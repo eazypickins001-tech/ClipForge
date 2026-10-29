@@ -3,7 +3,7 @@
 // editor, live and one Ctrl/Cmd+Z step per call, and both transports share the
 // app's one tool runner: its queue and its checkpoints.
 //
-// The channel is MCP itself. The app serves the same `createOpenScreenMcpServer` on
+// The channel is MCP itself. The app serves the same `createClipForgeMcpServer` on
 // a named pipe (Windows) or a Unix socket, and `openscreen mcp` is its client: each
 // document tool call is forwarded as a `tools/call` and its result handed back
 // untouched. No second protocol to keep in step with the tools, and the handshake
@@ -41,7 +41,7 @@ import {
 	pointerTrackEdit,
 } from "./media-tools";
 import {
-	createOpenScreenMcpServer,
+	createClipForgeMcpServer,
 	LIST_PROJECTS_TOOL,
 	type McpToolDeps,
 	type McpToolRunner,
@@ -60,7 +60,7 @@ const MAX_TOKEN_LINE_BYTES = 256;
 const MAX_ANSWER_BYTES = 256 * 1024 * 1024;
 
 const LOST_MESSAGE =
-	"OpenScreen stopped answering during this call, so whether it took effect is unknown. Call getCurrentDocument with the same projectId to check before retrying.";
+	"ClipForge stopped answering during this call, so whether it took effect is unknown. Call getCurrentDocument with the same projectId to check before retrying.";
 
 interface Discovery {
 	pid: number;
@@ -133,7 +133,7 @@ export async function serveAppChannel(options: {
 			const input = new PassThrough();
 			input.write(head.subarray(end + 1));
 			socket.pipe(input);
-			const session = createOpenScreenMcpServer(deps, runTool);
+			const session = createClipForgeMcpServer(deps, runTool);
 			// Not the media tools' own setPointerTrack: `openscreen mcp` records its takes itself,
 			// so the call carries their start times. The edit is computed in this process from
 			// them, then run like any edit.

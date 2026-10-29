@@ -10,7 +10,7 @@ export const EFFECTS_CONTRACT_URI = "openscreen://effects/contract";
 
 export const EFFECTS_NOTE = `Before writing a shader effect with addEffect, read the resource ${EFFECTS_CONTRACT_URI}: the full WGSL contract and two examples.`;
 
-export const EFFECTS_CONTRACT = `# OpenScreen shader effects — WGSL contract 1
+export const EFFECTS_CONTRACT = `# ClipForge shader effects — WGSL contract 1
 
 An effect is WGSL that defines one function, called for every pixel of the output:
 

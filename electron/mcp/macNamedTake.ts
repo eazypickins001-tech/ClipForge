@@ -10,7 +10,7 @@
 import type { MacScreenAccessStatus } from "../native-bridge/screen/macScreenAccess";
 
 export const NAMED_TAKE_NEEDS_SCREEN_ACCESS =
-	"OpenScreen needs the Screen Recording permission to record a window or display it is told to, without asking which one. Ask the user to turn OpenScreen on under System Settings > Privacy & Security > Screen & System Audio Recording, then try again.";
+	"ClipForge needs the Screen Recording permission to record a window or display it is told to, without asking which one. Ask the user to turn ClipForge on under System Settings > Privacy & Security > Screen & System Audio Recording, then try again.";
 
 /**
  * Whether a named take may enumerate its source. Only a refusal the probe actually read

@@ -155,13 +155,13 @@ export function frameTimes(durationSec: number, atSec: number[] | null, count: n
 export interface PointerEvent {
 	/** Epoch milliseconds, from the clock the take's `recordingStartedAt` came from. */
 	at: number;
-	/** Fractions of the recorded window (or display), as OpenScreen records a real pointer. */
+	/** Fractions of the recorded window (or display), as ClipForge records a real pointer. */
 	x: number;
 	y: number;
 	click?: boolean;
 }
 
-// The rate OpenScreen's own pointer sampler records at.
+// The rate ClipForge's own pointer sampler records at.
 const POINTER_STEP_MS = 33;
 // A hand reaches for the next control in about this long, then the click lands.
 const POINTER_TRAVEL_MS = 600;
@@ -226,19 +226,19 @@ const GIF_OPTIONS = ["gifFrameRate", "gifSize", "gifLoop"] as const;
 
 /** Where a take is made and where it lands, on each server. */
 const TAKE_NOTES: Record<McpTransport, string> = {
-	http: "Recording is the app's own: startRecording hands over to OpenScreen's recording bar, as the editor's Record button does, so the editor closes for the take, and stopRecording opens the take in the editor, where the user sees each edit land and can undo it. Its zooms on the clicks follow Record mode's Auto-zoom after recording, as for any take.",
+	http: "Recording is the app's own: startRecording hands over to ClipForge's recording bar, as the editor's Record button does, so the editor closes for the take, and stopRecording opens the take in the editor, where the user sees each edit land and can undo it. Its zooms on the clicks follow Record mode's Auto-zoom after recording, as for any take.",
 	stdio:
-		"These projects are in the OpenScreen app's project list, so the user can open one in its editor.",
+		"These projects are in the ClipForge app's project list, so the user can open one in its editor.",
 };
 
 /** The media tools' capability block, placed before the projects-and-checkpoints rules
  *  (`mcpInstructions`) on the server that registers them. */
 export function mediaPreamble(transport: McpTransport): string {
 	return [
-		"OpenScreen records the screen, turns each take into a project you edit with the document tools, and exports it as a video.",
+		"ClipForge records the screen, turns each take into a project you edit with the document tools, and exports it as a video.",
 		"A demo goes: listSources, then startRecording, then drive the app, then stopRecording. It returns the projectId and a checkpointId. Edit with the document tools, always passing that projectId: every edit is saved to the project straight away, and restoreCheckpoint with the checkpointId takes the project back to the raw take in one step. Then exportVideo, and getFrames with the projectId to check the export before you hand it over: it takes the same ruler seconds as the document tools, so a trim or a speed region never shifts what you look at.",
 		"To edit a video you already have instead, createProject with its videoPath; importMedia adds a video or an audio file to a project.",
-		"Drive the app with the real mouse when you can: OpenScreen records the pointer, draws a clean cursor and zooms on the clicks as the editor does: clicks close in time and on screen share one zoom, and the first seconds and the end stay on the whole screen. If you drive it from a script instead (Playwright, CDP), the screen pointer never moves: log each action as the script runs it, then hand the log to setPointerTrack after stopRecording.",
+		"Drive the app with the real mouse when you can: ClipForge records the pointer, draws a clean cursor and zooms on the clicks as the editor does: clicks close in time and on screen share one zoom, and the first seconds and the end stay on the whole screen. If you drive it from a script instead (Playwright, CDP), the screen pointer never moves: log each action as the script runs it, then hand the log to setPointerTrack after stopRecording.",
 		TAKE_NOTES[transport],
 	].join("\n");
 }
@@ -252,19 +252,19 @@ export interface MediaTools {
 }
 
 const START_RECORDING_NOTES: Record<McpTransport, string> = {
-	http: "It goes through OpenScreen's recording bar, as the editor's Record button does: the editor closes for the take, so this is refused while the editor has unsaved changes, and the bar's countdown applies. On Linux the system's portal asks the user what to record, whatever window or display says. On macOS the take records the window or display named here, even where the bar otherwise asks in Apple's picker (macOS 15.2 or later); that needs OpenScreen's Screen Recording permission, and without it the call is refused. The bar records with these settings, and gets the user's own back once the take ends.",
+	http: "It goes through ClipForge's recording bar, as the editor's Record button does: the editor closes for the take, so this is refused while the editor has unsaved changes, and the bar's countdown applies. On Linux the system's portal asks the user what to record, whatever window or display says. On macOS the take records the window or display named here, even where the bar otherwise asks in Apple's picker (macOS 15.2 or later); that needs ClipForge's Screen Recording permission, and without it the call is refused. The bar records with these settings, and gets the user's own back once the take ends.",
 	stdio: "On Linux the desktop's own picker asks the user which window to record.",
 };
 
 const STOP_RECORDING_DESCRIPTIONS: Record<McpTransport, string> = {
-	http: "Stop the recording. OpenScreen's editor opens the take as a new project, as it does after any recording: one clip, plus the zooms planned from the recorded clicks when Record mode's Auto-zoom after recording is on, and autoZooms says how many. Returns the projectId to edit, now open in the editor, a checkpointId that restores the take as it opened, and the take's videoPath.",
+	http: "Stop the recording. ClipForge's editor opens the take as a new project, as it does after any recording: one clip, plus the zooms planned from the recorded clicks when Record mode's Auto-zoom after recording is on, and autoZooms says how many. Returns the projectId to edit, now open in the editor, a checkpointId that restores the take as it opened, and the take's videoPath.",
 	stdio:
 		"Stop the recording and turn the take into a new project, laid out as the editor lays out a fresh recording: one clip, plus the zooms planned from the recorded clicks. Not one per click: clicks close in time and on screen share one zoom, a click in the first seconds or the one that stopped the take gets none, and autoZooms says how many there are. Returns the projectId to edit, a checkpointId that restores the raw take, and the take's videoPath.",
 };
 
 const CREATE_PROJECT_NOTES: Record<McpTransport, string> = {
-	http: "The editor keeps the project it has open: the new one is in OpenScreen's project list, for the user to open.",
-	stdio: "It is in the OpenScreen app's project list, so the user can open it in its editor.",
+	http: "The editor keeps the project it has open: the new one is in ClipForge's project list, for the user to open.",
+	stdio: "It is in the ClipForge app's project list, so the user can open it in its editor.",
 };
 
 const EXPORT_PATH_DESCRIPTIONS: Record<McpTransport, string> = {
@@ -279,7 +279,7 @@ const AUDIO_PATH_DESCRIPTIONS: Record<McpTransport, string> = {
 		"Where to write the audio: an absolute path, or one relative to this server's working directory, ending in .wav or .m4a.",
 };
 
-const GATED_MESSAGE = `Nothing was recorded or exported: OpenScreen lets MCP clients record and export only while the user allows it. Ask the user to turn on ${MCP_EDITS_SETTING}.`;
+const GATED_MESSAGE = `Nothing was recorded or exported: ClipForge lets MCP clients record and export only while the user allows it. Ask the user to turn on ${MCP_EDITS_SETTING}.`;
 
 /** A path a client passed, resolved; `null` for a relative one the in-app server cannot place. */
 function clientPath(transport: McpTransport, value: string): string | null {
@@ -642,7 +642,7 @@ export function createMediaTools(deps: MediaToolDeps): MediaTools {
 		server.registerTool(
 			"listSources",
 			{
-				description: `List the displays and windows OpenScreen can record, the microphones and the cameras. Pass startRecording a display's index or part of a window's title, and part of a microphone's or a camera's name. microphoneLabelsUnavailable or cameraLabelsUnavailable true means their names need a permission the user has not granted, so the list is empty: ask the user to allow it. ${HIDDEN_WINDOWS_NOTE}`,
+				description: `List the displays and windows ClipForge can record, the microphones and the cameras. Pass startRecording a display's index or part of a window's title, and part of a microphone's or a camera's name. microphoneLabelsUnavailable or cameraLabelsUnavailable true means their names need a permission the user has not granted, so the list is empty: ask the user to allow it. ${HIDDEN_WINDOWS_NOTE}`,
 				inputSchema: z.object({}),
 				annotations: READ_ONLY,
 			},
@@ -743,7 +743,7 @@ export function createMediaTools(deps: MediaToolDeps): MediaTools {
 			{
 				description: STOP_RECORDING_DESCRIPTIONS[transport],
 				inputSchema: z.object({
-					title: z.string().optional().describe("The project's title in OpenScreen."),
+					title: z.string().optional().describe("The project's title in ClipForge."),
 				}),
 				annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: false },
 			},
@@ -770,7 +770,7 @@ export function createMediaTools(deps: MediaToolDeps): MediaTools {
 			"setPointerTrack",
 			{
 				description: [
-					"For a take driven by a script (Playwright, CDP, a browser extension) rather than the real mouse: the screen pointer never moved, so the video has no cursor and no zoom. Give the pointer's path here and OpenScreen draws it, gliding between your actions, and zooms on its clicks as for a real mouse. It replaces the pointer recorded with the take, then plans zooms on the new clicks as stopRecording does, clear of the zooms already there; autoZoomsAdded says how many. Only for a take recorded by this server. It is an edit like any other: on a project that is not open in the editor it needs a checkpoint (stopRecording made one), and restoreCheckpoint undoes it, the pointer track included.",
+					"For a take driven by a script (Playwright, CDP, a browser extension) rather than the real mouse: the screen pointer never moved, so the video has no cursor and no zoom. Give the pointer's path here and ClipForge draws it, gliding between your actions, and zooms on its clicks as for a real mouse. It replaces the pointer recorded with the take, then plans zooms on the new clicks as stopRecording does, clear of the zooms already there; autoZoomsAdded says how many. Only for a take recorded by this server. It is an edit like any other: on a project that is not open in the editor it needs a checkpoint (stopRecording made one), and restoreCheckpoint undoes it, the pointer track included.",
 					"events, one per action: `at` is Date.now() when your script did it (log it as it runs; the take's recordingStartedAt is on the same clock). `x` and `y` are fractions (0 to 1) of the recorded window. For a point (clientX, clientY) of a page shown in that window, from inside the page: border = (outerWidth - innerWidth) / 2; x = (border + clientX) / outerWidth; y = (outerHeight - innerHeight - border + clientY) / outerHeight.",
 				].join("\n"),
 				inputSchema: z.object({ projectId: z.string(), events: POINTER_EVENTS }),
@@ -795,7 +795,7 @@ export function createMediaTools(deps: MediaToolDeps): MediaTools {
 			"exportVideo",
 			{
 				description:
-					"Render a project to an MP4 (H.264) or a GIF with OpenScreen's compositor: the background, cursor, zooms, cuts, speed changes and annotations as edited. Returns the file's path; call getFrames with the projectId to check it at the ruler seconds you edited with. The video's shape follows the project's format (setAspectRatio). The options are the Export dialog's: quality and fps for an MP4; gifFrameRate, gifSize and gifLoop for a GIF.",
+					"Render a project to an MP4 (H.264) or a GIF with ClipForge's compositor: the background, cursor, zooms, cuts, speed changes and annotations as edited. Returns the file's path; call getFrames with the projectId to check it at the ruler seconds you edited with. The video's shape follows the project's format (setAspectRatio). The options are the Export dialog's: quality and fps for an MP4; gifFrameRate, gifSize and gifLoop for a GIF.",
 				inputSchema: z.object({
 					projectId: z.string(),
 					path: z.string().describe(EXPORT_PATH_DESCRIPTIONS[transport]),
@@ -1097,7 +1097,7 @@ export function createMediaTools(deps: MediaToolDeps): MediaTools {
 			"createProject",
 			{
 				description: [
-					"Create a new project, in the look new projects start with in OpenScreen (the style preset marked for them, else the last edited project's), as the editor's New does. Empty, or from a video file laid out as one clip, as the editor lays out an opened video, with zooms planned from the clicks when the video is an OpenScreen recording with its pointer track; autoZooms says how many.",
+					"Create a new project, in the look new projects start with in ClipForge (the style preset marked for them, else the last edited project's), as the editor's New does. Empty, or from a video file laid out as one clip, as the editor lays out an opened video, with zooms planned from the clicks when the video is an ClipForge recording with its pointer track; autoZooms says how many.",
 					`Returns the projectId to edit and a checkpointId that restores the project as it was created. Fill an empty one with importMedia. ${CREATE_PROJECT_NOTES[transport]}`,
 				].join("\n"),
 				inputSchema: z.object({
@@ -1105,7 +1105,7 @@ export function createMediaTools(deps: MediaToolDeps): MediaTools {
 						.string()
 						.optional()
 						.describe(
-							"The project's title in OpenScreen. Default: the video's file name, or Untitled Project.",
+							"The project's title in ClipForge. Default: the video's file name, or Untitled Project.",
 						),
 					videoPath: z
 						.string()
@@ -1119,7 +1119,7 @@ export function createMediaTools(deps: MediaToolDeps): MediaTools {
 			async (args) => {
 				if (!deps.editsAllowed()) {
 					return text(
-						`No project was created: OpenScreen lets MCP clients create projects only while the user allows it. Ask the user to turn on ${MCP_EDITS_SETTING}.`,
+						`No project was created: ClipForge lets MCP clients create projects only while the user allows it. Ask the user to turn on ${MCP_EDITS_SETTING}.`,
 						true,
 					);
 				}

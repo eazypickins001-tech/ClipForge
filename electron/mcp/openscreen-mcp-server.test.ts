@@ -375,11 +375,11 @@ describe("the MCP tool surface", () => {
 		expect(instructions).toContain(
 			"Without a projectId they act on the project open in the editor",
 		);
-		expect(instructions).toContain("startRecording hands over to OpenScreen's recording bar");
+		expect(instructions).toContain("startRecording hands over to ClipForge's recording bar");
 		expect(instructions).toContain(
 			"startRecording, exportVideo, exportAudio and createProject are refused too",
 		);
-		expect(instructions).toContain("all of them are lost when OpenScreen quits.");
+		expect(instructions).toContain("all of them are lost when ClipForge quits.");
 		expect(instructions).toContain("turn on 'MCP edits' under MCP server in AI settings");
 		expect(instructions).not.toContain("Agent edits");
 		const { tools } = await mcp.listTools();
@@ -403,8 +403,8 @@ describe("the instructions, composed per transport", () => {
 		}
 		// stdio reaches the editor only through the app.
 		expect(stdio).not.toContain("Without a projectId they act");
-		expect(stdio).toContain("While the OpenScreen app runs, this server hands each call to it");
-		expect(stdio).toContain("in OpenScreen's memory while the app runs");
+		expect(stdio).toContain("While the ClipForge app runs, this server hands each call to it");
+		expect(stdio).toContain("in ClipForge's memory while the app runs");
 	});
 });
 
@@ -576,7 +576,7 @@ describe("checkpoints", () => {
 			arguments: { checkpointId: "cp_nope" },
 		});
 		expect(result.isError).toBe(true);
-		expect(resultText(result)).toContain("lost when OpenScreen quits");
+		expect(resultText(result)).toContain("lost when ClipForge quits");
 		expect(editor.applied).toHaveLength(0);
 	});
 
@@ -1024,8 +1024,8 @@ describe("a project open in another process's editor", () => {
 		theApp().markOpenInEditor("proj_2");
 		const result = await mcp.callTool({ name: "addTrim", arguments: addTrimArgs });
 		expect(result.isError).toBe(true);
-		expect(resultText(result)).toContain("open in the OpenScreen editor");
-		expect(resultText(result)).toContain("close the project in OpenScreen");
+		expect(resultText(result)).toContain("open in the ClipForge editor");
+		expect(resultText(result)).toContain("close the project in ClipForge");
 		expect((await projects.getProject("proj_2")).timeline.trimRanges).toHaveLength(0);
 	});
 

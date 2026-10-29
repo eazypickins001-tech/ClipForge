@@ -182,7 +182,7 @@ const BASE_SYSTEM_PROMPT = [
 	"- Deleting is a first-class action, not a workaround: removeTrim, removeModifier, removeClip. Never fake a deletion by re-adding an element or zeroing it out (span 0, speed 1×) — that leaves it in the document and misreports what you did.",
 	"If nothing in the list does what was asked, say so; do not approximate it with a bigger tool.",
 	"",
-	"Cursor telemetry: while the screen was captured, OpenScreen recorded where the pointer went. assets[].hasCursorTelemetry in getCurrentDocument says which assets carry it, and getCursorTrack returns the recorded track for one of them — positions over time, and the pointer shape at each moment. What it means is yours to read.",
+	"Cursor telemetry: while the screen was captured, ClipForge recorded where the pointer went. assets[].hasCursorTelemetry in getCurrentDocument says which assets carry it, and getCursorTrack returns the recorded track for one of them — positions over time, and the pointer shape at each moment. What it means is yours to read.",
 	"Blindness is not evidence. When a tool reports it could not read something (reason 'unavailable'), that is a limit of your runtime, not a fact about the project. Only an explicit negative — reason 'no-sidecar', or a false flag — supports telling the user the data is not there.",
 	"",
 ].join("\n");
@@ -297,7 +297,7 @@ export const TOOL_DESCRIPTIONS: Record<string, string> = {
 		"Store your translation of caption units for one asset in a language layer: `units` lists each unit as { id, text }: its id from getCaptionTranslationUnits and your translation of it. It merges into the layer, which the first call creates, so send long transcripts in batches. language is the layer's code (fr, pt-BR); label is the name the editor's language picker shows, such as Français (default: the code). Unknown unit ids refuse the whole call. The transcript is never changed: this is a separate layer the captions can show. It does not switch the captions to it: setCaptionSettings with this language does.",
 	removeCaptionTranslation:
 		"Delete one caption language layer. The transcript is untouched, and captions that showed this language go back to the transcript's own.",
-	setVocabulary: `Set the project's vocabulary: the names and technical terms Whisper is primed with on every transcription of this project, so it spells them right (at most ${VOCABULARY_MAX_CHARS} characters, read as a plain list such as "OpenScreen, Vulkan, whisper.cpp"). An empty string clears it. It changes no existing transcript: transcribe the asset again for that. getCurrentDocument reports it as vocabulary.`,
+	setVocabulary: `Set the project's vocabulary: the names and technical terms Whisper is primed with on every transcription of this project, so it spells them right (at most ${VOCABULARY_MAX_CHARS} characters, read as a plain list such as "ClipForge, Vulkan, whisper.cpp"). An empty string clears it. It changes no existing transcript: transcribe the asset again for that. getCurrentDocument reports it as vocabulary.`,
 };
 
 // ponytail: mutable document holder so a write-tool that updates the snapshot

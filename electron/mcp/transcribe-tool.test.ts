@@ -30,7 +30,7 @@ function fixtureDocument(projectId: string): AxcutDocument {
 	});
 	return documentSchema.parse({
 		...base,
-		project: { ...base.project, primaryAssetId: "asset_1", vocabulary: "OpenScreen" },
+		project: { ...base.project, primaryAssetId: "asset_1", vocabulary: "ClipForge" },
 		assets: [
 			{ id: "asset_1", kind: "video", label: "Rec", originalPath: "/tmp/rec.mp4", durationSec: 30 },
 		],
@@ -103,7 +103,7 @@ describe("transcribe, on a project's file", () => {
 		expect(transcribe).toHaveBeenCalledWith({
 			sourcePath: "/tmp/rec.mp4",
 			language: undefined,
-			prompt: "OpenScreen",
+			prompt: "ClipForge",
 		});
 		const saved = await projects.getProject("proj_1");
 		expect(saved.transcripts[0]?.words.map((w) => w.text)).toEqual(["Hello", "world"]);

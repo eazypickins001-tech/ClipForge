@@ -59,14 +59,14 @@ export const PROJECT_TOOLS = [
 	{
 		name: SET_PROJECT_INFO_TOOL,
 		description:
-			"Rename the project: its title in OpenScreen's project list and in the editor's top bar, as renaming it there does. Changes nothing else.",
+			"Rename the project: its title in ClipForge's project list and in the editor's top bar, as renaming it there does. Changes nothing else.",
 		inputSchema: setProjectInfoArgs,
 		destructive: false,
 	},
 	{
 		name: IMPORT_MEDIA_TOOL,
 		description:
-			"Add a video or audio file from disk to the project's media, as the editor's Import does. It does not place it on the timeline. An audio file is then played by a track you lay with addAudio. A video becomes the project's footage when it has none yet (a project createProject made without a video): replaceTimeline then lays it out. Returns the new assetId and the file's durationSec, null when OpenScreen could not read it (the editor reads it again when it opens the project).",
+			"Add a video or audio file from disk to the project's media, as the editor's Import does. It does not place it on the timeline. An audio file is then played by a track you lay with addAudio. A video becomes the project's footage when it has none yet (a project createProject made without a video): replaceTimeline then lays it out. Returns the new assetId and the file's durationSec, null when ClipForge could not read it (the editor reads it again when it opens the project).",
 		inputSchema: importMediaArgs,
 		destructive: false,
 	},

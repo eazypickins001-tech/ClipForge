@@ -339,7 +339,7 @@ describe("the app going away", () => {
 			const result = await route("addTrim", { ...trimArgs("proj_open"), startSec: 20, endSec: 21 });
 			expect(localCalls).toContain("addTrim");
 			expect(result.isError).toBe(true);
-			expect(text(result)).toContain("open in the OpenScreen editor");
+			expect(text(result)).toContain("open in the ClipForge editor");
 		});
 		expect(editor.applied).toBe(1);
 	});

@@ -2,7 +2,7 @@
 // this process. The document tools are the in-app server's own, run by the same
 // executor; the media tools around them record, export and look at the result.
 //
-// When the OpenScreen app runs, it is the authority: each document tool call is
+// When the ClipForge app runs, it is the authority: each document tool call is
 // forwarded to it (app-channel.ts), so the project open in its editor is edited
 // there, live, and checkpoints live in one place. With no app, the calls run here
 // on the project files, where no editor can hold one.
@@ -18,7 +18,7 @@ import { openStdin } from "../cli/stdin";
 import { routeToApp } from "./app-channel";
 import { createMediaTools, type MediaToolDeps } from "./media-tools";
 import {
-	createOpenScreenMcpServer,
+	createClipForgeMcpServer,
 	createToolRunner,
 	type McpToolDeps,
 } from "./openscreen-mcp-server";
@@ -57,7 +57,7 @@ export async function serveMcpOverStdio(options: {
 		readCursor: options.readCursorTelemetry,
 		runTool,
 	});
-	const server = createOpenScreenMcpServer(deps, runTool, media);
+	const server = createClipForgeMcpServer(deps, runTool, media);
 	const stdin = openStdin();
 	// The transport only reads stdin; a client that exits just closes it. A pipe can
 	// report that as "end", "close" or "error", depending on how the client went.
