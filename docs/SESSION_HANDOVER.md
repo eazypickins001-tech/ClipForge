@@ -78,13 +78,20 @@ committed so Windows checkouts stay LF and `biome` matches CI).
 **Verified working:** the ClipForge repo is pushed; CI is green (lint + type-check + the full
 unit suite); **the Windows native build succeeds in GitHub Actions** and produces a ClipForge
 NSIS installer alongside the compiled `wgc-capture.exe` and `cursor-sampler.exe`; the SBOM
-(`THIRD-PARTY-LICENSES.txt`) is generated. Locally: `tsc --noEmit` exit 0, `biome check` exit 0,
-`node scripts/check-docs.mjs` reports OK.
+(`THIRD-PARTY-LICENSES.txt`) is generated. **The downloaded `win-unpacked` build launches on
+this machine** — 6 ClipForge processes, main window responsive. Locally: `tsc --noEmit` exit 0,
+`biome check` exit 0, `node scripts/check-docs.mjs` reports OK.
 
-**Unverified (NOT RUN):** installing and launching the built installer on Windows — and
-therefore recording, editing, save/reopen and export on a real machine. Download the artifact
-and run it to verify. This machine's hardware is below OpenScreen's stated minimum, so expect
-slow capture even once it launches.
+**Unverified (NOT RUN):** recording, editing, save/reopen and export. The app was launched only
+briefly to confirm it starts, then closed; no workflow was exercised.
+
+**Known cosmetic issue:** the launched window's title renders as lowercase `clipforge` (from
+package.json `name`) rather than `ClipForge`. Either set the window title explicitly in
+`electron/windows.ts` or confirm electron-builder's `productName` reaches `app.getName()`.
+
+**Fixed during this session:** the first `upload-artifact` filter captured only `*.exe`, so the
+downloaded build could not run (missing DLLs, `icudtl.dat`, paks, `app.asar`). The workflow now
+uploads the whole `win-unpacked` tree.
 
 **Blocked locally:** native Windows capture helper + compositor. **Resolved by design** by
 building in GitHub Actions (`windows-latest`).
