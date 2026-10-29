@@ -1,0 +1,908 @@
+# CLIPFORGE: MASTER ENGINEERING, CAPTURE-TO-CONTENT AND PRODUCT BUILD PROMPT
+
+## 1. Your role and mission
+
+Act as a senior desktop software architect, video-processing engineer, media workflow designer, security-conscious product developer, and open-source engineering lead.
+
+Build **ClipForge**, a local-first desktop workspace that takes users from recording their work to producing edited, repurposed and publication-ready content.
+
+Do not start by building a new video editor from scratch. Audit the existing open-source candidates, inspect their actual source and licensing, test them on the available Windows environment, and choose the most suitable foundation based on evidence.
+
+Then create a separate ClipForge application and repository. Reuse only code that is suitable, maintainable, and legally reusable. Preserve all required notices.
+
+Work independently through routine implementation decisions. Do not stop for approval after every phase. Ask only when a decision genuinely requires my input, a destructive or irreversible action is proposed, credentials are needed, or an external service requires configuration.
+
+**Critical rule:** Never claim a repository was built, a test passed, a recording worked, a video exported or an integration succeeded unless you actually verified it.
+
+## 2. Product vision
+
+ClipForge is a local-first content production workspace that combines:
+
+1. Screen recording and capture ingestion.
+2. A practical video editor.
+3. AI-assisted content creation.
+4. Build-in-public content generation.
+5. Short-form video repurposing.
+6. Thumbnail Studio.
+7. Content organization and approvals.
+8. Optional publishing and scheduling integrations.
+
+The promise is:
+
+"Capture what you do. Turn it into content. Edit it. Repurpose it. Prepare it for publication."
+
+ClipForge should reduce the number of separate applications a creator needs to move from raw footage to ready-to-publish content.
+
+It should not require a cloud account to perform core recording, editing, saving and export.
+
+## 3. Mandatory local engineering audit
+
+This audit must happen before selecting a foundation or implementing major product features.
+
+### 3.1 Environment inventory
+
+Record:
+
+- Windows edition and version.
+- CPU architecture and available disk space.
+- Git, Node.js and npm versions.
+- Rust/Cargo versions if evaluating Tauri.
+- Available build tools.
+- Installed FFmpeg and FFprobe versions, if any.
+- Audio and video capture permissions and available devices.
+- Existing repositories, working directories and uncommitted changes.
+- Whether the system can build and package Windows desktop applications.
+- Relevant GPU capabilities, without assuming hardware-accelerated encoding is available.
+
+Do not overwrite, reset, clean or delete any existing repository or user files during the audit.
+
+### 3.2 Candidate repositories
+
+Inspect at least:
+
+1. OpenScreen: https://github.com/getopenscreen/openscreen
+2. OpenScene: https://github.com/Theorvane/openscene
+3. NanoThumbnail: https://github.com/yoanbernabeu/NanoThumbnail
+4. Fest Video Editor: https://github.com/festverse/Fest-Video-Editor
+5. RHCES Video Editor: https://github.com/ruelhcepeda/rhces-video-editor
+
+Treat these as candidates, not predetermined winners.
+
+OpenScreen is a leading recording and editing candidate. OpenScene is a candidate for its desktop editing architecture and workflow. NanoThumbnail is a candidate for thumbnail-generation workflows and interface components. Fest Video Editor and RHCES are comparison and reference projects.
+
+Inspect the actual source and current repository state. Do not assume the previously observed features or licenses remain unchanged.
+
+### 3.3 License and dependency audit
+
+For every candidate:
+
+- Inspect the actual license file and copyright notices.
+- Pin and record the commit being evaluated.
+- Inspect direct and transitive dependencies.
+- Identify bundled binaries, codecs, fonts, images, icons and other assets.
+- Identify separate licenses for submodules and vendored code.
+- Review FFmpeg build configuration and codec distribution obligations.
+- Inspect any use of GPL, LGPL, AGPL, source-available or commercially restricted components.
+- Record attribution requirements and redistribution limitations.
+- Identify telemetry, update services, analytics and external network dependencies.
+- Produce a third-party attribution inventory and software bill of materials where practical.
+
+Do not assume the main repository's MIT license applies to its submodules, bundled binaries or all dependencies.
+
+OpenScene has previously been identified as using an OpenCut-related submodule. Inspect the actual submodule revision, its license, source boundary and dependencies. Do not incorporate it until its licensing and integration implications are understood.
+
+If OBS integration is needed, prefer connecting to a separately installed OBS application through a supported interface rather than bundling or copying GPL-licensed OBS components into ClipForge. Audit any connector and distribution implications separately.
+
+If a component has an incompatible, restrictive or unclear license, do not copy it. Replace it independently or omit it.
+
+### 3.4 Actual build and test verification
+
+For each viable candidate:
+
+1. Clone into an isolated audit directory.
+2. Install dependencies using the documented package manager and lockfile.
+3. Run existing tests.
+4. Run type checking and linting where available.
+5. Run the production build.
+6. Attempt Windows packaging.
+7. Test launching the built application.
+8. Test importing media, saving a project, reopening it and exporting a video.
+9. Record exact commands, exit codes, failures, warnings and missing prerequisites.
+10. Distinguish tests actually run from tests merely described in documentation.
+
+Do not modify upstream code just to make the audit report look successful. Diagnose failures and document any necessary patch separately.
+
+### 3.5 Functional and security audit
+
+Check:
+
+- Project save/reopen reliability.
+- Media relinking and missing-file behavior.
+- Timeline editing correctness.
+- Undo/redo consistency.
+- Export reliability and error handling.
+- Audio/video synchronization.
+- Recording completion and file finalization.
+- FFmpeg command construction and process termination.
+- File overwrite protection.
+- Long-running job cancellation.
+- Memory consumption for large projects.
+- IPC boundaries between renderer and main process.
+- API key and token storage.
+- External upload behavior.
+- Project format compatibility and migrations.
+- Recovery after an interrupted export or application crash.
+
+Test using synthetic or non-sensitive sample media first.
+
+### 3.6 Foundation decision
+
+Compare:
+
+A. OpenScreen as the main capture and editing foundation.
+
+B. OpenScene as the main editing/workflow foundation.
+
+C. A combination where one project provides the desktop shell and editor, while selected recording or thumbnail capabilities are integrated through well-defined interfaces.
+
+D. A clean desktop implementation using only selected reusable components if neither foundation is appropriate.
+
+Do not merge entire repositories blindly. Avoid running two complete editor frameworks inside one application unless a demonstrated benefit outweighs the complexity.
+
+Score candidates on:
+
+- Windows build reliability.
+- Recording capabilities.
+- Timeline functionality.
+- Save/reopen reliability.
+- Export quality and performance.
+- Media architecture.
+- Test coverage.
+- Maintainability.
+- License clarity.
+- Packaging and update support.
+- Ease of adding the content engine.
+- Ease of adding Thumbnail Studio.
+- Long-term maintenance risk.
+
+### 3.7 Audit deliverable
+
+Create `docs/ENGINEERING_AUDIT.md` documenting:
+
+- Environment inventory.
+- Candidate repositories and pinned commits.
+- License and dependency findings.
+- Actual commands and build/test results.
+- Recording and export tests.
+- Security and privacy findings.
+- Architecture comparison.
+- Recommended foundation.
+- Components to reuse, rewrite or exclude.
+- Known limitations and blockers.
+- Implementation phases.
+
+Then continue automatically if a defensible path exists. Do not claim the audit is complete if important checks were blocked. If no candidate passes, choose the safest feasible alternative and document why.
+
+## 4. Application architecture
+
+Create a new independent repository named `clipforge`.
+
+Use the chosen foundation if it passes the audit. For an Electron-based application, prefer:
+
+- Electron main process for privileged operations.
+- React and TypeScript for the renderer.
+- A narrow, typed preload API.
+- Context isolation enabled.
+- Node integration disabled in the renderer.
+- Strict Content Security Policy.
+- Dedicated workers or processes for media jobs.
+- A validated FFmpeg/FFprobe process manager.
+- A versioned project format.
+- A local project and asset manager.
+- A modular provider interface for optional AI.
+- A modular publishing connector interface.
+- Secure storage for credentials.
+
+Never expose arbitrary shell execution to renderer code. Never accept arbitrary command strings from untrusted UI content. Construct FFmpeg arguments from validated parameters and use safe process APIs.
+
+Keep the core workflow local-first. Make network services optional and transparent.
+
+## 5. Core product navigation
+
+Provide a cohesive desktop interface with these areas:
+
+- Home / Recent Projects.
+- Capture.
+- Video Editor.
+- Content Studio.
+- Thumbnail Studio.
+- Content Library.
+- Approval and Publishing Queue.
+- Settings, privacy and integrations.
+
+Avoid building each feature as a separate application with a disconnected interface.
+
+The user must be able to move naturally from a recording session into a project, from the project into content generation, from content generation into editing, and from editing into export or approval.
+
+## 6. Capture and recording workflow
+
+### 6.1 ClipForge recording
+
+If the selected foundation already supports recording, adapt and test its recording functionality rather than rebuilding it unnecessarily.
+
+Where supported, provide:
+
+- Full-screen recording.
+- Selected-window recording.
+- Selected-region recording.
+- Microphone audio.
+- System audio, subject to Windows capture capabilities and permissions.
+- Optional webcam overlay.
+- Recording pause and resume where reliable.
+- Clear recording status and elapsed time.
+- Output location and available storage checks.
+- Error handling for permission failures and unavailable devices.
+
+Do not promise that every capture mode works on every Windows version. Test and document actual support.
+
+### 6.2 OBS integration
+
+Provide an optional connector for users who already have OBS installed.
+
+Investigate the supported OBS WebSocket interface and compatible versions.
+
+Possible features:
+
+- Detect whether OBS is available.
+- Let the user configure the connection securely.
+- Start and stop recordings when supported and explicitly configured.
+- Retrieve recording status and output path where supported.
+- Detect completed recordings.
+- Offer to import the recording into ClipForge.
+
+Do not hard-code credentials. Do not bundle OBS by default. Do not claim compatibility without testing the selected versions.
+
+If the connector is unavailable, explain how to import a recording manually.
+
+### 6.3 Windows recorder and watched folders
+
+Support recordings made using Windows' built-in recording tools and other external applications.
+
+Implement:
+
+- Manual file import.
+- Drag and drop.
+- A configurable watched folder.
+- Detection of newly completed recordings.
+- An explicit option to import automatically or ask first.
+- Safe handling of files that are still being written.
+- Duplicate import detection.
+- A clear notification with an **Open in Editor** action.
+
+Never assume the Windows recorder exposes a supported remote-control interface. Use file-based handoff unless a documented and tested API exists.
+
+### 6.4 Immediate editor handoff
+
+When a recording completes or is imported:
+
+1. Detect or receive the completed media file.
+2. Verify the file exists and is readable.
+3. Extract duration, dimensions, frame rate, codecs and audio metadata using FFprobe or an equivalent audited method.
+4. Create a new project or add the media to the selected project.
+5. Preserve the original recording.
+6. Show a preview and an **Open in Editor** action.
+7. If selected, open the media in the editor automatically.
+8. Report any unsupported codec, corrupted file or import error honestly.
+
+Do not assume a recording is complete just because a file appears in the watched folder. Confirm that the file is no longer changing and can be probed.
+
+## 7. Build-in-Public Content Engine
+
+This is a core product differentiator. Incorporate the capabilities of the planned **MASTER BUILD PROMPT: BUILD-IN-PUBLIC CONTENT ENGINE** into ClipForge instead of creating a separate cloud-only application.
+
+The purpose is to turn real product-building activity into useful, evidence-based marketing and educational content.
+
+### 7.1 Session and project evidence
+
+Allow a user to create a content session associated with:
+
+- A product or project.
+- A development task.
+- A problem being solved.
+- A feature being implemented.
+- A bug and its resolution.
+- A demo or milestone.
+- A release or deployment.
+- A lesson learned.
+- An experiment or outcome.
+
+Optionally attach:
+
+- Screen recordings.
+- Screenshots.
+- Selected video frames.
+- User-written notes.
+- Transcripts.
+- Git commit messages and diffs.
+- Release notes.
+- Test summaries.
+- Approved project documentation.
+
+Git integration must be read-only by default. Do not push commits, change branches, alter repository files or execute arbitrary Git commands as part of content generation.
+
+Never assume a commit message or a successful-looking screen proves the application works. Treat test output and release information as evidence only when it has actually been supplied or verified.
+
+### 7.2 Evidence-aware content generation
+
+Generate drafts for:
+
+- Short-form videos.
+- Product demonstrations.
+- Educational explainers.
+- Tutorials.
+- Development diaries.
+- Problem/solution stories.
+- Release announcements.
+- Behind-the-scenes content.
+- Lessons learned.
+- LinkedIn posts.
+- X posts.
+- Instagram and Facebook captions.
+- YouTube titles, descriptions and chapter suggestions.
+- Email or newsletter outlines.
+
+For each generated asset, retain its source context and identify whether its reasoning came from:
+
+- User-written notes.
+- A transcript.
+- Selected frames.
+- Git activity.
+- Supplied test results.
+- A combination of sources.
+
+Do not claim to have analyzed a video visually if only its title or transcript was provided.
+
+Do not invent events, customer results, performance improvements, sales outcomes, feature behavior or product capabilities.
+
+Distinguish confirmed facts, user-provided claims, hypotheses and suggested marketing language.
+
+### 7.3 Content outputs
+
+For a single approved session, allow the user to generate a package such as:
+
+- Three opening hooks.
+- A 30-to-60-second short-form script.
+- Scene-by-scene storyboard.
+- Voiceover text.
+- On-screen text.
+- Caption and subtitle draft.
+- Thumbnail concepts.
+- Platform-specific copy.
+- A longer tutorial outline.
+- A checklist of supporting evidence.
+- A list of missing details requiring confirmation.
+
+Allow users to select a target duration, audience, tone, platform, call to action and content objective.
+
+Keep generated content editable. Do not lock users into a single AI output.
+
+### 7.4 Local frame extraction
+
+Allow users to extract selected frames from a recording using FFmpeg or the audited media engine.
+
+Provide:
+
+- Timestamp selection.
+- Frame preview.
+- Frame selection.
+- A small contact sheet if practical.
+- Optional use of selected frames in content or thumbnail generation.
+
+Do not upload full recordings by default. If an external AI provider requires images, ask for consent and disclose exactly which selected frames or assets will be transmitted.
+
+### 7.5 Repurposing
+
+From one source recording, support creation of multiple output projects:
+
+- Original long-form edit.
+- Vertical short.
+- Square video.
+- Landscape video.
+- Highlight clips.
+- Captioned and uncaptioned versions.
+- Different hook or title variants.
+
+Keep a relationship between the source and derivative assets. Do not overwrite the source recording when producing a derivative.
+
+AI may suggest potential highlights, but the user must be able to inspect and edit the suggested segments before export.
+
+## 8. Video editor requirements
+
+### 8.1 Project and media management
+
+Implement:
+
+- Create, save, reopen and duplicate projects.
+- Import video, audio and image assets.
+- Preview media.
+- Organize media within a project.
+- Show metadata and media availability.
+- Detect missing media.
+- Relink missing files.
+- Keep project files versioned and recoverable.
+
+Store media references and editable project data separately from the source binaries. Do not embed entire video files in project JSON.
+
+Document whether imported assets are referenced in place or copied into the project.
+
+### 8.2 Timeline
+
+Implement the strongest available timeline functionality from the selected foundation.
+
+Minimum useful editing operations:
+
+- Add and arrange clips.
+- Trim clip in/out points.
+- Split clips.
+- Move clips.
+- Remove clips.
+- Adjust clip order.
+- Add audio.
+- Add titles and text overlays.
+- Add captions/subtitles.
+- Undo and redo.
+- Save and restore edit state.
+
+If the selected foundation already provides reliable multi-track editing, preserve and test it.
+
+Do not claim advanced transitions, keyframes, effects or multi-track mixing unless implemented and verified.
+
+### 8.3 Aspect ratios and output formats
+
+Support practical presets:
+
+- Landscape 16:9.
+- Vertical 9:16.
+- Square 1:1.
+
+Allow users to preview framing and adjust crop or positioning where supported.
+
+Use sensible export presets, such as 1920×1080 landscape and 1080×1920 vertical, while allowing appropriate alternatives based on source footage and performance.
+
+Use FFmpeg or the selected engine for export. Validate output, report errors and preserve source files.
+
+### 8.4 Export queue
+
+Provide:
+
+- Export preset selection.
+- Output path selection.
+- Progress and estimated status where reliable.
+- Cancel operation.
+- Error details.
+- Safe handling of interrupted exports.
+- File overwrite confirmation.
+- Export history.
+- Open output folder.
+
+Use temporary output files where practical, then finalize the file only when the export succeeds.
+
+Do not report export success until the output exists and basic validation passes.
+
+### 8.5 Captions and transcription
+
+Support importing or creating subtitles.
+
+If automatic speech recognition is included, evaluate local and optional remote providers separately.
+
+Disclose whether audio leaves the computer. Keep a manual correction workflow and preserve editable subtitle timing.
+
+Do not promise perfect transcription.
+
+## 9. Thumbnail Studio
+
+Integrate thumbnail creation into the same project workflow. Reuse NanoThumbnail's suitable workflows or components only after the audit confirms licensing, dependencies and architectural fit.
+
+### 9.1 Input context
+
+Allow the user to provide:
+
+- Video title.
+- Brief.
+- Intended audience.
+- Platform.
+- Transcript.
+- Selected video frames.
+- Brand kit.
+- Desired tone.
+- Thumbnail style.
+- Desired text.
+- Excluded imagery or concepts.
+- Relevant evidence or source notes.
+
+Explicitly identify whether the concepts are based on the title alone, the transcript, selected frames or other supplied evidence.
+
+### 9.2 Concept generation
+
+Generate three distinct concepts, such as:
+
+- Curiosity or mystery.
+- Transformation or result.
+- Comparison or reveal.
+
+Each concept should include:
+
+- Core hook.
+- Main visual subject.
+- Composition.
+- Focal point.
+- Background and lighting.
+- Suggested color palette.
+- Suggested thumbnail text.
+- Negative space and text placement.
+- Negative prompt or exclusions where supported.
+- Full copy-ready image-generation prompt.
+- Short rationale explaining relevance to the source content.
+
+Do not invent unsupported scenes, events or claims.
+
+Optimize for relevance, contrast, readability, clear focal points and mobile-size legibility. Never guarantee virality or click-through rates.
+
+### 9.3 Two operating modes
+
+**Prompt-only mode**
+
+- Generate copy-ready prompts.
+- No image-generation API required.
+- Allow copying, saving and editing concepts.
+
+**Direct image-generation mode**
+
+- Support provider adapters for currently documented and available models.
+- Verify model identifiers and endpoints against current provider documentation.
+- Do not invent model names or endpoints.
+- Support a configured provider key or an approved secure backend.
+- Keep credentials out of renderer code and source control.
+- Explain provider charges and external image/data transfers.
+- Handle timeouts, rate limits, failures and usage limits.
+- Do not retry paid requests indefinitely or without user awareness.
+
+Do not promise free image generation when a provider charges for it.
+
+### 9.4 Thumbnail editor
+
+Implement where supported:
+
+- Editable headline text.
+- Font, size, alignment and color controls.
+- Text outline or shadow.
+- Text movement and resizing.
+- Logo and brand assets.
+- Image crop and repositioning.
+- Reduced-size readability preview.
+- Variant comparison.
+- Refinement requests where the provider supports them.
+- PNG and JPEG export.
+
+Save the original generated image separately from the editable composition.
+
+Use a versioned composition format. Do not store image binaries inside project JSON.
+
+For YouTube, provide a 16:9 preset at 1280×720. Validate dimensions and relevant platform constraints before export.
+
+### 9.5 Quality review
+
+Provide honest heuristic checks for:
+
+- Relevance to the supplied content.
+- Small-size legibility.
+- Contrast.
+- Focal point.
+- Visual clutter.
+- Text density.
+- Unsupported implications.
+- Brand consistency.
+
+Do not fabricate CTR estimates, ranking scores or virality metrics.
+
+## 10. Optional AI architecture and privacy
+
+AI must enhance the workflow, not become a mandatory dependency.
+
+Use a modular provider interface. Keep provider credentials in an appropriate secure storage mechanism or a trusted backend. Never hard-code API keys.
+
+Allow the user to configure supported providers and understand:
+
+- What information is transmitted.
+- Which service receives it.
+- Whether charges may apply.
+- Which features work offline.
+- What happens when the provider is unavailable.
+
+Do not upload full video files, entire repositories, private source code, transcripts or screenshots without clear user consent.
+
+Use data minimization. Allow users to redact sensitive information before sharing selected screenshots or frames.
+
+The editor, project manager and local export workflow must remain usable if every external AI provider is unavailable.
+
+## 11. Content library and approvals
+
+Provide a library of content assets associated with projects and sessions.
+
+Track appropriate metadata, such as:
+
+- Project and source recording.
+- Asset type.
+- Platform.
+- Draft status.
+- Approval status.
+- Version.
+- Creation date.
+- Export path.
+- Publishing status when integrated.
+
+Allow users to mark content as draft, ready for review, approved, scheduled, published or failed, where those states are applicable.
+
+Do not confuse a locally approved draft with a successfully published post.
+
+Keep human approval before any external publication by default.
+
+## 12. Publishing and scheduling integrations
+
+Create a modular integration architecture.
+
+Investigate GoHighLevel (GHL) as a possible publishing and scheduling integration, along with other supported platforms if they provide useful APIs.
+
+Before implementing an integration:
+
+1. Inspect current official documentation.
+2. Confirm supported media types and publishing operations.
+3. Confirm authentication and permission requirements.
+4. Identify account, plan or API restrictions.
+5. Test with a sandbox or non-public draft where possible.
+6. Document limitations and expected costs.
+
+Never invent endpoints or claim that an integration is supported without evidence.
+
+Do not store API tokens in renderer code, source control or plaintext configuration files.
+
+Publishing must require explicit approval unless the user later configures a deliberate automation rule.
+
+Show the user the destination, content and intended publication time before submission.
+
+Distinguish queued, submitted, published and failed states based on actual integration responses.
+
+If GHL cannot support a requested action, provide a safe export package or manual handoff instead of pretending the action succeeded.
+
+## 13. Freemium and licensing architecture
+
+Design a useful free tier from the start.
+
+Potential premium features:
+
+- More advanced AI-assisted content generation.
+- Additional thumbnail variants.
+- Direct image generation workflows.
+- Brand kits.
+- Batch repurposing.
+- Advanced caption tools.
+- Additional export presets.
+- Publishing integrations.
+- Advanced project templates or workflow automation.
+
+Keep core recording, project access and basic editing/export useful without a paid subscription.
+
+If users provide their own AI API keys, disclose that the provider may charge them separately.
+
+Evaluate a signed licensing approach such as Ed25519, with private signing keys kept outside the distributed app. Keep product identifiers and entitlements separate from SpaceWise.
+
+If online activation is implemented:
+
+- Do not expose secret licensing credentials in the client.
+- Define activation, expiry, revocation and offline grace behavior.
+- Preserve user projects, recordings, exports and thumbnails after expiry.
+- Do not claim a provider's free plan supports our required commercial model until its current terms are verified.
+
+## 14. Testing requirements
+
+Build automated tests for:
+
+- Project creation, save and reopen.
+- Versioned project migration.
+- Media import and relinking.
+- Recording handoff.
+- Watched-folder detection.
+- Detection of incomplete media files.
+- FFprobe metadata extraction.
+- Timeline operations.
+- Undo and redo.
+- Export success, cancellation and failure.
+- Safe output overwrite handling.
+- Thumbnail composition save/reopen.
+- Image export dimensions.
+- AI provider timeouts and rate limits.
+- Credential handling.
+- IPC validation.
+- Approval states.
+- Publishing connector failures.
+- License verification.
+
+Use synthetic or non-sensitive media for automated tests.
+
+Create a repeatable Windows smoke test covering recording, importing an external recording, editing, saving, reopening and exporting.
+
+For recording and media integration, document which features were tested on the actual machine and which remain unverified.
+
+## 15. Packaging and commercial readiness
+
+Produce a Windows installer and, if practical, a portable build.
+
+Verify:
+
+- Clean installation and launch.
+- Application identity and branding.
+- Recording or external import.
+- Project save/reopen.
+- Timeline editing.
+- Export.
+- Thumbnail generation in prompt-only mode.
+- Direct generation when a provider is configured.
+- Project persistence after restart.
+- Missing-media handling.
+- License notices and third-party attributions.
+- Credential storage.
+- No unexpected network requests.
+- No destructive behavior on first launch.
+
+Review FFmpeg and codec licensing and distribution obligations before packaging. Document the actual FFmpeg build and codec configuration.
+
+Do not claim code signing unless a signing certificate and successful signing process are available.
+
+## 16. Documentation and repository structure
+
+Maintain:
+
+- `README.md`
+- `docs/ENGINEERING_AUDIT.md`
+- `docs/ARCHITECTURE.md`
+- `docs/PROJECT_FORMAT.md`
+- `docs/SECURITY.md`
+- `docs/PRIVACY.md`
+- `docs/TESTING.md`
+- `docs/LICENSING.md`
+- `docs/INTEGRATIONS.md`
+- `docs/ROADMAP.md`
+- Third-party notices.
+- Dependency inventory or SBOM where practical.
+- `.gitignore`
+- Environment example files containing placeholders only.
+
+Document build, test, run and package commands.
+
+Never commit API keys, tokens, private signing keys, personal recordings, private screenshots or sensitive source material.
+
+## 17. Implementation phases and acceptance criteria
+
+### Phase 0: Audit and architecture decision
+
+Complete the mandatory audit. Record the evidence, license findings, Windows build results and chosen foundation.
+
+### Phase 1: Usable desktop editor
+
+Acceptance criteria:
+
+- Create and save a project.
+- Import a local video.
+- Preview it.
+- Perform basic timeline editing.
+- Save and reopen the project.
+- Export a playable video.
+- Handle errors and missing media clearly.
+
+### Phase 2: Capture and recording handoff
+
+Acceptance criteria:
+
+- Use the verified built-in recording capability or an explicitly documented capture path.
+- Import Windows recorder footage.
+- Detect completed recordings in a configured watched folder.
+- Support the OBS connector if its compatibility and API tests pass.
+- Offer an Open in Editor action.
+- Preserve original media.
+- Validate imported files.
+
+### Phase 3: Build-in-Public Content Engine
+
+Acceptance criteria:
+
+- Create a content session.
+- Associate recordings, notes and optional Git activity with the session.
+- Generate editable hooks, scripts, captions and storyboards.
+- Identify the evidence used.
+- Avoid unsupported claims.
+- Save generated content locally.
+- Keep external AI optional.
+
+### Phase 4: Repurposing and captions
+
+Acceptance criteria:
+
+- Create derivative projects from a source recording.
+- Support practical landscape, vertical and square output presets.
+- Generate or import subtitles.
+- Let the user review and edit proposed clips.
+- Export valid outputs without modifying the original source.
+
+### Phase 5: Thumbnail Studio
+
+Acceptance criteria:
+
+- Generate three distinct concepts.
+- Provide complete editable prompts.
+- Support prompt-only operation without API credentials.
+- Support direct image generation when a provider is configured and verified.
+- Allow basic thumbnail editing and export.
+- Save editable composition data.
+- Provide honest quality checks.
+
+### Phase 6: Content library and publishing connectors
+
+Acceptance criteria:
+
+- Organize assets by project and session.
+- Support draft and approval states.
+- Verify connector capabilities before implementation.
+- Preserve human approval.
+- Report actual publishing status.
+- Provide manual export packages when integrations are unavailable.
+
+### Phase 7: Freemium readiness and release candidate
+
+Acceptance criteria:
+
+- Free features remain useful.
+- Premium boundaries are clear.
+- Licensing is independently testable.
+- Expiry does not block access to projects or files.
+- Windows packaging succeeds.
+- Critical tests pass.
+- License and codec notices are present.
+- A new user can complete the core workflow without developer assistance.
+
+## 18. Required working method
+
+Work in small, testable modules.
+
+After each phase:
+
+1. Run relevant tests.
+2. Fix regressions before continuing.
+3. Record commands and actual results.
+4. Update documentation.
+5. Summarize what changed, what works, what remains and what is blocked.
+
+Do not substitute planning documents for working software.
+
+Do not leave core controls as placeholders.
+
+Do not simulate successful recording, export, AI generation, licensing or publication.
+
+Do not hide errors or silently suppress failures.
+
+Do not overwrite user changes or source recordings.
+
+Do not introduce a second full editor framework without a documented reason.
+
+Do not build every proposed feature in the first phase. Establish a reliable capture-to-edit-to-export path first.
+
+## 19. First action
+
+Start with the environment inventory and local engineering audit.
+
+Do not begin by redesigning the interface or merging repositories.
+
+Inspect the actual source, verify licenses, build and test the leading candidates, and document the decision in `docs/ENGINEERING_AUDIT.md`.
+
+Then proceed directly to Phase 1 if a defensible architecture exists.
+
+The final goal is a reliable, commercially distributable desktop application that lets users capture real work, turn it into evidence-based content, edit and repurpose videos, create thumbnails, and prepare content for publication without requiring a separate cloud-only content engine.

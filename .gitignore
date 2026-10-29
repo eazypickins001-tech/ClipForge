@@ -1,0 +1,55 @@
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# Build output
+dist/
+dist-electron/
+out/
+release/
+build-licenses/
+*.tsbuildinfo
+
+# Native build artefacts (Rust / MSVC / vendored binaries)
+crates/target/
+electron/native/bin/
+electron/native/compositor-view/build/
+electron/native/wgc-capture/build/
+crates/thirdparty/
+
+# Audit workspace (isolated upstream clones — never committed)
+audit/
+
+# Environment / secrets — placeholders only in .env.example
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# User media — never commit recordings, screenshots or personal assets
+*.mp4
+*.mov
+*.mkv
+*.webm
+*.wav
+*.mp3
+recordings/
+screenshots/
+media/
+uploads/
+
+# Licences generated at build time
+THIRD-PARTY-LICENSES.txt
+
+# Editors / OS
+.vscode/*
+!.vscode/extensions.json
+.idea/
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Logs
+*.log
+npm-debug.log*
