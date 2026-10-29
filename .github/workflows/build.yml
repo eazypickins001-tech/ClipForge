@@ -80,9 +80,15 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: clipforge-windows-x64
+          # The whole win-unpacked tree is included, not just the .exe files: an
+          # Electron build is not runnable without its DLLs, icudtl.dat, locale
+          # paks and resources/app.asar, so an exe-only artifact cannot be smoke
+          # tested. The NSIS installer is self-contained, but it is uploaded
+          # alongside so the unpacked build can be launched directly.
           path: |
             release/**/*.exe
             release/**/*.blockmap
             release/**/latest.yml
+            release/**/win-unpacked/**
             build-licenses/THIRD-PARTY-LICENSES.txt
           if-no-files-found: error
