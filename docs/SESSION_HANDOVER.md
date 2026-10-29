@@ -11,16 +11,27 @@
 
 ## 1. Current phase and last completed step
 
-**Phase 1 (usable desktop editor) — kickoff complete; waiting on CI.**
+**Phase 1 (usable desktop editor) — kickoff complete; CI green and a Windows installer builds.**
 
-Last completed step: the forked + rebranded ClipForge app was **committed and pushed** to
-`github.com/eazypickins001-tech/ClipForge` (`main` = `3e9aff6`). Two GitHub Actions runs
-were triggered and are in progress:
+Last completed step: the forked + rebranded ClipForge app is on `main` at `9a6ea54`, and both
+GitHub Actions workflows are **green**:
 
-- **CI** — run id `40827568634`
-- **Build Windows installer** — run id `40827568839`
+- **CI** (`40830412560`) — success: lint, type-check and the full unit suite pass.
+- **Build Windows installer** (`40829905908`) — success (6m30s). The native Windows Graphics
+  Capture helper and the Rust D3D11 compositor compile on `windows-latest`; an NSIS installer
+  artifact `clipforge-windows-x64` is produced and was downloaded and verified locally.
 
-`tsc --noEmit` and `biome check` were both verified locally as **exit 0** before the push.
+Verified artifact contents (`gh run download 40829905908 -n clipforge-windows-x64`):
+
+| File | Size |
+| --- | --- |
+| `ClipForge.Setup.0.1.0-x64.exe` | 162.9 MB (NSIS installer) |
+| `ClipForge.exe` | 213.0 MB (unpacked app) |
+| `wgc-capture.exe` | 0.6 MB (native capture helper) |
+| `cursor-sampler.exe` | 0.3 MB (native cursor sampler) |
+| `ffmpeg-shared.exe` | 0.5 MB (LGPL FFmpeg CLI) |
+| `THIRD-PARTY-LICENSES.txt` | 0.6 MB (SBOM) |
+| `latest.yml`, `.blockmap`, `elevate.exe` | update metadata / helper |
 
 ## 2. Commands run and actual results
 
@@ -64,12 +75,16 @@ committed so Windows checkouts stay LF and `biome` matches CI).
 
 ## 4. Verified / unverified / blocked
 
-**Verified working:** repo pushed; `tsc` and `biome` clean locally; OpenScreen’s JS test
-layer runs (691 tests); NanoThumbnail `npm run build` succeeds; dependencies install.
+**Verified working:** the ClipForge repo is pushed; CI is green (lint + type-check + the full
+unit suite); **the Windows native build succeeds in GitHub Actions** and produces a ClipForge
+NSIS installer alongside the compiled `wgc-capture.exe` and `cursor-sampler.exe`; the SBOM
+(`THIRD-PARTY-LICENSES.txt`) is generated. Locally: `tsc --noEmit` exit 0, `biome check` exit 0,
+`node scripts/check-docs.mjs` reports OK.
 
-**Unverified (NOT RUN):** any Windows native build, app launch, recording, editing,
-save/reopen, export, or packaging — because this machine lacks MSVC/CMake/Ninja/Rust.
-The two CI runs above are the first attempt to build the installer.
+**Unverified (NOT RUN):** installing and launching the built installer on Windows — and
+therefore recording, editing, save/reopen and export on a real machine. Download the artifact
+and run it to verify. This machine's hardware is below OpenScreen's stated minimum, so expect
+slow capture even once it launches.
 
 **Blocked locally:** native Windows capture helper + compositor. **Resolved by design** by
 building in GitHub Actions (`windows-latest`).
