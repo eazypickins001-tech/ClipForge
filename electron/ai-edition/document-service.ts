@@ -1,0 +1,700 @@
+// DocumentService — main-process owner of v3 AxcutDocument projects.
+// Persists one .openscreen JSON per project under userData/projects/ (the file
+// carries its own `schemaVersion`, so migration keys off the content, not the
+// extension). Older builds wrote these same documents as `.axcut`; those are
+// renamed to `.openscreen` on first access. Slim port of
+// axcut's apps/server/src/services/document-service.ts (no separate paths.ts —
+// uses app.getPath("userData") directly; no Python probe_media — assets carry
+// only path metadata, duration is filled in by the renderer).
+//
+// ponytail: Phase 1 surface area is intentionally narrow (list / get / create
+// / save / addAsset / removeAsset). ops/history/agent runtime land in Phase 6.
+
+import { mkdirSync, rmSync, writeFileSync } from "node:fs";
+import fs, { type FileHandle } from "node:fs/promises";
+import path from "node:path";
+import { createId } from "../../src/lib/ai-edition/document/ids";
+import { removeClip } from "../../src/lib/ai-edition/document/timeline";
+import {
+	type AxcutAsset,
+	type AxcutDocument,
+	createEmptyDocument,
+	documentSchema,
+	migrateRawDocumentToCurrent,
+} from "../../src/lib/ai-edition/schema";
+import {
+	lookFromLegacyEditor,
+	type StylePresetAppearance,
+	stylePresetLegacyEditor,
+} from "../../src/lib/ai-edition/stylePresets";
+import { renameSyncWithFallback, renameWithRetry } from "../atomic-rename";
+import { ensureDocumentExtensions } from "../media/extensionClip";
+import { relinkProjectMedia } from "../media/projectMediaRelinker";
+
+const PROJECT_FILE_EXTENSION = ".openscreen";
+// Older builds stored these same v3/v4 AxcutDocuments under `.axcut`. We read
+// them for back-compat and rename them to PROJECT_FILE_EXTENSION on access.
+const LEGACY_PROJECT_FILE_EXTENSION = ".axcut";
+// Which project the app's editor holds, for the OpenScreen processes beside it
+// (`openscreen mcp`): see markOpenInEditor. Not a `.openscreen`, so never listed.
+const OPEN_IN_EDITOR_FILE = ".open-in-editor.json";
+
+export interface ProjectSummary {
+	id: string;
+	title: string;
+	updatedAt: string;
+	assetCount: number;
+}
+
+function stampForSave(document: AxcutDocument): AxcutDocument {
+	const parsed = documentSchema.parse(document);
+	return { ...parsed, project: { ...parsed.project, updatedAt: new Date().toISOString() } };
+}
+
+/** What `saveProjectIfUnchanged` checks against: the read that returned it. */
+export interface ProjectVersion {
+	readonly generation: number;
+	readonly raw: string;
+}
+
+export interface AddAssetInput {
+	path: string;
+	label?: string;
+	// "audio" imports an external voiceover / BGM / SFX file (issue #350).
+	// Defaults to "video" when omitted, so existing callers are unaffected.
+	kind?: "video" | "audio";
+}
+
+export class DocumentNotFoundError extends Error {
+	constructor(public readonly projectId: string) {
+		super(`Project not found: ${projectId}`);
+		this.name = "DocumentNotFoundError";
+	}
+}
+
+/**
+ * A file write refused because an editor holds the project and would save over it. Edits
+ * to it go through that editor, `openscreen mcp`'s through the app (#1174), so this is
+ * only met when the editor or the app does not answer, or the app predates forwarding.
+ */
+export class ProjectOpenInEditorError extends Error {
+	constructor(public readonly projectId: string) {
+		super(
+			"The edit was NOT applied: this project is open in the ClipForge editor, and the editor could not be reached to apply it there (a file edit would be overwritten by its next save). Retry in a moment. If it is refused again, ask the user to close the project in ClipForge, or to restart or update ClipForge.",
+		);
+		this.name = "ProjectOpenInEditorError";
+	}
+}
+
+/** Whether a process with this pid is running. EPERM: it is, just not ours to signal. */
+export function isProcessAlive(pid: number): boolean {
+	try {
+		process.kill(pid, 0);
+		return true;
+	} catch (error) {
+		return (error as NodeJS.ErrnoException).code === "EPERM";
+	}
+}
+
+export class ProjectFileError extends Error {
+	constructor(
+		message: string,
+		public readonly projectId?: string,
+	) {
+		super(message);
+		this.name = "ProjectFileError";
+	}
+}
+
+const SUPPORTED_VIDEO_EXTENSIONS = new Set([
+	".mp4",
+	".mov",
+	".m4v",
+	".webm",
+	".mkv",
+	".avi",
+	".wmv",
+]);
+
+function isSupportedVideoPath(filePath: string): boolean {
+	const ext = path.extname(filePath).toLowerCase();
+	return SUPPORTED_VIDEO_EXTENSIONS.has(ext);
+}
+
+// Imported audio (issue #350). Decoding is handled downstream by the same
+// WebCodecs / ffmpeg paths that read a video's audio track, so this list is the
+// container formats decodeAudioData and the compositor can open.
+// What may be filed as an AUDIO asset. Deliberately WIDER than the import
+// picker's list in `electron/ipc/handlers.ts`: this gate runs when the caller
+// has already declared `kind: "audio"`, so it only has to reject files that
+// could not carry audio at all, whereas the picker has to guess from the
+// extension alone and must not offer a video as audio.
+//
+// `.webm` is exactly that difference. An in-editor voiceover take is written by
+// MediaRecorder as webm/opus — the same extension a screen recording uses — so
+// the picker rightly refuses it while this gate must accept it.
+const SUPPORTED_AUDIO_EXTENSIONS = new Set([
+	".mp3",
+	".wav",
+	".m4a",
+	".aac",
+	".flac",
+	".ogg",
+	".oga",
+	".opus",
+	".webm",
+]);
+
+function isSupportedAudioPath(filePath: string): boolean {
+	const ext = path.extname(filePath).toLowerCase();
+	return SUPPORTED_AUDIO_EXTENSIONS.has(ext);
+}
+
+/** Why `input` cannot be filed as its kind of asset, or `null` when it can. */
+export function unsupportedAssetPath(input: Pick<AddAssetInput, "path" | "kind">): string | null {
+	if (!input.path) return "Asset path is required.";
+	if ((input.kind ?? "video") === "audio") {
+		return isSupportedAudioPath(input.path)
+			? null
+			: `Unsupported audio extension: ${path.extname(input.path)} (supported: ${[...SUPPORTED_AUDIO_EXTENSIONS].join(", ")})`;
+	}
+	return isSupportedVideoPath(input.path)
+		? null
+		: `Unsupported video extension: ${path.extname(input.path)} (supported: ${[...SUPPORTED_VIDEO_EXTENSIONS].join(", ")})`;
+}
+
+/** The kind a media file is imported as, from its extension: audio only when it cannot be a video. */
+export function assetKindForPath(filePath: string): "video" | "audio" {
+	return !isSupportedVideoPath(filePath) && isSupportedAudioPath(filePath) ? "audio" : "video";
+}
+
+/** `doc` with `asset` added to its media, as an import adds it. */
+export function documentWithAsset(doc: AxcutDocument, asset: AxcutAsset): AxcutDocument {
+	// An audio import is an overlay, never the thing the timeline is built
+	// around, so it must not claim the empty primaryAssetId slot — otherwise the
+	// first file dropped into a fresh project (a BGM track) would become its
+	// primary asset and the editor would try to lay out clips from a file with
+	// no video.
+	const claimsPrimary = asset.kind !== "audio" && !doc.project.primaryAssetId;
+	return {
+		...doc,
+		assets: [...doc.assets, asset],
+		project: {
+			...doc.project,
+			...(claimsPrimary ? { primaryAssetId: asset.id } : {}),
+			updatedAt: new Date().toISOString(),
+		},
+	};
+}
+
+/** `doc` without the asset, its clips, trims and audio tracks. */
+export function documentWithoutAsset(doc: AxcutDocument, assetId: string): AxcutDocument {
+	const assets = doc.assets.filter((a) => a.id !== assetId);
+	// Primary is the thing the timeline is built around, so it must fall to the
+	// next VIDEO asset — never an audio overlay (issue #350), which can't be
+	// primary (see addAsset). Falling back to `assets[0]` would hand primary to
+	// an audio asset when the removed one was the last video.
+	const primaryAssetId =
+		doc.project.primaryAssetId === assetId
+			? (assets.find((a) => a.kind !== "audio")?.id ?? undefined)
+			: doc.project.primaryAssetId;
+	const withoutAssetClips = doc.timeline.clips
+		.filter((clip) => clip.assetId === assetId)
+		.reduce((current, clip) => removeClip(current, clip.id), doc);
+	return {
+		...withoutAssetClips,
+		assets,
+		// Drop imported audio tracks that referenced the removed asset — they
+		// would otherwise dangle, pointing at an asset the document no longer has.
+		audioTracks: withoutAssetClips.audioTracks.filter((t) => t.assetId !== assetId),
+		timeline: {
+			...withoutAssetClips.timeline,
+			trimRanges: withoutAssetClips.timeline.trimRanges.filter((r) => r.assetId !== assetId),
+		},
+		project: {
+			...withoutAssetClips.project,
+			primaryAssetId,
+			updatedAt: new Date().toISOString(),
+		},
+	};
+}
+
+function safeProjectId(raw: string): string {
+	// ponytail: project ids are uuid-prefixed strings (e.g. "proj_<uuid>"). Reject
+	// anything that smells like path traversal before we ever touch the disk.
+	if (!/^[A-Za-z0-9_-]+$/.test(raw)) {
+		throw new ProjectFileError(`Invalid project id: ${raw}`);
+	}
+	return raw;
+}
+
+// ponytail: load-time migration hook. The on-disk file may carry any supported
+// `schemaVersion` (v2 EditorProjectData handled separately by
+// `migrateProjectDataToAxcutDocument`; v3 / v4 AxcutDocuments handled here).
+// `documentSchema.parse` is now a pure v6 validator — every JSON-read path
+// (list, get, future bulk-export) must run the upgrader chain first via this
+// helper so the in-memory parse is a single `z.literal(6)` + shape check.
+// `getProject` spells the same two steps out inline because it relinks moved
+// media between them; keep the order (upgrade, then validate) in step.
+function parseLoadedDocument(raw: string): AxcutDocument {
+	return documentSchema.parse(migrateRawDocumentToCurrent(JSON.parse(raw)));
+}
+
+export class DocumentService {
+	private readonly projectsRoot: string;
+	private readonly mediaRegistryDir: string;
+	private legacyMigrationDone = false;
+	/** Tail of the in-flight read and save chain per project id — see writeProject. */
+	private readonly writeQueues = new Map<string, Promise<void>>();
+	/** Bumped as each read or save of a project starts — see saveProjectIfUnchanged. */
+	private readonly generations = new Map<string, number>();
+
+	// `mediaRegistryDir` is where the media-links registry file lives
+	// (RECORDINGS_DIR in production) — see getProject. Injected for the same
+	// reason as `projectsRoot`: this module stays free of any `electron` import.
+	/**
+	 * Called with every document this service hands out, so the process that owns the read
+	 * allow-list can grant the media that document declares.
+	 *
+	 * Injected for the same reason as the two paths above: this module stays free of any
+	 * `electron` import. Optional so the tests and the CLI construct it as they always did.
+	 */
+	private readonly onProjectRead?: (document: AxcutDocument) => void;
+	/** The look of the preset marked for new projects, if any (see `newProjectLook`). */
+	private readonly newProjectPreset?: () => Promise<StylePresetAppearance | null>;
+
+	constructor(
+		projectsRoot: string,
+		mediaRegistryDir: string,
+		onProjectRead?: (document: AxcutDocument) => void,
+		newProjectPreset?: () => Promise<StylePresetAppearance | null>,
+	) {
+		this.projectsRoot = projectsRoot;
+		this.mediaRegistryDir = mediaRegistryDir;
+		this.onProjectRead = onProjectRead;
+		this.newProjectPreset = newProjectPreset;
+	}
+
+	async ensureProjectsDir(): Promise<void> {
+		await fs.mkdir(this.projectsRoot, { recursive: true });
+		await this.migrateLegacyExtensions();
+	}
+
+	// One-time-per-process pass renaming any legacy `.axcut` project files to
+	// `.openscreen`. The document bytes are identical (same schemaVersion), so
+	// this is a pure rename — no content migration involved.
+	private async migrateLegacyExtensions(): Promise<void> {
+		if (this.legacyMigrationDone) return;
+		this.legacyMigrationDone = true;
+		let entries: string[];
+		try {
+			entries = await fs.readdir(this.projectsRoot);
+		} catch {
+			return;
+		}
+		await Promise.all(
+			entries
+				.filter((name) => name.endsWith(LEGACY_PROJECT_FILE_EXTENSION))
+				.map(async (name) => {
+					const from = path.join(this.projectsRoot, name);
+					const base = name.slice(0, -LEGACY_PROJECT_FILE_EXTENSION.length);
+					const to = path.join(this.projectsRoot, `${base}${PROJECT_FILE_EXTENSION}`);
+					try {
+						// If a `.openscreen` already exists for this id it's authoritative;
+						// drop the stale `.axcut`. Otherwise rename the legacy file across.
+						await fs.access(to);
+						await fs.unlink(from);
+					} catch {
+						await renameWithRetry(from, to).catch((err) =>
+							console.warn(`[ai-edition] failed to migrate ${from} -> ${to}:`, err),
+						);
+					}
+				}),
+		);
+	}
+
+	private fileFor(projectId: string): string {
+		const safe = safeProjectId(projectId);
+		return path.join(this.projectsRoot, `${safe}${PROJECT_FILE_EXTENSION}`);
+	}
+
+	/** The project's own file, for a reader that takes a path (the export runner). */
+	filePathFor(projectId: string): string {
+		return this.fileFor(projectId);
+	}
+
+	private legacyFileFor(projectId: string): string {
+		const safe = safeProjectId(projectId);
+		return path.join(this.projectsRoot, `${safe}${LEGACY_PROJECT_FILE_EXTENSION}`);
+	}
+
+	/**
+	 * Records which project this process's editor holds (`null`: none), for the other
+	 * OpenScreen processes that write projects. `openscreen mcp` runs beside the app
+	 * with no editor of its own to ask, and a file edit to a project the editor holds
+	 * is lost on the editor's next save (#1138).
+	 *
+	 * Synchronous so the removal lands even as the app quits. A crash leaves the file
+	 * behind, which `projectOpenInEditor` ignores once its pid is gone.
+	 */
+	markOpenInEditor(projectId: string | null): void {
+		const marker = path.join(this.projectsRoot, OPEN_IN_EDITOR_FILE);
+		try {
+			if (projectId === null) {
+				rmSync(marker, { force: true });
+				return;
+			}
+			mkdirSync(this.projectsRoot, { recursive: true });
+			// Temp + rename: a reader never sees a half-written marker.
+			const temp = `${marker}.tmp-${process.pid}`;
+			writeFileSync(temp, JSON.stringify({ pid: process.pid, projectId }), "utf8");
+			renameSyncWithFallback(temp, marker);
+		} catch (error) {
+			console.warn("[document-service] could not record the project open in the editor:", error);
+		}
+	}
+
+	/**
+	 * The project an OpenScreen editor holds, in this process or another, or `null`.
+	 * ponytail: liveness is by pid alone, so a pid reused after the app crashed keeps
+	 * its project "open" until the app's editor runs again. That refuses, never loses.
+	 */
+	async projectOpenInEditor(): Promise<string | null> {
+		const raw = await fs
+			.readFile(path.join(this.projectsRoot, OPEN_IN_EDITOR_FILE), "utf8")
+			.catch(() => null);
+		if (raw === null) return null;
+		try {
+			const { pid, projectId } = JSON.parse(raw) as { pid?: unknown; projectId?: unknown };
+			if (typeof pid !== "number" || typeof projectId !== "string") return null;
+			return isProcessAlive(pid) ? projectId : null;
+		} catch {
+			return null;
+		}
+	}
+
+	async listProjects(): Promise<ProjectSummary[]> {
+		const summaries = (await this.readAllProjects()).map((parsed) => ({
+			id: parsed.project.id,
+			title: parsed.project.title,
+			updatedAt: parsed.project.updatedAt,
+			assetCount: parsed.assets.length,
+		}));
+		summaries.sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
+		return summaries;
+	}
+
+	/** Every project that parses, unrelinked and unannounced: a listing, not an open. */
+	private async readAllProjects(): Promise<AxcutDocument[]> {
+		await this.ensureProjectsDir();
+		const entries = await fs.readdir(this.projectsRoot);
+		// ensureProjectsDir (above) already migrated any legacy `.axcut` files.
+		const projectFiles = entries.filter((name) => name.endsWith(PROJECT_FILE_EXTENSION));
+		const documents: AxcutDocument[] = [];
+		for (const name of projectFiles) {
+			const filePath = path.join(this.projectsRoot, name);
+			try {
+				documents.push(parseLoadedDocument(await fs.readFile(filePath, "utf8")));
+			} catch (error) {
+				// ponytail: skip unreadable files rather than failing the whole list.
+				// A future migration pass can recover them.
+				console.warn(`[ai-edition] failed to read ${filePath}:`, error);
+			}
+		}
+		return documents;
+	}
+
+	/**
+	 * The look a new project starts from, as `legacyEditor` fields: the preset marked for new
+	 * projects, else the most recently edited project's look, else nothing (factory defaults).
+	 * Never the format — a new project keeps Auto — and never anything tied to footage.
+	 */
+	private async newProjectLook(): Promise<Record<string, unknown> | null> {
+		const preset = await this.newProjectPreset?.().catch((error) => {
+			console.warn("[ai-edition] could not read the preset for new projects:", error);
+			return null;
+		});
+		if (preset) return stylePresetLegacyEditor(preset);
+		const latest = (await this.readAllProjects()).reduce<AxcutDocument | null>(
+			(best, doc) => (!best || doc.project.updatedAt > best.project.updatedAt ? doc : best),
+			null,
+		);
+		const look = lookFromLegacyEditor(latest?.legacyEditor);
+		return Object.keys(look).length > 0 ? look : null;
+	}
+
+	async getProject(projectId: string): Promise<AxcutDocument> {
+		return (await this.getProjectForUpdate(projectId)).document;
+	}
+
+	/** `getProject`, plus the version to hand `saveProjectIfUnchanged`. */
+	async getProjectForUpdate(
+		projectId: string,
+	): Promise<{ document: AxcutDocument; version: ProjectVersion }> {
+		const generation = this.touch(projectId);
+		// In the project's queue: behind its saves, so a read never returns the file one
+		// is about to replace, and behind its other reads, so a read asked for earlier
+		// has returned first. saveProjectIfUnchanged and the MCP server rely on both.
+		return this.enqueue(projectId, async () => {
+			const raw = await this.readProjectFile(projectId);
+			return { document: await this.parseProjectFile(raw), version: { generation, raw } };
+		});
+	}
+
+	private async parseProjectFile(raw: string): Promise<AxcutDocument> {
+		// Relink here rather than in the .openscreen import handlers, because this
+		// is the one place every open funnels through — the project picker, the
+		// agent, and the auto-load-last-project effect on launch. A document whose
+		// media moved (or that was authored on another machine, issue #212) is
+		// otherwise re-read as broken on every subsequent open, and media that
+		// moves after the import is never noticed at all. The relink is applied to
+		// the upgraded JSON so `documentSchema.parse` still validates what we hand
+		// back, and it is not persisted from here: the renderer saves the document
+		// it was given, as it does for any other load-time repair.
+		const migrated = migrateRawDocumentToCurrent(JSON.parse(raw));
+		const document = documentSchema.parse(
+			await relinkProjectMedia(migrated, this.mediaRegistryDir),
+		);
+		// AFTER the relink, so what is granted is the path the renderer will actually ask for.
+		this.onProjectRead?.(document);
+		return document;
+	}
+
+	/**
+	 * The id of the project `filePath` is the own file of, or undefined for any other
+	 * file. The open-file dialog hands it to the editor, which then loads that project
+	 * instead of saving back the file as read, over any change made since.
+	 */
+	storedProjectId(filePath: string): string | undefined {
+		const resolved = path.resolve(filePath);
+		if (path.relative(path.resolve(this.projectsRoot), path.dirname(resolved)) !== "") {
+			return undefined;
+		}
+		const extension = [PROJECT_FILE_EXTENSION, LEGACY_PROJECT_FILE_EXTENSION].find((ext) =>
+			resolved.endsWith(ext),
+		);
+		return extension ? path.basename(resolved, extension) : undefined;
+	}
+
+	private touch(projectId: string): number {
+		const generation = (this.generations.get(projectId) ?? 0) + 1;
+		this.generations.set(projectId, generation);
+		return generation;
+	}
+
+	private async readProjectFile(projectId: string): Promise<string> {
+		// Prefer the canonical `.openscreen` file, falling back to a not-yet-migrated
+		// legacy `.axcut` so a project opened before its migration pass still loads.
+		try {
+			return await fs.readFile(this.fileFor(projectId), "utf8");
+		} catch (error) {
+			if ((error as NodeJS.ErrnoException)?.code !== "ENOENT") {
+				throw new ProjectFileError(
+					`Failed to read project ${projectId}: ${error instanceof Error ? error.message : String(error)}`,
+					projectId,
+				);
+			}
+		}
+		try {
+			return await fs.readFile(this.legacyFileFor(projectId), "utf8");
+		} catch (legacyError) {
+			if ((legacyError as NodeJS.ErrnoException)?.code === "ENOENT") {
+				throw new DocumentNotFoundError(projectId);
+			}
+			throw new ProjectFileError(
+				`Failed to read project ${projectId}: ${legacyError instanceof Error ? legacyError.message : String(legacyError)}`,
+				projectId,
+			);
+		}
+	}
+
+	async createProject(title: string): Promise<AxcutDocument> {
+		await this.ensureProjectsDir();
+		const projectId = createId("proj");
+		// Every new project comes through here — the New dialog, the empty state and a finished
+		// recording alike — so this is the one place it takes the user's look.
+		const doc: AxcutDocument = {
+			...createEmptyDocument({ projectId, title: title?.trim() || "Untitled Project" }),
+			legacyEditor: await this.newProjectLook(),
+		};
+		await this.writeProject(doc);
+		return doc;
+	}
+
+	async saveProject(document: AxcutDocument): Promise<AxcutDocument> {
+		const stamped = stampForSave(document);
+		this.touch(stamped.project.id);
+		await this.writeProject(stamped);
+		// After the write, never before: a derived file is not worth delaying the user's edit
+		// reaching disk, and a failure to generate one must not fail the save.
+		await ensureDocumentExtensions(stamped);
+		return stamped;
+	}
+
+	/**
+	 * `saveProject` for a writer that does not hold the project open (the MCP
+	 * server), unless anything read or saved the project since the
+	 * `getProjectForUpdate` that returned `version`, or its file changed: then
+	 * nothing is written and this resolves null.
+	 *
+	 * The read is the case that matters: an editor that opened the project after
+	 * `version` holds a copy without this save, and its own next save would drop
+	 * it without a word. The check runs inside the project's write queue, and reads
+	 * wait behind that queue, so nothing in this process reads or saves the project
+	 * between the check and the write. An editor in another process is seen through
+	 * `projectOpenInEditor` instead: then this rejects with `ProjectOpenInEditorError`.
+	 */
+	async saveProjectIfUnchanged(
+		document: AxcutDocument,
+		version: ProjectVersion,
+	): Promise<AxcutDocument | null> {
+		const stamped = stampForSave(document);
+		const projectId = stamped.project.id;
+		const written = await this.writeProject(stamped, async () => {
+			if ((await this.projectOpenInEditor()) === projectId) {
+				throw new ProjectOpenInEditorError(projectId);
+			}
+			return (
+				this.generations.get(projectId) === version.generation &&
+				(await this.readProjectFile(projectId).catch(() => null)) === version.raw
+			);
+		});
+		if (!written) return null;
+		await ensureDocumentExtensions(stamped);
+		return stamped;
+	}
+
+	async deleteProject(projectId: string): Promise<void> {
+		// Remove the canonical file and any lingering legacy `.axcut` for this id.
+		for (const filePath of [this.fileFor(projectId), this.legacyFileFor(projectId)]) {
+			try {
+				await fs.unlink(filePath);
+			} catch (error) {
+				if ((error as NodeJS.ErrnoException)?.code !== "ENOENT") {
+					throw error;
+				}
+			}
+		}
+	}
+
+	async addAsset(projectId: string, input: AddAssetInput): Promise<AxcutDocument> {
+		const doc = await this.getProject(projectId);
+		const unsupported = unsupportedAssetPath(input);
+		if (unsupported) throw new ProjectFileError(unsupported, projectId);
+		const absolutePath = path.isAbsolute(input.path) ? input.path : path.resolve(input.path);
+		// P3.1 — capture the file size at import. Non-fatal: a stat failure
+		// (network drive, permissions) just leaves sizeBytes undefined.
+		let sizeBytes: number | undefined;
+		try {
+			sizeBytes = (await fs.stat(absolutePath)).size;
+		} catch {
+			sizeBytes = undefined;
+		}
+		const asset: AxcutAsset = {
+			id: createId("asset"),
+			kind: input.kind ?? "video",
+			label: input.label?.trim() || path.basename(absolutePath),
+			originalPath: absolutePath,
+			sizeBytes,
+			cameraTrack: null,
+		};
+		return this.saveProject(documentWithAsset(doc, asset));
+	}
+
+	async removeAsset(projectId: string, assetId: string): Promise<AxcutDocument> {
+		const doc = await this.getProject(projectId);
+		if (!doc.assets.some((a) => a.id === assetId)) {
+			throw new ProjectFileError(`Asset ${assetId} not found in project ${projectId}.`, projectId);
+		}
+		return this.saveProject(documentWithoutAsset(doc, assetId));
+	}
+
+	/**
+	 * Serialise saves per project, then write atomically.
+	 *
+	 * This has destroyed real project files. `fs.writeFile` opens with O_TRUNC and
+	 * writes from offset 0, so two concurrent saves of the SAME project interleave
+	 * onto one path: the short document lands over the long one's opening bytes and
+	 * the long one's tail survives past its end. The result parses as JSON right up
+	 * to the splice and then dies — the file is unreadable and the edits in it are
+	 * gone. Two projects on this machine were lost exactly that way (a complete
+	 * document followed by the tail of a longer, older version).
+	 *
+	 * Both halves are load-bearing:
+	 *  - the queue makes concurrent saves of one project sequential, so a save
+	 *    always writes over a settled file, never a half-written one;
+	 *  - temp + rename makes each save all-or-nothing, so a crash (or a full disk)
+	 *    mid-write leaves the previous document intact instead of a truncated one.
+	 * The queue alone would still leave a torn file on a crash; the rename alone
+	 * would still let two saves race for the same destination.
+	 */
+	private writeProject(
+		doc: AxcutDocument,
+		precondition?: () => Promise<boolean>,
+	): Promise<boolean> {
+		return this.enqueue(doc.project.id, async () => {
+			if (precondition && !(await precondition())) return false;
+			await this.writeProjectNow(doc);
+			return true;
+		});
+	}
+
+	/** Runs `step` once every read and save of the project asked for before it is done. */
+	private enqueue<T>(projectId: string, step: () => Promise<T>): Promise<T> {
+		const tail = this.writeQueues.get(projectId) ?? Promise.resolve();
+		// Chained on both settlements: one save failing must not cancel the next.
+		const run = tail.then(step, step);
+		const settled = run.then(
+			() => undefined,
+			() => undefined,
+		);
+		this.writeQueues.set(projectId, settled);
+		void settled.then(() => {
+			// Only the tail clears the entry — a later save may already own it.
+			if (this.writeQueues.get(projectId) === settled) this.writeQueues.delete(projectId);
+		});
+		return run;
+	}
+
+	private async writeProjectNow(doc: AxcutDocument): Promise<void> {
+		await this.ensureProjectsDir();
+		const filePath = this.fileFor(doc.project.id);
+		// The suffix goes AFTER the extension on purpose: listProjects matches on a
+		// trailing `.openscreen`, so an interrupted write's leftover is invisible to
+		// it rather than showing up as a corrupt project. Unique per write, so two
+		// queues (or two processes) never share a temp path.
+		const tempPath = `${filePath}.tmp-${process.pid}-${createId("w")}`;
+		const json = JSON.stringify(doc, null, 2);
+
+		let handle: FileHandle | undefined;
+		try {
+			handle = await fs.open(tempPath, "w");
+			await handle.writeFile(json, "utf8");
+			// Flush before the rename: without it the rename can reach the disk first
+			// and a power loss leaves the new name pointing at unwritten blocks.
+			await handle.sync();
+		} catch (error) {
+			await handle?.close().catch(() => undefined);
+			await fs.unlink(tempPath).catch(() => undefined);
+			throw new ProjectFileError(
+				`Failed to write project ${doc.project.id}: ${error instanceof Error ? error.message : String(error)}`,
+				doc.project.id,
+			);
+		}
+		await handle.close();
+
+		try {
+			await renameWithRetry(tempPath, filePath);
+		} catch (error) {
+			await fs.unlink(tempPath).catch(() => undefined);
+			throw new ProjectFileError(
+				`Failed to save project ${doc.project.id}: ${error instanceof Error ? error.message : String(error)}`,
+				doc.project.id,
+			);
+		}
+
+		// A save supersedes any legacy `.axcut` for this id (ensureProjectsDir
+		// usually renamed it already; this is a belt-and-braces cleanup).
+		await fs.unlink(this.legacyFileFor(doc.project.id)).catch(() => undefined);
+	}
+}

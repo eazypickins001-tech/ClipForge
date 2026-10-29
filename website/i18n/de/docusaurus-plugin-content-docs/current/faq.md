@@ -1,0 +1,165 @@
+---
+id: faq
+title: "OpenScreen-FAQ: Lizenz, Datenschutz und Links"
+sidebar_label: FAQ
+description: "Ist OpenScreen für kommerzielle Nutzung kostenlos? Ja, unter MIT-Lizenz. Antworten zu Wasserzeichen, Offline-Nutzung, Datenschutz, signierten Installern und offiziellen Links."
+keywords:
+  - OpenScreen FAQ
+  - kostenlos für kommerzielle Nutzung
+  - MIT-Lizenz
+  - ohne Wasserzeichen
+  - Bildschirmrekorder offline
+  - OpenScreen Originalprojekt
+---
+
+# OpenScreen-FAQ
+
+OpenScreen ist ein kostenloser Bildschirmrekorder und Videoeditor unter MIT-Lizenz für Windows, macOS und Linux. Er ist auch für kommerzielle Nutzung kostenlos, ohne Konto und ohne Wasserzeichen. Diese Seite beantwortet die Fragen, die vor der Installation gestellt werden: Lizenz, was über das Netzwerk geht, wie die Installer signiert sind und welche Websites offiziell sind. OpenScreen ist nicht dasselbe Produkt wie Open Screen auf openscreen.io.
+
+## Ist OpenScreen für kommerzielle Nutzung kostenlos? {#is-openscreen-free-for-commercial-use}
+
+**Ja.** OpenScreen steht unter der [MIT-Lizenz](https://github.com/getopenscreen/openscreen/blob/main/LICENSE).
+
+- Du darfst es nutzen, kopieren, verändern, weitergeben und verkaufen. Die einzige Bedingung: Copyright- und Lizenzhinweis müssen in Kopien der Software erhalten bleiben.
+- Der Lizenztext gilt für die Software. Über die Videos, die du damit machst, sagt er nichts.
+- Es gibt kein Konto, keine kostenpflichtige Stufe und keine Premium-Funktion.
+
+## Fügt OpenScreen ein Wasserzeichen hinzu? {#does-openscreen-add-a-watermark}
+
+**Nein.** MP4- und GIF-Exporte haben kein Wasserzeichen, und es gibt keine kostenpflichtige Version, die eines entfernt. Die Formate stehen unter [Export](./export.md).
+
+## Funktioniert OpenScreen offline? {#does-openscreen-work-offline}
+
+**Aufnahme, Transkription und Rendering laufen auf deinem Rechner.** OpenScreen hat keine Upload-Funktion, deine Aufnahmen bleiben also auf deiner Festplatte. Die App baut trotzdem einige Netzwerkverbindungen auf, deshalb wäre „komplett offline“ falsch:
+
+- **huggingface.co, einmalig.** Die erste Transkription lädt das Whisper-Modell herunter, etwa 264 MB, und ein Modell zur Spracherkennung unter 1 MB, jedes gegen einen SHA-256-Hash geprüft. Danach braucht die Transkription keine Verbindung mehr.
+- **github.com, einmal pro Sprache.** Auf einem Rechner mit GPU lädt die erste englische oder französische Transkription zusätzlich das Modell herunter, das jedes Wort neu zeitlich ausrichtet: etwa 110 MB für Englisch, 350 MB für Französisch.
+- **github.com und api.github.com.** Builds, die sich selbst aktualisieren, suchen alle 24 Stunden und auf deine Anfrage nach einer neuen Version. Standardmäßig melden sie nur, dass eine verfügbar ist.
+- **fonts.googleapis.com, nur für eine in 1.x hinzugefügte Schrift.** Eine eigene Schrift für Annotationen, die in einer früheren Version hinzugefügt wurde, wird beim Start weiterhin geladen, obwohl 2.x sie nicht mehr zeichnet.
+- **PostHog, einmal täglich.** Eine anonyme Zählung aktiver Installationen, gesendet an die EU-Server von PostHog. Sie enthält die App-Version, das Betriebssystem, die Prozessorarchitektur, die Art der Installation, ob die App direkt oder über ihren MCP-Server von einem KI-Agenten genutzt wurde, und ob es die erste Zählung der Woche und des Monats ist. Mehr nicht: keine Installationskennung (jede Zählung erhält eine neue Zufalls-ID), keine gespeicherte IP-Adresse, nichts über deine Aufnahmen. Entferne im Menü des Symbols im Infobereich das Häkchen bei **Anonyme Nutzungszählung senden**, um sie abzuschalten, oder setze `DO_NOT_TRACK=1`.
+- **Dein KI-Anbieter, nur wenn du einen verbindest.** Die Chat-Bearbeitung sendet deine Nachrichten und die Projektdaten, die sie liest, etwa Zeitleiste und Transkript. Die Untertitelübersetzung sendet den Untertiteltext. Beides bleibt aus, bis du einen Anbieter verbindest. Siehe [KI-Bearbeitung](./ai-editing.md).
+
+## Sammelt OpenScreen Analysedaten oder Absturzberichte? {#does-openscreen-collect-analytics-or-crash-reports}
+
+**Eine anonyme tägliche Zählung, sonst nichts.** Die App enthält kein SDK für Analysen oder Absturzberichte, und nichts zeichnet auf, was du in ihr tust.
+
+- Einmal täglich meldet die App, dass eine Installation aktiv war. [Funktioniert OpenScreen offline?](#does-openscreen-work-offline) listet genau auf, was diese Zählung enthält und wie du sie abschaltest.
+- Die Zählung trägt keine Installationskennung: Jede erhält eine neue Zufalls-ID, und nichts anderes darin ist spezifisch für deinen Computer.
+- API-Schlüssel für KI-Anbieter werden verschlüsselt mit Electrons `safeStorage` gespeichert. Ist keine Verschlüsselung verfügbar, wird der Schlüssel nicht gespeichert.
+
+## Ist die Installation von OpenScreen sicher? {#is-openscreen-safe-to-install}
+
+**Der Quellcode ist öffentlich, und die Builds für macOS und den Store sind signiert.** Lade nur über die Links unter [Offizielle Links](#what-are-the-official-openscreen-links) herunter.
+
+- **macOS:** Builds ab 1.9.0 sind mit einer Apple Developer ID signiert und notarisiert.
+- **Windows, Microsoft Store:** Microsoft signiert das Paket, es installiert sich also ohne Warnung.
+- **Windows, `.exe`-Installer:** nicht codesigniert. SmartScreen zeigt „Der Computer wurde durch Windows geschützt“. Wähle **Weitere Informationen** und dann **Trotzdem ausführen**, oder nimm stattdessen die Store-Version.
+
+Unter [Installation](./installation.md) stehen die Schritte für jede Plattform.
+
+## Auf welchen Systemen läuft OpenScreen? {#which-systems-does-openscreen-run-on}
+
+| System | Minimum | Pakete |
+|---|---|---|
+| macOS | 13 Ventura | `.dmg` für Apple Silicon und für Intel |
+| Windows | 10 Version 1903, x64 oder ARM64 | Microsoft Store (x64), `.exe`-Installer (x64 und ARM64) |
+| Linux | x64, PipeWire und xdg-desktop-portal | AppImage, `.deb`, `.rpm`, `.pacman`, Nix-Flake |
+
+- Unter Windows braucht die native Aufnahme Build 19041 (Windows 10 Version 2004). Ältere Builds weichen auf die Browser-Aufnahme aus.
+- Plane 8 GB RAM ein, empfohlen sind 16 GB.
+
+## Gibt es einen ARM64-Build für Windows oder Linux? {#is-there-an-arm64-build-for-windows-or-linux}
+
+**Unter Windows ja. Unter Linux nur über Nix.**
+
+- Windows on ARM bekommt einen eigenen `.exe`-Installer auf der Seite [Releases](https://github.com/getopenscreen/openscreen/releases). Das Microsoft-Store-Paket gibt es nur für x64.
+- Linux-Pakete gibt es nur für x64. Unter ARM64-Linux baut der Nix-Flake OpenScreen aus dem Quellcode für `aarch64-linux`.
+- Macs mit Apple Silicon bekommen eine native `.dmg`.
+
+## Kann ich OpenScreen mit winget, Homebrew oder Flathub installieren? {#can-i-install-openscreen-with-winget-homebrew-or-flathub}
+
+- **winget:** Ja, über die Store-Quelle: `winget install --source msstore OpenScreen`.
+- **Homebrew:** Ja, über den offiziellen Tap: `brew install --cask getopenscreen/openscreen/openscreen`. Jede stabile Version aktualisiert den Cask.
+- **Flathub:** Es gibt keinen Eintrag.
+
+## Ist das das ursprüngliche OpenScreen-Projekt? {#is-this-the-original-openscreen-project}
+
+**Es ist seine Fortführung.**
+
+- Siddharth Vaddem hat OpenScreen entwickelt und das [ursprüngliche Repository](https://github.com/siddharthvaddem/openscreen) nach v1.5.0 archiviert.
+- Die Entwicklung ist mit seiner Zustimmung nach [getopenscreen/openscreen](https://github.com/getopenscreen/openscreen) umgezogen, unter demselben Namen und derselben MIT-Lizenz.
+- Die archivierte README nennt dieses Projekt einen Community-getragenen Ableger, geleitet von einem der Hauptbeitragenden. Das ist Etienne Lescot, der es pflegt. Der Link in der README, github.com/EtienneLescot/openscreen, leitet auf das aktuelle Repository weiter.
+- Das archivierte Repository bekommt keine Updates mehr. [Picking up OpenScreen (auf Englisch)](/blog/2026/06/15/picking-up-openscreen/) erklärt die Übergabe.
+
+## Hat OpenScreen etwas mit openscreen.io oder openscreen.net zu tun? {#is-openscreen-related-to-openscreenio-or-openscreennet}
+
+- **openscreen.io:** Nein. Das ist ein anderes Produkt, Open Screen, das sich auf seiner Website als Bildschirmrekorder für macOS vorstellt. OpenScreen steht in keiner Verbindung dazu.
+- **openscreen.net:** Das ist keine offizielle OpenScreen-Website.
+
+## Was sind die offiziellen OpenScreen-Links? {#what-are-the-official-openscreen-links}
+
+| Was | Link |
+|---|---|
+| Website | [getopenscreen.com](https://getopenscreen.com/) |
+| Quellcode, Releases und Issues | [github.com/getopenscreen/openscreen](https://github.com/getopenscreen/openscreen) |
+| Microsoft Store | [apps.microsoft.com/detail/9MXQ1HQJL5G5](https://apps.microsoft.com/detail/9MXQ1HQJL5G5?cid=website) |
+| Discord | [getopenscreen.com/discord](https://getopenscreen.com/discord/) |
+| Originalprojekt, archiviert und schreibgeschützt | [github.com/siddharthvaddem/openscreen](https://github.com/siddharthvaddem/openscreen) |
+
+## Was passiert, wenn eine Aufnahme abbricht? {#what-happens-if-a-recording-is-interrupted}
+
+Unter Windows und macOS schreiben die nativen Rekorder fragmentiertes MP4 in Fragmenten von je einer Sekunde. Bricht eine Aufnahme ab, lässt sich die Datei bis zum letzten vollständigen Fragment abspielen.
+
+Fehlerberichte und Feature-Wünsche gehören in die [GitHub-Issues](https://github.com/getopenscreen/openscreen/issues).
+
+## Warum beendet sich OpenScreen unter macOS, wenn ich auswähle, was ich aufnehmen will? {#why-does-openscreen-quit-on-macos-when-i-choose-what-to-record}
+
+**Meist fordert eine andere App OpenScreen zum Beenden auf.** Manche Mac-Tools beenden eine App, sobald sie annehmen, dass ihr letztes Fenster geschlossen wurde. Ein Beispiel ist die Option **Quit on close** von [Vorssaint](https://github.com/vorssaint/vorssaint-utils), wenn sie eingeschaltet ist. Sie zählt das HUD, die Aufnahmeleiste von OpenScreen, nicht als Fenster, weil das HUD über den anderen Fenstern schwebt. Deshalb beendet sie OpenScreen ein bis zwei Sekunden nach einem dieser Momente:
+
+- Unter macOS 15.2 und neuer ist das HUD ausgeblendet, solange die Systemauswahl von Apple offen ist.
+- Vor macOS 15.2 schließt sich das Quellenfenster von OpenScreen, sobald du gewählt hast, sodass die App während des Countdowns verschwinden kann.
+
+OpenScreen beendet sich wie mit ⌘Q: ohne Fehlermeldung und ohne Absturzbericht.
+
+- **Abhilfe:** Füge OpenScreen zu den Ausnahmen des Tools hinzu oder schalte die Option aus. In Vorssaint: **Quit on close**, **Exceptions**, **Add app…**.
+- **Um zu sehen, welche App das verlangt hat**, führe direkt nach dem Beenden von OpenScreen diesen Befehl im Terminal aus. In jeder Zeile ist der Name nach der Uhrzeit eine App, die eine Beenden-Anfrage gesendet hat:
+
+```sh
+/usr/bin/log show --last 5m --info --style compact --predicate 'eventMessage CONTAINS "AESendMessage(aevt,quit"'
+```
+
+## Warum kann ich die Aufnahmeleiste unter Windows 10 nicht anklicken? {#why-cant-i-click-the-recording-bar-on-windows-10}
+
+**Aktualisiere auf OpenScreen 2.1.0: Es behebt das.** In 2.0.0 hat unter Windows 10 und unter Windows 11 vor Version 22H2 der Schutz, der die Aufnahmeleiste aus deinen Videos heraushält, auch ihre Klicks blockiert ([Issue #1105](https://github.com/getopenscreen/openscreen/issues/1105)). Seit 2.1.0 lässt OpenScreen diesen Schutz auf diesen Versionen aus, sodass die Leiste Klicks annimmt. Sie kann dann in deinen Aufnahmen erscheinen.
+
+Wenn du `OPENSCREEN_DISABLE_CONTENT_PROTECTION` gesetzt hast, um das Problem in 2.0.0 zu umgehen, entferne die Variable und melde dich dann von Windows ab und wieder an:
+
+```powershell
+reg delete HKCU\Environment /v OPENSCREEN_DISABLE_CONTENT_PROTECTION /f
+```
+
+## Was kann OpenScreen nicht? {#what-doesnt-openscreen-do}
+
+Wenn du eines davon brauchst, ist OpenScreen nicht das richtige Werkzeug:
+
+- **Gehostetes Teilen.** Keine Freigabelinks, kein Cloudspeicher, keine Team-Arbeitsbereiche, keine Kommentare. Deine Dateien bleiben auf deiner Festplatte. Siehe [OpenScreen als Loom-Alternative](/alternatives/loom/).
+- **Livestreaming.** Siehe [OpenScreen vs OBS Studio](/compare/openscreen-vs-obs/).
+- **Untertiteldateien.** Untertitel werden ins Video eingebrannt. Es gibt keinen Export als SRT oder VTT. Siehe [Untertitel](./captions.md).
+- **Mobilgeräte.** Keine Mobil-App und keine Aufnahme unter iOS oder Android.
+
+## Wie fange ich an? {#how-do-i-get-started}
+
+1. Hol dir den Installer für dein System von der [Download-Seite](/download/).
+2. Folge der [Installation](./installation.md) für deine Plattform.
+3. Nimm mit dem [Schnellstart](./quick-start.md) ein erstes Video auf, kürze und exportiere es.
+
+## Quellen {#sources}
+
+Geprüft im September 2026:
+
+- Ursprüngliches Repository und sein Archivhinweis: [github.com/siddharthvaddem/openscreen](https://github.com/siddharthvaddem/openscreen)
+- Offizieller Homebrew-Tap: [github.com/getopenscreen/homebrew-openscreen](https://github.com/getopenscreen/homebrew-openscreen)
+- Open Screen: [openscreen.io](https://openscreen.io/)
+- Option *Quit on close* von Vorssaint, geprüft im Oktober 2026: [github.com/vorssaint/vorssaint-utils](https://github.com/vorssaint/vorssaint-utils)
+
+Open Screen, Loom, OBS Studio und die anderen Produktnamen auf dieser Seite sind Marken ihrer jeweiligen Inhaber. OpenScreen steht in keiner Verbindung zu Open Screen (openscreen.io), Loom oder OBS Studio.

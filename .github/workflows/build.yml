@@ -1,0 +1,88 @@
+# Builds the ClipForge Windows installer.
+#
+# The native Windows pieces (the WGC capture helper and the Rust D3D11
+# compositor addon) need MSVC + Windows SDK + CMake/Ninja + Rust + LLVM, which
+# a local machine may not have. `windows-latest` ships MSVC, the SDK, CMake,
+# Ninja and LLVM; Rust is added below. See docs/ENGINEERING_AUDIT.md (blockers
+# B1-B4) for why this builds in CI rather than on the developer machine.
+#
+# Nothing is published: the installer is uploaded as a workflow artifact only.
+name: Build Windows installer
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths-ignore:
+      - "docs/**"
+      - "**.md"
+      - ".gitignore"
+
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  windows-x64:
+    name: Windows x64 (native + NSIS)
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache cargo registry and target
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            crates/target
+          key: cargo-win-x64-${{ hashFiles('crates/Cargo.lock') }}
+          restore-keys: cargo-win-x64-
+
+      - name: Install dependencies
+        run: npm ci
+
+      # Vendors the pinned LGPL FFmpeg (shared libs + build-time SDK) and
+      # refuses any non-LGPL build. Also required by the compositor addon.
+      - name: Fetch pinned LGPL FFmpeg
+        run: npm run fetch:ffmpeg
+
+      - name: Fetch ONNX Runtime
+        run: npm run fetch:onnxruntime
+
+      - name: Build native capture helper (Windows Graphics Capture)
+        run: npm run build:native:win
+
+      - name: Stage MSVC OpenMP runtime
+        run: npm run stage:vcomp
+
+      - name: Build native D3D11 compositor addon
+        run: npm run build:native:compositor
+
+      - name: Type-check and build renderer
+        run: npx tsc && npx vite build
+
+      - name: Generate third-party licence texts (SBOM)
+        run: npm run licenses:generate
+
+      - name: Package NSIS installer
+        run: npx electron-builder --win --config.npmRebuild=false --publish never
+
+      - name: Upload installer artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: clipforge-windows-x64
+          path: |
+            release/**/*.exe
+            release/**/*.blockmap
+            release/**/latest.yml
+            build-licenses/THIRD-PARTY-LICENSES.txt
+          if-no-files-found: error
