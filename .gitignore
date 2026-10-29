@@ -151,16 +151,13 @@ tmp_handoff.md
 /audit/
 
 # Local media: recordings, screenshots, extracted frames and export output.
-# Never commit personal or user footage.
-recordings/
-screenshots/
-media/
-exports/
-*.mp4
-*.mov
-*.mkv
-*.webm
-*.wav
+# Root-scoped directories only. Deliberately NO blanket `*.mp4`/`*.wav`/…
+# patterns: upstream commits real assets (public/sounds/*.wav,
+# tests/fixtures/*.webm, website/static/**/*.mp4) that those would silently
+# drop, and a bare `media/` would ignore the `electron/media/` source dir.
+/recordings/
+/screenshots/
+/exports/
 
 # Credentials and signing material — placeholders only in .env.example.
 *.pem
