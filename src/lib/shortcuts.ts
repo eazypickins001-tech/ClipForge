@@ -114,10 +114,11 @@ export const DEFAULT_SHORTCUTS: ShortcutsConfig = {
 	addZoom: { key: "z" },
 	addTrim: { key: "t" },
 	addSpeed: { key: "s" },
-	// Blade. Cuts the selected clip, or the clip under the playhead, at the playhead.
-	// NOT `b`: shortcuts.test.ts reserves plain B so a new action cannot re-create the
-	// "Already used by Add Blur" ghost that a removed action used to squat on it.
-	splitClip: { key: "k" },
+	// Blade / Split. Cuts the selected clip, or the clip under the playhead, at the playhead.
+	// Ctrl+B because that is CapCut's documented desktop shortcut, and matching it is worth
+	// more than any preference of ours: plain B stays free (shortcuts.test.ts reserves it so a
+	// new action cannot re-create the "Already used by Add Blur" ghost a removed action left).
+	splitClip: { key: "b", ctrl: true },
 	addCameraFullscreen: { key: "c" },
 	addAnnotation: { key: "a" },
 	addAudio: { key: "m" },

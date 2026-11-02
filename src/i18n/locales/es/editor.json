@@ -230,7 +230,7 @@
 		"collapseInspector": "Contraer inspector",
 		"editClipTip": "Editar clip: recorte, inicio y final",
 		"splitClipHint": "Put the playhead inside a clip to split it.",
-		"splitClip": "Split at playhead",
+		"splitClip": "Split",
 		"captionsDescription": "Genera subtítulos sincronizados con las palabras a partir de la transcripción y colócalos en la línea de tiempo.",
 		"generateCaptions": "Generar subtítulos",
 		"cropDescription": "Reencuadra la grabación: elige una relación de aspecto y haz zoom en la región que deseas conservar.",

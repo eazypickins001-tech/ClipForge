@@ -230,7 +230,7 @@
 		"collapseInspector": "Réduire l'inspecteur",
 		"editClipTip": "Modifier le clip : recadrage, début et fin",
 		"splitClipHint": "Put the playhead inside a clip to split it.",
-		"splitClip": "Split at playhead",
+		"splitClip": "Split",
 		"captionsDescription": "Générer des sous-titres synchronisés aux mots à partir de la transcription et les déposer sur la timeline.",
 		"generateCaptions": "Générer les sous-titres",
 		"cropDescription": "Recadrer l'enregistrement — choisissez un format et zoomez sur la région à conserver.",

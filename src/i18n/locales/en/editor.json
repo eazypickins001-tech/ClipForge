@@ -230,7 +230,7 @@
 		"collapseInspector": "Collapse inspector",
 		"editClipTip": "Edit clip: crop, start and end",
 		"splitClipHint": "Put the playhead inside a clip to split it.",
-		"splitClip": "Split at playhead",
+		"splitClip": "Split",
 		"captionsDescription": "Generate word-timed captions from the transcript and drop them onto the timeline.",
 		"generateCaptions": "Generate captions",
 		"cropDescription": "Reframe the recording — pick an aspect ratio and zoom into the region you want to keep.",
