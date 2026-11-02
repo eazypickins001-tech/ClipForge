@@ -14,7 +14,8 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.join(__dirname, "../..");
 const MAIN_JS = path.join(ROOT, "dist-electron/main.js");
 
-export const TEST_VIDEO = path.join(__dirname, "../fixtures/sample.webm");
+export const FIXTURES_DIR = path.join(__dirname, "../fixtures");
+export const TEST_VIDEO = path.join(FIXTURES_DIR, "sample.webm");
 export const PACKAGED_APP = process.env["CLIPFORGE_APP_EXE"];
 
 export type ElectronApplication = Awaited<ReturnType<typeof electron.launch>>;

@@ -27,9 +27,9 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { expect, test } from "@playwright/test";
-import { closeApp, launchApp, openEditorWithRecording } from "./harness";
+import { closeApp, FIXTURES_DIR, launchApp, openEditorWithRecording } from "./harness";
 
-const FIXTURE = path.join(__dirname, "../fixtures/speech-sample.mp4");
+const FIXTURE = path.join(FIXTURES_DIR, "speech-sample.mp4");
 
 interface Segment {
 	kind?: string;
