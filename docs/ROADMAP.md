@@ -41,10 +41,10 @@ presence of code — that distinction is the point of the honesty gate.
 | Export a playable MP4 | **Verified** on a GPU machine *and* on a GPU-less CI runner | `tests/e2e/gif-export.spec.ts` against the packaged build; the written file is decoded end to end by FFmpeg with `-map 0:v:0`, so a header-only file cannot pass. On `windows-latest` it takes the software path (`h264_mf`, 22.1 s) |
 | Export a GIF | **Verified** on a GPU-less CI runner and on a desktop | same suite; 12.7 s on `windows-latest` |
 | Trim → save → close → reopen | **Verified** on a GPU-less CI runner and on a desktop | `tests/e2e/phase1-acceptance.spec.ts`; restarts the app and reads the trim back through the UI. 26.4 s on `windows-latest` |
-| E2E running in CI | **Green — `3 passed (36.2s)`** | `.github/workflows/build.yml`, after packaging. Run 1 exposed two real problems (GPU-less Windows could not export at all, and a drag that relied on desktop window size); both are fixed |
+| E2E running in CI | **Green — `4 passed (1.0m)`** | `.github/workflows/build.yml`, after packaging: MP4 export, GIF export, trim/save/reopen, transcription. Run 1 exposed two real problems (GPU-less Windows could not export at all, and a drag that relied on desktop window size); both are fixed |
 | Clip split | **Not implemented** | the timeline's tools are `cut / comment / speed` (`V4Timeline.tsx:1656`); zero `split` strings in the English locale |
 | Missing-media handling | **Not verified** | no test, no observation |
-| Whisper STT helper on Windows | **Shipped and running; captions NOT yet verified** | Built in the Windows job (CPU-only) and asserted present in the packaged tree; it boots and loads `ggml-small-q8_0` (263.87 MB) on `windows-latest`. Caption *output* is unverified — `tests/fixtures/sample.webm` has no audio track, so transcription correctly answers `NoAudioTrackError` |
+| Whisper transcription on Windows | **Verified end to end** | `tests/e2e/transcription.spec.ts` on `windows-latest` (35.6 s): VAD finds the fixture's 2 speech segments (0.10–2.88, 3.78–7.49), the language auto-detects as `en` (p = 0.9996), and the saved project document carries speech segments whose text matches "quick brown fox" with in-range timings |
 | GIF export cancel | **Unreliable** | two symptoms while the CPU-bound encode runs: the Cancel click can exhaust its 30s actionability window; the dialog did not return to an exportable state within 15s when a click did land |
 
 ## Core hardening (before new features)
@@ -61,14 +61,20 @@ Linux-side). It now probes the pool and falls back to the existing system-memory
 **Closed — Whisper was not shipped on Windows.** The fork deleted the workflow that built
 `whisper-stt-server` and nothing replaced it, so every Windows install logged
 `whisper-stt-server binary not found`. The Windows job now builds it, refuses to continue if it
-is absent, and asserts it inside the packaged tree; on `windows-latest` the helper boots and loads
-its model (commit `e955996`). What is still open is the *caption* assertion — F1 step 5.
+is absent, asserts it inside the packaged tree, and a spec transcribes real speech through it into
+the saved project (commits `e955996`, `1955f1c`, `91e19af`).
+
+**Open, same family as the export bug — the preview readback.** The smoke-test log still carries
+`compositor.readFrame failed: Error: hwdevice_ctx_init: -1313558101` on the GPU-less runner. That is
+the export failure's twin, one layer over: `make_enc_frames` got a probe-and-fall-back, the
+frame-readback path did not, so preview has no frame on such a machine. Non-fatal for the current
+specs, which is exactly why it is written down instead of quietly ignored.
 
 | # | Item | Why it comes first |
 |---|---|---|
 | H1 | Make GIF export cancel dependable, or report honestly that it is not | Master Prompt §8.4 requires a working cancel; today it is the one flaky spec |
 | H2 | Implement clip split | It is a Phase 1 acceptance criterion and an §8.2 minimum operation, and it has no control at all |
-| H3 | Verify missing-media handling and preview | Phase 1 criteria currently unobserved |
+| H3 | Verify missing-media handling and preview | Phase 1 criteria currently unobserved — and preview is also broken on GPU-less machines (see above), so this is a fix, not just a test |
 | H4 | Document the compositor-addon constraint where developers will hit it | Export has **no JS fallback**: a dev checkout cannot export at all, and the failure reads as a product bug |
 
 ## Feature backlog
@@ -76,18 +82,18 @@ its model (commit `e955996`). What is still open is the *caption* assertion — 
 Ordered by value ÷ cost. Each is a slice that can be finished and verified on its own — no item
 depends on a later one, except where stated.
 
-### F1 — Auto-captions on Windows (local Whisper) · steps 1–4 done, step 5 open
+### F1 — Auto-captions on Windows (local Whisper) · done
 
 The helper is written end to end (`electron/stt/*` — `whisperServer`, `extractAudio`,
 `modelManager`, `chunking`, `ctcAlign`; native `electron/native/whisper-stt/`); the binary was the
-missing piece, and it now ships — see Core hardening.
+missing piece, and it now ships and transcribes — see Core hardening.
 
 1. ~~Add a whisper build step to the Windows job, before packaging.~~ Done.
 2. ~~Make the build **fail** if `whisper-stt-server` is absent from `electron/native/bin/win32-*`.~~ Done — this guard is what stops it rotting a second time.
 3. ~~Extend the `win.extraResources` filter if the binary lands outside `win32-*`.~~ Not needed: `win32-*/*` already covers the staged path, and the packaged tree is asserted separately.
-4. ~~Ship the ggml model on first use via `modelManager`, not inside the installer.~~ Confirmed working — the helper fetched and loaded `ggml-small-q8_0` (263.87 MB) on the runner.
-5. **Open — assert captions, not just the helper.** `tests/fixtures/sample.webm` carries no audio, so transcription correctly returns `NoAudioTrackError`. A fixture with synthetic speech (plus a tiny model, to keep CI cheap) is what would make caption *output* verified. Worth noting too: the model is fetched per fresh userData, so three specs download ~264 MB each.
-6. Follow-up, not a blocker: rebuild the Windows helper with the Vulkan backend once the SDK is a declared prerequisite and the `vulkan-1.dll` runtime dependency has been measured.
+4. ~~Ship the ggml model on first use via `modelManager`, not inside the installer.~~ Confirmed working — the helper fetches and loads `ggml-small-q8_0` (263.87 MB) on the runner.
+5. ~~Assert caption output, not just the helper.~~ Done — `tests/e2e/transcription.spec.ts` transcribes the synthetic-speech fixture and checks the words and the timings in the saved project.
+6. Follow-up, not a blocker: rebuild the Windows helper with the Vulkan backend once the SDK is a declared prerequisite and the `vulkan-1.dll` runtime dependency has been measured. Also worth knowing: the model is fetched per fresh userData, so each spec that imports media downloads ~264 MB.
 
 ### F2 — Detach a clip's audio into an editable track
 
