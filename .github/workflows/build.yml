@@ -67,6 +67,31 @@ jobs:
       - name: Build native D3D11 compositor addon
         run: npm run build:native:compositor
 
+      # OpenScreen's build-whisper-stt.yml did not survive the fork, so nothing has produced
+      # this helper since — which is why every Windows install logs "whisper-stt-server
+      # binary not found" and transcription is dead there. CPU-only on purpose; the reasons
+      # (no glslc on the hosted images, and no hard vulkan-1.dll dependency) are written out
+      # beside the WHISPER_STT_BACKEND override in scripts/build-whisper-stt.sh.
+      - name: Build Whisper STT helper
+        shell: bash
+        env:
+          WHISPER_STT_BACKEND: cpu
+        run: bash scripts/build-whisper-stt.sh
+
+      # A silent absence is exactly how this rotted: the helper is worthless unless it lands
+      # where electron-builder's `win32-*/*` extraResources filter will pick it up.
+      - name: Verify the Whisper STT helper was staged
+        shell: bash
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          staged=(electron/native/bin/win32-x64/whisper-stt-server*)
+          if [ ${#staged[@]} -eq 0 ]; then
+            echo "::error::whisper-stt-server was not staged under electron/native/bin/win32-x64/"
+            exit 1
+          fi
+          ls -lh "${staged[@]}"
+
       - name: Type-check and build renderer
         run: npx tsc && npx vite build
 
@@ -122,6 +147,11 @@ jobs:
           $ffmpeg = (Get-ChildItem -Path release -Recurse -Filter ffmpeg-shared.exe | Select-Object -First 1).FullName
           $env:CLIPFORGE_APP_EXE = $exe
           $env:OPENSCREEN_TEST_FFMPEG = $ffmpeg
+          # Transcription is only actually "shipped" if the helper is in the installer tree,
+          # not merely staged in the repo before packaging.
+          $whisper = Join-Path (Split-Path $exe) "resources\electron\native\bin\win32-x64\whisper-stt-server.exe"
+          if (-not (Test-Path $whisper)) { throw "whisper-stt-server.exe is missing from the packaged app" }
+          Write-Host "Whisper helper packaged: $whisper"
           Write-Host "Testing $exe"
           npx playwright test tests/e2e/gif-export.spec.ts tests/e2e/phase1-acceptance.spec.ts --grep-invert "cancels a running native GIF" --timeout 600000 --reporter list
 

@@ -85,7 +85,29 @@ readonly OUT_DIR="${OUT_ROOT}/${OS_ARCH}"
 readonly MACOS_DEPLOYMENT_TARGET="13.0"
 
 # Determine the default backend flag for this host.
+#
+# WHISPER_STT_BACKEND overrides the per-host default. CI builds Windows x64 CPU-only for
+# two reasons, and neither is a preference:
+#   - ggml's Vulkan backend compiles its shaders with `glslc` from the Vulkan SDK, and the
+#     hosted Windows images do not carry it. CPU-only also skips `vulkan-shaders-gen`, the
+#     sub-project this file's BUILD_ROOT workaround exists for.
+#   - A Vulkan-linked helper imports `vulkan-1.dll` at load time. That is the same
+#     hard-dependency shape as the 0xC0000135 OpenSSL incident documented in the
+#     CMakeLists — a Windows machine with no GPU would fail to *start* the helper, not
+#     merely run it slowly.
+# CPU inference is slower everywhere and works everywhere; adding Vulkan back is a
+# follow-up that needs the SDK declared as a build prerequisite and the runtime dependency
+# measured, not assumed.
 backend_flag_for_host() {
+  if [[ -n "${WHISPER_STT_BACKEND:-}" ]]; then
+    case "${WHISPER_STT_BACKEND}" in
+      cpu)    echo "" ;;
+      vulkan) echo "-DOSC_ENABLE_VULKAN=ON" ;;
+      metal)  echo "-DOSC_ENABLE_METAL=ON" ;;
+      *) echo "WHISPER_STT_BACKEND must be cpu|vulkan|metal, got: ${WHISPER_STT_BACKEND}" >&2; exit 1 ;;
+    esac
+    return 0
+  fi
   case "${OS_ARCH}" in
     darwin-arm64) echo "-DOSC_ENABLE_METAL=ON" ;;
     darwin-x64)   echo "" ;;
