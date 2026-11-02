@@ -36,18 +36,6 @@ async function exportFromLoadedVideo(
 	const app = await launchApp(userDataDir, appTmpDir);
 
 	try {
-		// The native save dialog can't be driven from Playwright, so the handler is
-		// stubbed to return a temp path. Everything downstream of it is the real
-		// pipeline.
-		await app.evaluate(({ ipcMain }, targetPath: string) => {
-			ipcMain.removeHandler("pick-export-save-path");
-			ipcMain.handle("pick-export-save-path", () => ({
-				success: true,
-				path: targetPath,
-				canceled: false,
-			}));
-		}, outputPath);
-
 		const recordingsDir = path.join(
 			await app.evaluate(({ app: electronApp }) => electronApp.getPath("userData")),
 			"recordings",
@@ -84,6 +72,21 @@ async function exportFromLoadedVideo(
 		}
 
 		const editorWindow = await openEditorWithRecording(app, testVideoInRecordings);
+
+		// Stub the native save dialog AFTER the editor is up, not before: the app registers
+		// `pick-export-save-path` itself while starting, so replacing it earlier races that
+		// registration and Electron answers "Attempted to register a second handler for
+		// 'pick-export-save-path'" whenever our stub lands first. Observed on CI as a flip
+		// between runs, on a test that had nothing to do with what changed. Everything
+		// downstream of the stub is still the real pipeline.
+		await app.evaluate(({ ipcMain }, targetPath: string) => {
+			ipcMain.removeHandler("pick-export-save-path");
+			ipcMain.handle("pick-export-save-path", () => ({
+				success: true,
+				path: targetPath,
+				canceled: false,
+			}));
+		}, outputPath);
 
 		// Top bar: the Export control is disabled until the seeded recording has been
 		// imported into the project, so waiting for it to be enabled doubles as the
