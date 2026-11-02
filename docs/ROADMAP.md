@@ -43,7 +43,7 @@ presence of code — that distinction is the point of the honesty gate.
 | Trim → save → close → reopen | **Verified** on a GPU-less CI runner and on a desktop | `tests/e2e/phase1-acceptance.spec.ts`; restarts the app and reads the trim back through the UI. 26.4 s on `windows-latest` |
 | E2E running in CI | **Green — `4 passed (1.3m)`** | `.github/workflows/build.yml`, after packaging: MP4 export, GIF export, trim/save/reopen, transcription. Run 1 exposed two real problems (GPU-less Windows could not export at all, and a drag that relied on desktop window size); both are fixed |
 | Preview on a GPU-less machine | **Fixed** | `Decoder::open` no longer fails the decode when the D3D11VA device cannot be created; it falls back to system frames. `readFrame failed` has left the CI log |
-| Clip split | **Not implemented** | the timeline's tools are `cut / comment / speed` (`V4Timeline.tsx:1656`); zero `split` strings in the English locale |
+| Clip split | **Implemented (K), unit-tested; no e2e or toolbar button** | `splitClip` in `document/timeline.ts`, 12 tests, `splitClipAt` store action declared in the write audit, dispatched on K. The halves carry `detached` so `joinContiguous` cannot fold them back. Known limits: `wordRefs` stay with the left half, and a modifier spanning the cut stays anchored to it |
 | Missing-media handling | **Not verified** | no test, no observation |
 | Whisper transcription on Windows | **Verified end to end** | `tests/e2e/transcription.spec.ts` on `windows-latest` (35.6 s): VAD finds the fixture's 2 speech segments (0.10–2.88, 3.78–7.49), the language auto-detects as `en` (p = 0.9996), and the saved project document carries speech segments whose text matches "quick brown fox" with in-range timings |
 | GIF export cancel | **Unreliable** | two symptoms while the CPU-bound encode runs: the Cancel click can exhaust its 30s actionability window; the dialog did not return to an exportable state within 15s when a click did land |
@@ -77,9 +77,9 @@ benches that are deliberately D3D11VA-only and keep their hard failure.
 | # | Item | Why it comes first |
 |---|---|---|
 | H1 | Make GIF export cancel dependable, or report honestly that it is not | Master Prompt §8.4 requires a working cancel; today it is the one flaky spec |
-| H2 | Implement clip split | It is a Phase 1 acceptance criterion and an §8.2 minimum operation, and it has no control at all |
-| H3 | Verify missing-media handling | The last unobserved Phase 1 criterion |
-| H4 | Document the compositor-addon constraint where developers will hit it | Export has **no JS fallback**: a dev checkout cannot export at all, and the failure reads as a product bug |
+| H2 | Verify missing-media handling | The last unobserved Phase 1 criterion |
+| H3 | Document the compositor-addon constraint where developers will hit it | Export has **no JS fallback**: a dev checkout cannot export at all, and the failure reads as a product bug |
+| H4 | Split: give it a discoverable control and an e2e | It works on K, but nothing on screen says so, and nothing asserts the keypress end to end |
 
 ## Feature backlog
 
