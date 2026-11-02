@@ -102,14 +102,13 @@ jobs:
       #
       #  - GIF export, and import → trim → save → reopen. Both pass on a GPU-less runner.
       #
-      #  - MP4 export used to be excluded from this step. The first run failed at
-      #    "enc hwdevice init: -1313558101 (Unknown error occurred)" because
-      #    crates/compositor/src/pipeline_windows.rs:1736 tried to build a D3D11VA pool on a
-      #    runner that has no video device. The pipeline ALREADY has a software path
-      #    (`software_frames` → `send_composited` → a system-memory encoder); it was only
-      #    gated on `gpu.backend == Backend::Cpu`. Forcing that backend below is how this
-      #    job reaches the encoder without a GPU. Making the same fallback automatic for
-      #    real users is H1 in docs/ROADMAP.md.
+      #  - MP4 export used to be excluded from this step. It failed at
+      #    "enc hwdevice init: -1313558101 (Unknown error occurred)" because run_multi_inner
+      #    tried to build a D3D11VA pool on a runner that has no video device, and only
+      #    skipped that when the backend was already classified Cpu. Forcing the backend
+      #    with OPENSCREEN_COMPOSITOR_BACKEND=cpu did NOT help — that switch is Linux-side.
+      #    run_multi_inner now probes the pool and falls back to the system-memory path, so
+      #    this step exercises the REAL user path: nothing below pins the backend or encoder.
       #
       #  - The GIF cancel/retry case is flaky while the CPU-bound encode starves the
       #    renderer, so it is excluded here too and stays runnable by hand.
@@ -123,9 +122,6 @@ jobs:
           $ffmpeg = (Get-ChildItem -Path release -Recurse -Filter ffmpeg-shared.exe | Select-Object -First 1).FullName
           $env:CLIPFORGE_APP_EXE = $exe
           $env:OPENSCREEN_TEST_FFMPEG = $ffmpeg
-          # A hosted runner has no GPU, so take the compositor's software backend: the
-          # encoder then runs from system memory instead of demanding a D3D11VA device.
-          $env:OPENSCREEN_COMPOSITOR_BACKEND = "cpu"
           Write-Host "Testing $exe"
           npx playwright test tests/e2e/gif-export.spec.ts tests/e2e/phase1-acceptance.spec.ts --grep-invert "cancels a running native GIF" --timeout 600000 --reporter list
 

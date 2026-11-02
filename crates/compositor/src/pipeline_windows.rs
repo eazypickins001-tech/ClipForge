@@ -1729,11 +1729,28 @@ unsafe fn run_multi_inner(
     // WARP (pas d'`ID3D11VideoDevice`), donc on n'essaie même pas — `VideoEncoder::open`
     // écarte alors les candidats zéro-copie et le compositeur alimente l'encodeur en
     // mémoire système via `send_composited`.
-    let software_frames = gpu.backend == Backend::Cpu;
+    //
+    // La classe du backend ne suffit pourtant PAS à en décider : une machine peut se classer
+    // matérielle — device D3D11 adossé à WARP, machine virtuelle, runner hébergé — et échouer
+    // quand même à créer le device D3D11VA, qui exige un `ID3D11VideoDevice`. Mesuré sur un
+    // runner GitHub : `enc hwdevice init: -1313558101`, export MP4 impossible. On sonde donc
+    // le pool au lieu de croire l'étiquette, et on retombe sur le MÊME chemin mémoire système
+    // au lieu de faire échouer l'export. Le build vendorisé embarque de quoi l'encoder :
+    // `--enable-libopenh264`, `--disable-libx264`/`--disable-libx265`.
+    let mut software_frames = gpu.backend == Backend::Cpu;
     let (enc_hwdev, enc_frames) = if software_frames {
         (ptr::null_mut(), ptr::null_mut())
     } else {
-        make_enc_frames(gpu, out_w as i32, out_h as i32)?
+        match make_enc_frames(gpu, out_w as i32, out_h as i32) {
+            Ok(pool) => pool,
+            Err(error) => {
+                eprintln!(
+                    "[pipeline] pool D3D11 indisponible ({error}) ; encodeur alimenté en mémoire système"
+                );
+                software_frames = true;
+                (ptr::null_mut(), ptr::null_mut())
+            }
+        }
     };
     // Libérés en fin de portée sur toutes les sorties : une annulation qui les laisserait fuir
     // coûterait 32 surfaces NV12 à chaque fois. `enc` garde sa propre référence sur le pool.
