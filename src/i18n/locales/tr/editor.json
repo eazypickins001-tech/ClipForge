@@ -229,6 +229,8 @@
 		"restoreDeleteTrim": "Geri yükle (kırpmayı sil)",
 		"collapseInspector": "Denetleyiciyi daralt",
 		"editClipTip": "Klibi düzenle: kırpma, başlangıç ve bitiş",
+		"splitClipHint": "Put the playhead inside a clip to split it.",
+		"splitClip": "Split at playhead",
 		"captionsDescription": "Transkriptten kelime zamanlamalı altyazılar oluşturun ve zaman çizelgesine bırakın.",
 		"generateCaptions": "Altyazı oluştur",
 		"cropDescription": "Kaydı yeniden çerçeveleyin — bir en boy oranı seçin ve saklamak istediğiniz bölgeye yakınlaşın.",

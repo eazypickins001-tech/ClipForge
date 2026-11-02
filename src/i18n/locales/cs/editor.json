@@ -229,6 +229,8 @@
 		"restoreDeleteTrim": "Obnovit (smazat oříznutí)",
 		"collapseInspector": "Sbalit inspektor",
 		"editClipTip": "Upravit klip: oříznutí, začátek a konec",
+		"splitClipHint": "Put the playhead inside a clip to split it.",
+		"splitClip": "Split at playhead",
 		"captionsDescription": "Generujte titulky synchronizované se slovy z přepisu a přetáhněte je na časovou osu.",
 		"generateCaptions": "Generovat titulky",
 		"cropDescription": "Přeformátujte nahrávku: vyberte poměr stran a přibližte oblast, kterou chcete zachovat.",

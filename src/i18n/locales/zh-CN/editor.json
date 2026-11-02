@@ -229,6 +229,8 @@
 		"restoreDeleteTrim": "恢复这段内容",
 		"collapseInspector": "折叠检查器",
 		"editClipTip": "编辑片段：裁剪画面，调整起止时间",
+		"splitClipHint": "Put the playhead inside a clip to split it.",
+		"splitClip": "Split at playhead",
 		"captionsDescription": "根据转录文本生成按字词计时的字幕，并将其放置到时间轴上。",
 		"generateCaptions": "生成字幕",
 		"cropDescription": "重新构图录制内容 — 选择宽高比并缩放到要保留的区域。",

@@ -19,6 +19,7 @@ import {
 	MousePointer2,
 	Pencil,
 	Scissors,
+	Slice,
 	SlidersHorizontal,
 	Sparkles,
 	Trash2,
@@ -210,6 +211,33 @@ export function FloatingInspector({
 						</button>
 					</Tooltip>
 				))}
+				{/* Split lives beside Edit clip rather than in the timeline's tool strip: those tools
+				    are drag-to-place MODES, and splitting is an instant action on whatever sits
+				    under the playhead. Enabled whenever a clip exists, and the miss is reported on
+				    click — subscribing this pane to the playhead to disable it live would re-render
+				    the whole inspector every frame during playback, which the shell goes out of its
+				    way to avoid. */}
+				<Tooltip content={te("inspector.splitClip")} {...RAIL_TOOLTIP}>
+					<button
+						type="button"
+						aria-label={te("inspector.splitClip")}
+						disabled={clips.length === 0}
+						onClick={() => {
+							if (selection) tl.clearSelection();
+							const playhead = useProjectStore.getState().currentTimeSec;
+							const target = clips.find(
+								(clip) => playhead > clip.timelineStartSec && playhead < clip.timelineEndSec,
+							);
+							if (!target) {
+								toast.info(te("inspector.splitClipHint"));
+								return;
+							}
+							void tl.splitClipAt(target.id, playhead);
+						}}
+					>
+						<Slice size={17} />
+					</button>
+				</Tooltip>
 				{/* A portal, like the timeline's menus: drawn inside the stage, the list was clipped by
 				    the stage's edge, and the rows past it sat under the timeline, out of reach. */}
 				<Popover open={clipPickerOpen && clips.length > 1} onOpenChange={setClipPickerOpen}>

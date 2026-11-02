@@ -229,6 +229,8 @@
 		"restoreDeleteTrim": "復元(トリムを削除)",
 		"collapseInspector": "インスペクターを折りたたむ",
 		"editClipTip": "クリップを編集：切り抜き、開始位置、終了位置",
+		"splitClipHint": "Put the playhead inside a clip to split it.",
+		"splitClip": "Split at playhead",
 		"captionsDescription": "文字起こしから単語ごとにタイミングを合わせたキャプションを生成し、タイムラインに配置します。",
 		"generateCaptions": "キャプションを生成",
 		"cropDescription": "録画をリフレーム — アスペクト比を選び、保持したい範囲にズームします。",
