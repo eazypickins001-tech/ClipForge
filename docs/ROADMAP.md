@@ -41,7 +41,8 @@ presence of code — that distinction is the point of the honesty gate.
 | Export a playable MP4 | **Verified** on a GPU machine *and* on a GPU-less CI runner | `tests/e2e/gif-export.spec.ts` against the packaged build; the written file is decoded end to end by FFmpeg with `-map 0:v:0`, so a header-only file cannot pass. On `windows-latest` it takes the software path (`h264_mf`, 22.1 s) |
 | Export a GIF | **Verified** on a GPU-less CI runner and on a desktop | same suite; 12.7 s on `windows-latest` |
 | Trim → save → close → reopen | **Verified** on a GPU-less CI runner and on a desktop | `tests/e2e/phase1-acceptance.spec.ts`; restarts the app and reads the trim back through the UI. 26.4 s on `windows-latest` |
-| E2E running in CI | **Green — `4 passed (1.0m)`** | `.github/workflows/build.yml`, after packaging: MP4 export, GIF export, trim/save/reopen, transcription. Run 1 exposed two real problems (GPU-less Windows could not export at all, and a drag that relied on desktop window size); both are fixed |
+| E2E running in CI | **Green — `4 passed (1.3m)`** | `.github/workflows/build.yml`, after packaging: MP4 export, GIF export, trim/save/reopen, transcription. Run 1 exposed two real problems (GPU-less Windows could not export at all, and a drag that relied on desktop window size); both are fixed |
+| Preview on a GPU-less machine | **Fixed** | `Decoder::open` no longer fails the decode when the D3D11VA device cannot be created; it falls back to system frames. `readFrame failed` has left the CI log |
 | Clip split | **Not implemented** | the timeline's tools are `cut / comment / speed` (`V4Timeline.tsx:1656`); zero `split` strings in the English locale |
 | Missing-media handling | **Not verified** | no test, no observation |
 | Whisper transcription on Windows | **Verified end to end** | `tests/e2e/transcription.spec.ts` on `windows-latest` (35.6 s): VAD finds the fixture's 2 speech segments (0.10–2.88, 3.78–7.49), the language auto-detects as `en` (p = 0.9996), and the saved project document carries speech segments whose text matches "quick brown fox" with in-range timings |
@@ -64,17 +65,20 @@ Linux-side). It now probes the pool and falls back to the existing system-memory
 is absent, asserts it inside the packaged tree, and a spec transcribes real speech through it into
 the saved project (commits `e955996`, `1955f1c`, `91e19af`).
 
-**Open, same family as the export bug — the preview readback.** The smoke-test log still carries
-`compositor.readFrame failed: Error: hwdevice_ctx_init: -1313558101` on the GPU-less runner. That is
-the export failure's twin, one layer over: `make_enc_frames` got a probe-and-fall-back, the
-frame-readback path did not, so preview has no frame on such a machine. Non-fatal for the current
-specs, which is exactly why it is written down instead of quietly ignored.
+**Closed — the preview readback.** The same run that shipped Whisper logged
+`compositor.readFrame failed: Error: hwdevice_ctx_init: -1313558101`, with no test failing on it.
+`Decoder::open` chose hardware-vs-software from `gpu.backend != Backend::Cpu` — the export bug's
+twin, one layer over, and the comment three lines above it already said WARP has no video decoder.
+It now probes `attach_d3d11va` and falls back to the software `CpuFrames` axis. On `windows-latest`
+the fallback is taken twice (screen and webcam decoders) and `readFrame failed` no longer appears
+in the log at all (commit `25daa96`). The two other `attach_d3d11va` callers are C0/`decode_frame_n`
+benches that are deliberately D3D11VA-only and keep their hard failure.
 
 | # | Item | Why it comes first |
 |---|---|---|
 | H1 | Make GIF export cancel dependable, or report honestly that it is not | Master Prompt §8.4 requires a working cancel; today it is the one flaky spec |
 | H2 | Implement clip split | It is a Phase 1 acceptance criterion and an §8.2 minimum operation, and it has no control at all |
-| H3 | Verify missing-media handling and preview | Phase 1 criteria currently unobserved — and preview is also broken on GPU-less machines (see above), so this is a fix, not just a test |
+| H3 | Verify missing-media handling | The last unobserved Phase 1 criterion |
 | H4 | Document the compositor-addon constraint where developers will hit it | Export has **no JS fallback**: a dev checkout cannot export at all, and the failure reads as a product bug |
 
 ## Feature backlog
