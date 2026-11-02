@@ -1,63 +1,17 @@
 import { execFileSync } from "node:child_process";
-import { once } from "node:events";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
-import { _electron as electron, expect, test } from "@playwright/test";
+import { expect, test } from "@playwright/test";
+import { closeApp, launchApp, openEditorWithRecording, TEST_VIDEO } from "./harness";
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const ROOT = path.join(__dirname, "../..");
-const MAIN_JS = path.join(ROOT, "dist-electron/main.js");
-const TEST_VIDEO = path.join(__dirname, "../fixtures/sample.webm");
-
-type ElectronApplication = Awaited<ReturnType<typeof electron.launch>>;
-
-async function launchApp(userDataDir: string, tmpDir: string) {
-	const app = await electron.launch({
-		args: [
-			MAIN_JS,
-			// Required in CI sandbox environments (GitHub Actions, Docker, etc.)
-			"--no-sandbox",
-			// Force software WebGL in headless CI to avoid GPU framebuffer errors.
-			"--enable-unsafe-swiftshader",
-			// The selectors below are the English accessible names, so pin the locale.
-			"--lang=en-US",
-			`--user-data-dir=${userDataDir}`,
-		],
-		env: {
-			...process.env,
-			ELECTRON_USER_DATA_DIR: userDataDir,
-			// Keep this run's scratch files out of the shared temp dir so a dev instance
-			// cannot collide with them. The single-instance lock keys on userData, which
-			// `--user-data-dir` above already makes private to this launch.
-			TMPDIR: tmpDir,
-			TMP: tmpDir,
-			TEMP: tmpDir,
-			// Set HEADLESS=false to show windows while debugging.
-			HEADLESS: process.env["HEADLESS"] ?? "true",
-			LANG: "en_US.UTF-8",
-			LC_ALL: "en_US.UTF-8",
-			LANGUAGE: "en_US",
-		},
-	});
-
-	app.process().stdout?.on("data", (d) => process.stdout.write(`[electron] ${d}`));
-	app.process().stderr?.on("data", (d) => process.stderr.write(`[electron] ${d}`));
-	return app;
-}
-
-async function closeApp(app: ElectronApplication) {
-	const childProcess = app.process();
-	await Promise.race([app.close(), new Promise<void>((resolve) => setTimeout(resolve, 5_000))]);
-	if (childProcess.exitCode === null && childProcess.signalCode === null) {
-		if (!childProcess.killed) {
-			childProcess.kill("SIGKILL");
-		}
-		await Promise.race([
-			once(childProcess, "close"),
-			new Promise<void>((resolve) => setTimeout(resolve, 5_000)),
-		]);
+// Teardown must never decide a test's outcome. A packaged app can still hold its
+// own recording for a moment after `closeApp`, and Windows answers that with EBUSY.
+function removeQuietly(target: string): void {
+	try {
+		fs.rmSync(target, { recursive: true, force: true, maxRetries: 10, retryDelay: 200 });
+	} catch {
+		// A leftover scratch directory is not a test failure.
 	}
 }
 
@@ -74,6 +28,7 @@ async function closeApp(app: ElectronApplication) {
 async function exportFromLoadedVideo(
 	format: "gif" | "mp4",
 	cancelThenRetry = false,
+	validate?: (outputPath: string) => void,
 ): Promise<Buffer> {
 	const userDataDir = fs.mkdtempSync(path.join(os.tmpdir(), "openscreen-e2e-export-"));
 	const appTmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "openscreen-e2e-tmp-"));
@@ -81,9 +36,9 @@ async function exportFromLoadedVideo(
 	const app = await launchApp(userDataDir, appTmpDir);
 
 	try {
-		const hudWindow = await app.firstWindow({ timeout: 60_000 });
-		await hudWindow.waitForLoadState("domcontentloaded");
-
+		// The native save dialog can't be driven from Playwright, so the handler is
+		// stubbed to return a temp path. Everything downstream of it is the real
+		// pipeline.
 		await app.evaluate(({ ipcMain }, targetPath: string) => {
 			ipcMain.removeHandler("pick-export-save-path");
 			ipcMain.handle("pick-export-save-path", () => ({
@@ -128,29 +83,7 @@ async function exportFromLoadedVideo(
 			fs.copyFileSync(TEST_VIDEO, testVideoInRecordings);
 		}
 
-		await hudWindow.evaluate(
-			(videoPath: string) => window.electronAPI.setCurrentVideoPath(videoPath),
-			testVideoInRecordings,
-		);
-		try {
-			await hudWindow.evaluate(() => window.electronAPI.switchToEditor());
-		} catch (error) {
-			if (
-				!(error instanceof Error) ||
-				!/closed|destroyed|target page|target closed/i.test(error.message)
-			) {
-				throw error;
-			}
-		}
-
-		const editorWindow = await app.waitForEvent("window", {
-			predicate: (w) => w.url().includes("windowType=editor"),
-			timeout: 15_000,
-		});
-
-		// WebCodecs may not be registered in the renderer on first load.
-		await editorWindow.reload();
-		await editorWindow.waitForLoadState("domcontentloaded");
+		const editorWindow = await openEditorWithRecording(app, testVideoInRecordings);
 
 		// Top bar: the Export control is disabled until the seeded recording has been
 		// imported into the project, so waiting for it to be enabled doubles as the
@@ -180,7 +113,13 @@ async function exportFromLoadedVideo(
 			await expect(dialog.getByText(/^[1-9]\d?%$/)).toBeVisible({ timeout: 30_000 });
 			await expect(dialog.getByRole("button", { name: "Cancel", exact: true })).toBeEnabled();
 			await dialog.getByRole("button", { name: "Cancel", exact: true }).click();
-			await expect(startExport).toBeEnabled({ timeout: 15_000 });
+			// KNOWN FLAKY on this hardware, and NOT fixed by the generosity below. Two
+			// distinct symptoms have been observed while the CPU-bound GIF encode runs:
+			// this click failing its 30s actionability window, and the dialog never
+			// returning to an exportable state within 15s after a click that did land.
+			// Both point at a starved renderer rather than at the cancel itself, so the
+			// wait is left long enough to tell "slow to unwind" apart from "never".
+			await expect(startExport).toBeEnabled({ timeout: 180_000 });
 			await expect(dialog).toBeVisible();
 			expect(fs.readFileSync(outputPath)).toEqual(previousOutput);
 			expect(
@@ -191,14 +130,19 @@ async function exportFromLoadedVideo(
 		}
 
 		// The dialog swaps the placeholder for a progress block while the native
-		// exporter runs and finally reports the path it wrote to.
-		await expect(dialog.getByText("Saved to")).toBeVisible({ timeout: 85_000 });
+		// exporter runs and finally reports the path it wrote to. The wait is
+		// generous on purpose: the encoder is chosen at runtime (QSV/AMF/NVENC are
+		// probed and discarded in turn), so a software fallback on this hardware can
+		// legitimately take minutes for a frame walk that is instant with a GPU.
+		await expect(dialog.getByText("Saved to")).toBeVisible({ timeout: 480_000 });
 		await expect(dialog.getByText(outputPath)).toBeVisible();
 
 		expect(fs.existsSync(outputPath), `${format.toUpperCase()} not found at ${outputPath}`).toBe(
 			true,
 		);
 		expect(fs.statSync(outputPath).size).toBeGreaterThan(1024);
+		// Runs against the file the encoder wrote, before the cleanup below removes it.
+		validate?.(outputPath);
 		return fs.readFileSync(outputPath);
 	} catch (error) {
 		const editor = app.windows().find((window) => window.url().includes("windowType=editor"));
@@ -218,16 +162,28 @@ async function exportFromLoadedVideo(
 	} finally {
 		await closeApp(app);
 		if (fs.existsSync(outputPath)) {
-			fs.unlinkSync(outputPath);
+			removeQuietly(outputPath);
 		}
-		for (const dir of [userDataDir, appTmpDir]) {
-			fs.rmSync(dir, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
-		}
+		removeQuietly(userDataDir);
+		removeQuietly(appTmpDir);
 	}
 }
 
-test("exports an MP4 from a loaded video", async () => {
-	const exported = await exportFromLoadedVideo("mp4");
+// The container signature only proves a file was written; "playable" is the
+// acceptance criterion. The output is decoded end to end instead — every frame of
+// the first video stream read back, which is a stronger claim than reading headers
+// with ffprobe, and needs only one binary, so it can run off the app's own bundled
+// shared FFmpeg in CI where ffprobe is not guaranteed to exist.
+test("exports a playable MP4 from a loaded video", async () => {
+	const exported = await exportFromLoadedVideo("mp4", false, (outputPath) => {
+		// `-map 0:v:0` fails the command outright when no video stream exists, so this
+		// cannot pass on a file that merely has a valid header and nothing in it.
+		execFileSync(
+			process.env["OPENSCREEN_TEST_FFMPEG"] ?? "ffmpeg",
+			["-v", "error", "-i", outputPath, "-map", "0:v:0", "-f", "null", "-"],
+			{ stdio: "pipe", timeout: 120_000 },
+		);
+	});
 
 	expect(exported.subarray(4, 8).toString("ascii")).toBe("ftyp");
 });
@@ -239,7 +195,9 @@ test("exports a GIF from a loaded video", async () => {
 });
 
 test("cancels a running native GIF, preserves an existing file, and retries successfully", async () => {
-	test.setTimeout(180_000);
+	// Two full GIF encodes (each ~2-3 min on this hardware) plus the cancel unwind,
+	// so the 180s default would cut the run off mid-export and report the wrong thing.
+	test.setTimeout(570_000);
 	const exported = await exportFromLoadedVideo("gif", true);
 	expect(exported.subarray(0, 6).toString("ascii")).toMatch(/^GIF8[79]a/);
 });

@@ -92,3 +92,26 @@ jobs:
             release/**/win-unpacked/**
             build-licenses/THIRD-PARTY-LICENSES.txt
           if-no-files-found: error
+
+      # The native compositor addon only exists inside the packaged tree, so the export
+      # path can be exercised NOWHERE else — a dev bundle answers "Native compositor
+      # addon not present" and writes nothing. This is the only place the export half of
+      # Phase 1 is ever verified; before this step existed, these specs ran nowhere at
+      # all and the "export works" claim rested on a manual run somebody had to remember.
+      #
+      # The GIF cancel/retry case is excluded deliberately: it is flaky on a developer
+      # box (the renderer is starved while the CPU-bound encode runs, so the Cancel click
+      # can exhaust its actionability window) and a CI that is red for a known issue is a
+      # CI everyone learns to ignore. It stays runnable by hand — see the note at the
+      # test in tests/e2e/gif-export.spec.ts.
+      - name: Smoke-test the packaged app (export + trim/save/reopen)
+        shell: pwsh
+        run: |
+          $exe = (Get-ChildItem -Path release -Recurse -Filter ClipForge.exe | Select-Object -First 1).FullName
+          # The bundled LGPL shared FFmpeg doubles as the verifier: the MP4 check decodes
+          # the exported file with it, so the runner needs no system ffmpeg/ffprobe.
+          $ffmpeg = (Get-ChildItem -Path release -Recurse -Filter ffmpeg-shared.exe | Select-Object -First 1).FullName
+          $env:CLIPFORGE_APP_EXE = $exe
+          $env:OPENSCREEN_TEST_FFMPEG = $ffmpeg
+          Write-Host "Testing $exe"
+          npx playwright test tests/e2e/gif-export.spec.ts tests/e2e/phase1-acceptance.spec.ts --grep-invert "cancels a running native GIF" --timeout 600000 --reporter list
