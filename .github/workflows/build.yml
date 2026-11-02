@@ -102,26 +102,32 @@ jobs:
       #
       #  - GIF export, and import → trim → save → reopen. Both pass on a GPU-less runner.
       #
-      #  - MP4 export is EXCLUDED, and that is a product limitation rather than a test
-      #    problem. crates/compositor/src/pipeline_windows.rs:1184 requires a D3D11VA
-      #    device and propagates the failure at `enc hwdevice init` with NO software
-      #    fallback (macOS has one, pipeline_macos.rs:606). A machine without a usable GPU
-      #    therefore cannot export MP4 at all, and the dialog says so: the first run of
-      #    this job failed with "enc hwdevice init: -1313558101 (Unknown error occurred)".
-      #    Tracked as H1 in docs/ROADMAP.md. MP4 stays verifiable on a GPU machine by
-      #    running the same spec with CLIPFORGE_APP_EXE pointed at a packaged build.
+      #  - MP4 export used to be excluded from this step. The first run failed at
+      #    "enc hwdevice init: -1313558101 (Unknown error occurred)" because
+      #    crates/compositor/src/pipeline_windows.rs:1736 tried to build a D3D11VA pool on a
+      #    runner that has no video device. The pipeline ALREADY has a software path
+      #    (`software_frames` → `send_composited` → a system-memory encoder); it was only
+      #    gated on `gpu.backend == Backend::Cpu`. Forcing that backend below is how this
+      #    job reaches the encoder without a GPU. Making the same fallback automatic for
+      #    real users is H1 in docs/ROADMAP.md.
       #
       #  - The GIF cancel/retry case is flaky while the CPU-bound encode starves the
       #    renderer, so it is excluded here too and stays runnable by hand.
       #
       # Keeping the excluded ones out means a red job here is always news.
-      - name: Smoke-test the packaged app (GIF export + trim/save/reopen)
+      - name: Smoke-test the packaged app (MP4 + GIF export, trim/save/reopen)
         shell: pwsh
         run: |
           $exe = (Get-ChildItem -Path release -Recurse -Filter ClipForge.exe | Select-Object -First 1).FullName
+          # The MP4 spec decodes the exported file with the app's own bundled LGPL FFmpeg.
+          $ffmpeg = (Get-ChildItem -Path release -Recurse -Filter ffmpeg-shared.exe | Select-Object -First 1).FullName
           $env:CLIPFORGE_APP_EXE = $exe
+          $env:OPENSCREEN_TEST_FFMPEG = $ffmpeg
+          # A hosted runner has no GPU, so take the compositor's software backend: the
+          # encoder then runs from system memory instead of demanding a D3D11VA device.
+          $env:OPENSCREEN_COMPOSITOR_BACKEND = "cpu"
           Write-Host "Testing $exe"
-          npx playwright test tests/e2e/gif-export.spec.ts tests/e2e/phase1-acceptance.spec.ts --grep-invert "cancels a running native GIF|playable MP4" --timeout 600000 --reporter list
+          npx playwright test tests/e2e/gif-export.spec.ts tests/e2e/phase1-acceptance.spec.ts --grep-invert "cancels a running native GIF" --timeout 600000 --reporter list
 
       # Without this, a failure on the runner is a message with no state attached: the
       # first run's trim failure could not be explained from its log alone.
