@@ -1,3 +1,4 @@
+import * as ContextMenu from "@radix-ui/react-context-menu";
 import {
 	AudioLines,
 	Clock,
@@ -2597,90 +2598,141 @@ export function V4Timeline({
 								// reaches the end of the timeline.
 								const gutterPx = i === clips.length - 1 ? 0 : CLIP_GUTTER_PX;
 								return (
-									<div
-										key={c.id}
-										data-clip-id={c.id}
-										className={`${styles.tlClip}${narrow ? ` ${styles.tlClipNarrow}` : ""}${
-											// Amber, because nobody shot it. Same token the mark it replaces
-											// used, so an insertion still reads as one at a glance.
-											isGeneratedAssetId(c.assetId) ? ` ${styles.tlClipGenerated}` : ""
-										}${selected ? ` ${styles.tlClipSel}` : ""}${
-											dragging ? ` ${styles.tlClipDragging}` : ""
-										}`}
-										style={{
-											left: `${pctOf(boxStart)}%`,
-											// Minus the gutter that separates two cards (it used to be the
-											// flex row's `gap`). A clip shorter than the gutter lands on
-											// .tlClip's 1px min-width instead of collapsing — same rule as
-											// the lane pills above.
-											width: gutterPx
-												? `calc(${pctOf(boxLen)}% - ${gutterPx}px)`
-												: `${pctOf(boxLen)}%`,
-											transform: clipTransform,
-										}}
-										onPointerDown={(e) => startClipDrag(e, c)}
-										onClick={(e) => {
-											e.stopPropagation();
-											// A completed reorder-drag also fires a click; don't let it
-											// double as a selection.
-											if (didClipDragRef.current) {
-												didClipDragRef.current = false;
-												return;
-											}
-											tl.selectClip(c.id);
-										}}
-										onDoubleClick={(e) => {
-											e.stopPropagation();
-											onEditClip(c);
-										}}
-										// The file name is here rather than on the card: which file a clip
-										// comes from matters less than what can be done with it.
-										title={`${asset?.label ?? c.assetId}\n${t("toolbar.dragToReorderHint")}`}
-									>
-										<ClipWaveform
-											videoUrl={clipVideoUrl}
-											assetDurationSec={asset?.durationSec}
-											sourceStartSec={c.sourceStartSec}
-											sourceEndSec={c.sourceEndSec ?? c.sourceStartSec + dur}
-											gain={audioGainScalar(settings.audioGainDb)}
-										/>
-										<div className={styles.tlClipLabel}>
-											<button
-												type="button"
-												className={styles.tlClipEdit}
-												data-no-clip-drag
-												title={t("toolbar.editInOutPoints")}
-												aria-label={t("toolbar.editInOutPoints")}
+									<ContextMenu.Root key={c.id}>
+										{/* asChild, deliberately: a wrapper element inside this map would sit in
+										    the middle of the drag-to-reorder geometry, which measures the
+										    [data-clip-id] rects directly. This injects only onContextMenu,
+										    which is a separate event from the pointer handlers. */}
+										<ContextMenu.Trigger asChild>
+											<div
+												data-clip-id={c.id}
+												className={`${styles.tlClip}${narrow ? ` ${styles.tlClipNarrow}` : ""}${
+													// Amber, because nobody shot it. Same token the mark it replaces
+													// used, so an insertion still reads as one at a glance.
+													isGeneratedAssetId(c.assetId) ? ` ${styles.tlClipGenerated}` : ""
+												}${selected ? ` ${styles.tlClipSel}` : ""}${
+													dragging ? ` ${styles.tlClipDragging}` : ""
+												}`}
+												style={{
+													left: `${pctOf(boxStart)}%`,
+													// Minus the gutter that separates two cards (it used to be the
+													// flex row's `gap`). A clip shorter than the gutter lands on
+													// .tlClip's 1px min-width instead of collapsing — same rule as
+													// the lane pills above.
+													width: gutterPx
+														? `calc(${pctOf(boxLen)}% - ${gutterPx}px)`
+														: `${pctOf(boxLen)}%`,
+													transform: clipTransform,
+												}}
+												onPointerDown={(e) => startClipDrag(e, c)}
 												onClick={(e) => {
+													e.stopPropagation();
+													// A completed reorder-drag also fires a click; don't let it
+													// double as a selection.
+													if (didClipDragRef.current) {
+														didClipDragRef.current = false;
+														return;
+													}
+													tl.selectClip(c.id);
+												}}
+												onDoubleClick={(e) => {
 													e.stopPropagation();
 													onEditClip(c);
 												}}
-												onKeyDown={keepActivationKey}
+												// The file name is here rather than on the card: which file a clip
+												// comes from matters less than what can be done with it.
+												title={`${asset?.label ?? c.assetId}\n${t("toolbar.dragToReorderHint")}`}
 											>
-												<Pencil size={15} />
-											</button>
-											{cardFitsDuration(boxLen * pxPerSec - gutterPx, durText) ? (
-												<span className={styles.tlClipDuration}>{durText}</span>
-											) : null}
-										</div>
-										{selected ? (
-											<button
-												type="button"
-												data-no-clip-drag
-												className={styles.tlClipDelete}
-												data-narrow={narrow ? "true" : undefined}
-												title={t("toolbar.deleteClip")}
-												aria-label={t("toolbar.deleteClip")}
-												onClick={(e) => {
-													e.stopPropagation();
-													void tl.removeClip(c.id);
+												<ClipWaveform
+													videoUrl={clipVideoUrl}
+													assetDurationSec={asset?.durationSec}
+													sourceStartSec={c.sourceStartSec}
+													sourceEndSec={c.sourceEndSec ?? c.sourceStartSec + dur}
+													gain={audioGainScalar(settings.audioGainDb)}
+												/>
+												<div className={styles.tlClipLabel}>
+													<button
+														type="button"
+														className={styles.tlClipEdit}
+														data-no-clip-drag
+														title={t("toolbar.editInOutPoints")}
+														aria-label={t("toolbar.editInOutPoints")}
+														onClick={(e) => {
+															e.stopPropagation();
+															onEditClip(c);
+														}}
+														onKeyDown={keepActivationKey}
+													>
+														<Pencil size={15} />
+													</button>
+													{cardFitsDuration(boxLen * pxPerSec - gutterPx, durText) ? (
+														<span className={styles.tlClipDuration}>{durText}</span>
+													) : null}
+												</div>
+												{selected ? (
+													<button
+														type="button"
+														data-no-clip-drag
+														className={styles.tlClipDelete}
+														data-narrow={narrow ? "true" : undefined}
+														title={t("toolbar.deleteClip")}
+														aria-label={t("toolbar.deleteClip")}
+														onClick={(e) => {
+															e.stopPropagation();
+															void tl.removeClip(c.id);
+														}}
+														onKeyDown={keepActivationKey}
+													>
+														<Trash2 size={15} />
+													</button>
+												) : null}
+											</div>
+										</ContextMenu.Trigger>
+										<ContextMenu.Portal>
+											<ContextMenu.Content
+												style={{
+													minWidth: 180,
+													background: "var(--surface-1)",
+													border: "1px solid var(--border)",
+													borderRadius: 10,
+													boxShadow: "var(--elev-pop)",
+													padding: 4,
 												}}
-												onKeyDown={keepActivationKey}
 											>
-												<Trash2 size={15} />
-											</button>
-										) : null}
-									</div>
+												{/* CapCut's two clip actions, in CapCut's wording. Split reads the
+												    playhead at selection time, exactly as the keyboard path does. */}
+												<ContextMenu.Item
+													style={{
+														padding: "6px 10px",
+														borderRadius: 6,
+														fontSize: 13,
+														color: "var(--fg)",
+														cursor: "pointer",
+													}}
+													onSelect={() => {
+														const playhead = useProjectStore.getState().currentTimeSec;
+														void tl.splitClipAt(c.id, playhead);
+													}}
+												>
+													{t("inspector.splitClip")}
+												</ContextMenu.Item>
+												<ContextMenu.Item
+													style={{
+														padding: "6px 10px",
+														borderRadius: 6,
+														fontSize: 13,
+														color: "var(--fg)",
+														cursor: "pointer",
+													}}
+													onSelect={() => {
+														void tl.detachAudioAt(c.id, asset?.label ?? c.assetId);
+													}}
+												>
+													{t("inspector.extractAudio")}
+												</ContextMenu.Item>
+											</ContextMenu.Content>
+										</ContextMenu.Portal>
+									</ContextMenu.Root>
 								);
 							})}
 							{dragOver ? (
