@@ -849,7 +849,30 @@ impl Decoder {
         // Hardware D3D11VA is the H.264 capture path. WARP has no video decoder
         // (`tests/warp_device_cannot_decode.rs`). AV1/VP9 (legacy WebMs, #554)
         // take the same software CpuFrames axis as Backend::Cpu.
-        let want_hw = gpu.backend != Backend::Cpu && d3d11va_for_codec(codec_id);
+        //
+        // The backend label is not enough to decide, for the same reason it was not enough for
+        // the encoder pool: a machine can classify as hardware — a D3D11 device backed by WARP,
+        // a VM, a hosted runner — and still fail to create the D3D11VA device. Measured on a
+        // GitHub runner, this one surfaced as `compositor.readFrame failed: Error:
+        // hwdevice_ctx_init: -1313558101`, so the preview had no frame at all. Probe instead of
+        // trusting the label, and fall back to the software axis this function already builds
+        // for Backend::Cpu. The two other `attach_d3d11va` callers are C0/`decode_frame_n`
+        // benches that are deliberately GPU-only, and they keep their hard failure.
+        let mut want_hw = gpu.backend != Backend::Cpu && d3d11va_for_codec(codec_id);
+        if want_hw {
+            match attach_d3d11va(resources.dctx, gpu) {
+                // On failure `attach_d3d11va` unrefs its own hwdev and has not touched
+                // `hw_device_ctx` or `get_format` yet, so the fallback starts from exactly the
+                // state the Backend::Cpu path starts from.
+                Ok(hwdev) => resources.hwdev = hwdev,
+                Err(error) => {
+                    eprintln!(
+                        "[pipeline] décodage D3D11VA indisponible ({error}) ; repli sur des frames système"
+                    );
+                    want_hw = false;
+                }
+            }
+        }
         let cpu = if want_hw {
             None
         } else {
@@ -857,9 +880,6 @@ impl Decoder {
             Some(CpuFrames::new(gpu)?)
         };
 
-        if want_hw {
-            resources.hwdev = attach_d3d11va(resources.dctx, gpu)?;
-        }
         averr(
             avcodec_open2(resources.dctx, dec, ptr::null_mut()),
             "avcodec_open2",
