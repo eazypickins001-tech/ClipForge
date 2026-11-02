@@ -94,11 +94,20 @@ test("a trimmed clip is still trimmed after the app is closed and reopened", asy
 		// Drag the start grip a quarter of the way along the track. `startDrag`
 		// computes deltaSec as dx / trackWidth * sourceDuration, so this moves the
 		// in-point by ~0.5s of the two-second fixture.
-		const trackBox = await dialog.getByTestId("edit-clip-trim-track").boundingBox();
-		const gripBox = await dialog.getByRole("button", { name: "Adjust clip start" }).boundingBox();
+		const track = dialog.getByTestId("edit-clip-trim-track");
+		const grip = dialog.getByRole("button", { name: "Adjust clip start" });
+		// The raw mouse API does no actionability checking, so an element sitting below
+		// the fold would be handed coordinates outside the window and the drag would land
+		// on nothing. This passed on a desktop and failed on a CI runner for exactly that
+		// reason, so scroll it into view first and measure after.
+		await grip.scrollIntoViewIfNeeded();
+		const trackBox = await track.boundingBox();
+		const gripBox = await grip.boundingBox();
 		expect(trackBox, "trim track has no bounding box").not.toBeNull();
 		expect(gripBox, "start grip has no bounding box").not.toBeNull();
 		if (!trackBox || !gripBox) throw new Error("trim controls are not measurable");
+		// A collapsed track would silently turn the drag below into a no-op.
+		expect(trackBox.width, "trim track has no width to drag across").toBeGreaterThan(50);
 
 		const gripCentre = {
 			x: gripBox.x + gripBox.width / 2,
