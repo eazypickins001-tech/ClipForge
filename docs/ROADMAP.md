@@ -39,9 +39,9 @@ presence of code — that distinction is the point of the honesty gate.
 | Item | State | How it was established |
 |---|---|---|
 | Export a playable MP4 | **Verified on a GPU machine only** | `tests/e2e/gif-export.spec.ts` against the packaged build; the written file is decoded end to end by FFmpeg with `-map 0:v:0`, so a header-only file cannot pass. **Fails on a machine without a usable GPU** — see H1 |
-| Export a GIF | **Verified**, including on a GPU-less CI runner (12.7 s) | same suite |
-| Trim → save → close → reopen | **Verified** | `tests/e2e/phase1-acceptance.spec.ts`; restarts the app and reads the trim back through the UI |
-| E2E running in CI | **Running** | `.github/workflows/build.yml`, after packaging. Run 1 exposed two real problems (H1 below and a drag that relied on desktop window size); ubuntu CI and the Windows packaging steps are green |
+| Export a GIF | **Verified** on a GPU-less CI runner and on a desktop | same suite; 16.8 s on `windows-latest` |
+| Trim → save → close → reopen | **Verified** on a GPU-less CI runner and on a desktop | `tests/e2e/phase1-acceptance.spec.ts`; restarts the app and reads the trim back through the UI. 21.9 s on `windows-latest` |
+| E2E running in CI | **Green** | `.github/workflows/build.yml`, after packaging. Run 1 exposed two real problems (H1 below, and a drag that relied on desktop window size); both are fixed and run 2 passed — `2 passed (23.2s)` alongside a green ubuntu CI and Windows packaging |
 | Clip split | **Not implemented** | the timeline's tools are `cut / comment / speed` (`V4Timeline.tsx:1656`); zero `split` strings in the English locale |
 | Missing-media handling | **Not verified** | no test, no observation |
 | Whisper STT on Windows | **Not shipped** | `build.yml` never builds it; the app logs `whisper-stt-server binary not found` |
