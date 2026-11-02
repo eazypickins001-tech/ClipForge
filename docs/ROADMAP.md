@@ -23,13 +23,142 @@ Local-first desktop workspace: recording → editing → AI-assisted content →
 Each phase ends with: run tests → fix regressions → record commands/results → update docs → summarise what works / remains / is blocked.
 
 - **Phase 0 — Engineering audit.** *(this pass)* Environment inventory, candidate clones + pinned commits, licence/dependency audit, real build/test attempts, foundation decision. → `docs/ENGINEERING_AUDIT.md`
-- **Phase 1 — Usable desktop editor.** Rebrand fork; create/save/reopen/duplicate project; import + preview; basic timeline edit (add/trim/split/move/delete/order); save/reopen; export playable MP4; clear missing-media + error handling. **Prerequisite: resolve toolchain blockers B1–B4.**
+- **Phase 1 — Usable desktop editor.** Rebrand fork; create/save/reopen/duplicate project; import + preview; basic timeline edit (add/trim/split/move/delete/order); save/reopen; export playable MP4; clear missing-media + error handling. **Prerequisite: resolve toolchain blockers B1–B4.** *Status 2026-11-02: import, trim, save/reopen and playable-MP4 export are **verified on the packaged build** (see Functional verification). **Split is not implemented**, preview and missing-media handling are unverified.*
 - **Phase 2 — Capture & recording handoff.** Verify/adapt recording; manual + drag-drop import; configurable watched folder with completion detection + duplicate detection; "Open in Editor"; optional OBS WebSocket connector (only if version/API tests pass, else documented manual path); preserve originals.
 - **Phase 3 — Build-in-Public Content Engine.** Content sessions; evidence model (notes, transcript, frames, read-only git, test results); generate editable hooks/scripts/storyboards/captions/platform copy with **per-asset evidence provenance**; no invented claims; local save; AI optional.
 - **Phase 4 — Repurposing & captions.** Derivative projects (landscape/vertical/square, highlights, captioned variants); source↔derivative tracking; source never overwritten; ASR (local Whisper default) or subtitle import; user reviews proposed clips.
 - **Phase 5 — Thumbnail Studio.** Input context with declared evidence basis; 3 distinct concepts; **prompt-only mode with no API**; direct generation via verified providers (OpenRouter default) with consent/cost disclosure; composition editor; PNG/JPEG export; 16:9 **1280×720** preset; honest quality heuristics (no CTR/virality fabrication).
 - **Phase 6 — Content library & publishing connectors.** Asset library by project/session; approval state machine; investigate GHL (+ others) against live docs before implementing; preserve human approval; real publish states; manual export package fallback.
 - **Phase 7 — Freemium readiness & release candidate.** Useful free tier; clear premium boundaries; **Ed25519** entitlements with private key outside the app; expiry never blocks local files; Windows installer + portable; notices/SBOM; new user completes core workflow unaided.
+
+## Functional verification
+
+What has actually been run and observed, as of **2026-11-02**. Nothing here is inferred from the
+presence of code — that distinction is the point of the honesty gate.
+
+| Item | State | How it was established |
+|---|---|---|
+| Export a playable MP4 | **Verified** | `tests/e2e/gif-export.spec.ts` against the packaged build; the written file is decoded end to end by FFmpeg with `-map 0:v:0`, so a header-only file cannot pass |
+| Export a GIF | **Verified** | same suite |
+| Trim → save → close → reopen | **Verified** | `tests/e2e/phase1-acceptance.spec.ts`; restarts the app and reads the trim back through the UI |
+| E2E running in CI | **Wired, unverified** | new step in `.github/workflows/build.yml` after packaging; no run has executed it yet |
+| Clip split | **Not implemented** | the timeline's tools are `cut / comment / speed` (`V4Timeline.tsx:1656`); zero `split` strings in the English locale |
+| Missing-media handling | **Not verified** | no test, no observation |
+| Whisper STT on Windows | **Not shipped** | `build.yml` never builds it; the app logs `whisper-stt-server binary not found` |
+| GIF export cancel | **Unreliable** | two symptoms while the CPU-bound encode runs: the Cancel click can exhaust its 30s actionability window; the dialog did not return to an exportable state within 15s when a click did land |
+
+## Core hardening (before new features)
+
+Ordered. Nothing below should start work on the backlog until these are closed.
+
+| # | Item | Why it comes first |
+|---|---|---|
+| H1 | Make GIF export cancel dependable, or report honestly that it is not | Master Prompt §8.4 requires a working cancel; today it is the one failing spec |
+| H2 | Confirm the new CI e2e step actually passes on `windows-latest` | It is the only automated verification export will ever have; until it runs once, H3–H5 rest on a manual run |
+| H3 | Implement clip split | It is a Phase 1 acceptance criterion and an §8.2 minimum operation, and it has no control at all |
+| H4 | Build + ship `whisper-stt-server` on Windows | Everything caption-related (Phase 3 and 4) is dead without it; the code already exists |
+| H5 | Verify missing-media handling and preview | Phase 1 criteria currently unobserved |
+| H6 | Document the compositor-addon constraint where developers will hit it | Export has **no JS fallback**: a dev checkout cannot export at all, and the failure reads as a product bug |
+
+## Feature backlog
+
+Ordered by value ÷ cost. Each is a slice that can be finished and verified on its own — no item
+depends on a later one, except where stated.
+
+### F1 — Auto-captions on Windows (local Whisper) · highest value, lowest cost
+
+Already written end to end (`electron/stt/*` — `whisperServer`, `extractAudio`, `modelManager`,
+`chunking`, `ctcAlign`; native `electron/native/whisper-stt/`). Only the binary is missing.
+
+1. Add a whisper build step to the Windows job, before packaging (`build:whisper-binaries` exists but is never invoked).
+2. Make the build **fail** if `whisper-stt-server` is absent from `electron/native/bin/win32-*` — a silent absence is exactly how this rotted.
+3. Extend the `win.extraResources` filter if the binary lands outside `win32-*`.
+4. Ship the ggml model on first use via the existing `modelManager`, not inside the installer.
+5. E2E: transcribe the fixture and assert caption ranges appear with sane timings.
+
+### F2 — Detach a clip's audio into an editable track
+
+The data model already separates audio (`audioTracks` at `schema/index.ts:776`, `createAudioTrack`
+at `:1511`, per-track gain/fades) and can mute spans (`muteRanges`, `:305`). There is no detach
+*operation* — audio can be added, not extracted.
+
+1. Add a document op `detachAudio(clipId)`: mute the clip's own audio, create an audio track over the same asset and source span.
+2. Route it through the existing serialised write queue so one user action stays one save.
+3. UI: "Detach audio" in the clip inspector, undoable.
+4. Test: the detached track survives save/reopen; the source clip is muted; export level is unchanged.
+
+### F3 — Resolution presets up to 4K
+
+1. Inventory what the export dialog offers today (720p/1080p plus an upscale path) and how the encoder is negotiated.
+2. Add 1440p/2160p, gated on source resolution — never upscale by default.
+3. Verify on the packaged build: export each preset, decode-check, assert dimensions.
+
+### F4 — Background removal for any clip, not just webcam
+
+The mediapipe segmentation model already ships (`public/mediapipe`, out of the asar on purpose so the
+compositor can read it) and the compositor draws it.
+
+1. Confirm the present scope really is the camera layer only.
+2. Allow the mask to target the primary video.
+3. Verify the model is found at runtime in the packaged build — a miss disables the feature silently.
+
+### F5 — Thumbnail Studio, prompt-only first (Phase 5)
+
+No code exists. Start with the half that needs no credentials or spend.
+
+1. Inputs: title, brief, audience, platform, transcript, selected frames, brand kit, exclusions.
+2. Three distinct concepts, each with hook/composition/focal point/palette/thumbnail text/prompt/rationale — and each **declaring its evidence basis** (title alone vs transcript vs frames).
+3. Copy, save and edit concepts. No image generation in this step.
+4. Then direct generation via OpenRouter, with consent and cost disclosure, timeouts and rate limits.
+5. Editor: text/font/alignment/outline, logo, crop, 1280×720 preset, PNG + JPEG export.
+6. Composition stored as versioned data; image binaries never inside project JSON.
+
+### F6 — AI stem separation (vocal isolation) · spike, not a feature
+
+CapCut-Pro-class. ONNX Runtime already ships (`fetch:onnxruntime`, `onnxruntime.dll`), so there is a
+road, but decide before promising: pick a model and its licence, measure real-time factor on a modest
+CPU, then choose between muting a stem and full re-mixing.
+
+### F7 — Auto-reframe (subject tracking)
+
+Ratio presets exist (16:9, 9:16, 1:1, 4:3, 3:4, 21:9 — the Edit clip dialog) but nothing tracks a
+subject. Needs detection plus a keyframed crop, so it depends on F8.
+
+### F8 — Keyframes / animation curves
+
+Nothing found in the codebase. Large: new schema, new UI, new export path. Do not start before
+F1–F5 have landed.
+
+### F9 — Headless / batch render and agent surface
+
+Concept from OpenCut. ClipForge already has an MCP server (`electron/mcp/`) with project, media and
+transcribe tools, so the surface partly exists; the missing piece is a headless render entry point.
+
+## Reference projects (concept reuse only)
+
+| Project | Licence | Fit |
+|---|---|---|
+| `OpenCut-app/OpenCut` (+ the `eazypickins001-tech` fork) | MIT | Browser/desktop; mid-rewrite onto a Rust core and, per its own README, not accepting outside contributions. **This is the OpenCut lineage Master Prompt §3.3 flagged — audit licensing and integration before adopting any code.** |
+| `msgbyte/cutia` | MIT | 890★, 149 forks, but its README says **"fork from opencut"** — the same lineage. Next.js + Bun + Postgres/Redis + Better-Auth, which contradicts our local-first constraint. |
+
+Both render in the browser; ClipForge renders through the native Rust D3D11 compositor. So expect
+**low code reuse, high concept reuse**: OpenCut's headless/batch render and Editor API, cutia's
+layered text/sticker UX.
+
+## Explicit non-goals
+
+Voice cloning, avatars, text-to-video, cloud storage quotas, and any account system. Each is model-
+or server-heavy, and each weakens the local-first promise that is the reason this product exists.
+
+## Premium-feature reference (CapCut Pro)
+
+Sourced from third-party 2026 summaries, **not** vendor documentation — treat as approximate. The
+paid tier clusters around: 4K export, background removal, vocal isolation, speaker-aware auto
+captions, auto reframe, camera tracking, voice cloning and avatars, text-to-video, keyframes and
+graphs, colour tools, premium assets, AI credits and cloud storage.
+
+Our standing differences: fully local, no watermark, no subscription for the core workflow, and AI
+optional and BYOK.
 
 ## Compliance invariants (never break)
 
