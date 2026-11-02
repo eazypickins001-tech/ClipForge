@@ -38,10 +38,10 @@ presence of code — that distinction is the point of the honesty gate.
 
 | Item | State | How it was established |
 |---|---|---|
-| Export a playable MP4 | **Verified on a GPU machine only** | `tests/e2e/gif-export.spec.ts` against the packaged build; the written file is decoded end to end by FFmpeg with `-map 0:v:0`, so a header-only file cannot pass. **Fails on a machine without a usable GPU** — see H1 |
-| Export a GIF | **Verified** on a GPU-less CI runner and on a desktop | same suite; 16.8 s on `windows-latest` |
-| Trim → save → close → reopen | **Verified** on a GPU-less CI runner and on a desktop | `tests/e2e/phase1-acceptance.spec.ts`; restarts the app and reads the trim back through the UI. 21.9 s on `windows-latest` |
-| E2E running in CI | **Green** | `.github/workflows/build.yml`, after packaging. Run 1 exposed two real problems (H1 below, and a drag that relied on desktop window size); both are fixed and run 2 passed — `2 passed (23.2s)` alongside a green ubuntu CI and Windows packaging |
+| Export a playable MP4 | **Verified** on a GPU machine *and* on a GPU-less CI runner | `tests/e2e/gif-export.spec.ts` against the packaged build; the written file is decoded end to end by FFmpeg with `-map 0:v:0`, so a header-only file cannot pass. On `windows-latest` it takes the software path (`h264_mf`, 22.1 s) |
+| Export a GIF | **Verified** on a GPU-less CI runner and on a desktop | same suite; 12.7 s on `windows-latest` |
+| Trim → save → close → reopen | **Verified** on a GPU-less CI runner and on a desktop | `tests/e2e/phase1-acceptance.spec.ts`; restarts the app and reads the trim back through the UI. 26.4 s on `windows-latest` |
+| E2E running in CI | **Green — `3 passed (36.2s)`** | `.github/workflows/build.yml`, after packaging. Run 1 exposed two real problems (GPU-less Windows could not export at all, and a drag that relied on desktop window size); both are fixed |
 | Clip split | **Not implemented** | the timeline's tools are `cut / comment / speed` (`V4Timeline.tsx:1656`); zero `split` strings in the English locale |
 | Missing-media handling | **Not verified** | no test, no observation |
 | Whisper STT on Windows | **Not shipped** | `build.yml` never builds it; the app logs `whisper-stt-server binary not found` |
@@ -51,14 +51,20 @@ presence of code — that distinction is the point of the honesty gate.
 
 Ordered. Nothing below should start work on the backlog until these are closed.
 
+**Closed — GPU-less Windows could not export MP4.** `run_multi_inner` skipped the D3D11VA pool
+only when `gpu.backend == Backend::Cpu`, so a WARP-backed or virtualised machine — a VM, a hosted
+runner, an RDP session — classified as hardware, failed at `enc hwdevice init: -1313558101`, and
+produced no file. Forcing `OPENSCREEN_COMPOSITOR_BACKEND=cpu` did not help (that switch is
+Linux-side). It now probes the pool and falls back to the existing system-memory path, picking
+`h264_mf`; verified end to end on `windows-latest` (commit `e23a9f6`).
+
 | # | Item | Why it comes first |
 |---|---|---|
-| H1 | Give the Windows MP4 encoder a software fallback | **Product-breaking on any GPU-less Windows machine** — a VM, a CI runner, a locked-down office PC, an RDP session. `crates/compositor/src/pipeline_windows.rs:1184` requires a D3D11VA device and propagates the failure at `enc hwdevice init`; macOS falls back to software (`pipeline_macos.rs:606`) and Windows does not. Observed on the runner: `enc hwdevice init: -1313558101 (Unknown error occurred)`, and the export never completes. Until this is fixed the MP4 half of Phase 1 cannot be verified in CI at all. Note the Rust builds only on CI, so this cannot be tested locally. |
-| H2 | Make GIF export cancel dependable, or report honestly that it is not | Master Prompt §8.4 requires a working cancel; today it is the one flaky spec |
-| H3 | Implement clip split | It is a Phase 1 acceptance criterion and an §8.2 minimum operation, and it has no control at all |
-| H4 | Build + ship `whisper-stt-server` on Windows | Everything caption-related (Phase 3 and 4) is dead without it; the code already exists |
-| H5 | Verify missing-media handling and preview | Phase 1 criteria currently unobserved |
-| H6 | Document the compositor-addon constraint where developers will hit it | Export has **no JS fallback**: a dev checkout cannot export at all, and the failure reads as a product bug |
+| H1 | Make GIF export cancel dependable, or report honestly that it is not | Master Prompt §8.4 requires a working cancel; today it is the one flaky spec |
+| H2 | Implement clip split | It is a Phase 1 acceptance criterion and an §8.2 minimum operation, and it has no control at all |
+| H3 | Build + ship `whisper-stt-server` on Windows | Everything caption-related (Phase 3 and 4) is dead without it; the code already exists |
+| H4 | Verify missing-media handling and preview | Phase 1 criteria currently unobserved |
+| H5 | Document the compositor-addon constraint where developers will hit it | Export has **no JS fallback**: a dev checkout cannot export at all, and the failure reads as a product bug |
 
 ## Feature backlog
 
