@@ -44,7 +44,7 @@ presence of code — that distinction is the point of the honesty gate.
 | E2E running in CI | **Green — `3 passed (36.2s)`** | `.github/workflows/build.yml`, after packaging. Run 1 exposed two real problems (GPU-less Windows could not export at all, and a drag that relied on desktop window size); both are fixed |
 | Clip split | **Not implemented** | the timeline's tools are `cut / comment / speed` (`V4Timeline.tsx:1656`); zero `split` strings in the English locale |
 | Missing-media handling | **Not verified** | no test, no observation |
-| Whisper STT on Windows | **Not shipped** | `build.yml` never builds it; the app logs `whisper-stt-server binary not found` |
+| Whisper STT helper on Windows | **Shipped and running; captions NOT yet verified** | Built in the Windows job (CPU-only) and asserted present in the packaged tree; it boots and loads `ggml-small-q8_0` (263.87 MB) on `windows-latest`. Caption *output* is unverified — `tests/fixtures/sample.webm` has no audio track, so transcription correctly answers `NoAudioTrackError` |
 | GIF export cancel | **Unreliable** | two symptoms while the CPU-bound encode runs: the Cancel click can exhaust its 30s actionability window; the dialog did not return to an exportable state within 15s when a click did land |
 
 ## Core hardening (before new features)
@@ -58,29 +58,36 @@ produced no file. Forcing `OPENSCREEN_COMPOSITOR_BACKEND=cpu` did not help (that
 Linux-side). It now probes the pool and falls back to the existing system-memory path, picking
 `h264_mf`; verified end to end on `windows-latest` (commit `e23a9f6`).
 
+**Closed — Whisper was not shipped on Windows.** The fork deleted the workflow that built
+`whisper-stt-server` and nothing replaced it, so every Windows install logged
+`whisper-stt-server binary not found`. The Windows job now builds it, refuses to continue if it
+is absent, and asserts it inside the packaged tree; on `windows-latest` the helper boots and loads
+its model (commit `e955996`). What is still open is the *caption* assertion — F1 step 5.
+
 | # | Item | Why it comes first |
 |---|---|---|
 | H1 | Make GIF export cancel dependable, or report honestly that it is not | Master Prompt §8.4 requires a working cancel; today it is the one flaky spec |
 | H2 | Implement clip split | It is a Phase 1 acceptance criterion and an §8.2 minimum operation, and it has no control at all |
-| H3 | Build + ship `whisper-stt-server` on Windows | Everything caption-related (Phase 3 and 4) is dead without it; the code already exists |
-| H4 | Verify missing-media handling and preview | Phase 1 criteria currently unobserved |
-| H5 | Document the compositor-addon constraint where developers will hit it | Export has **no JS fallback**: a dev checkout cannot export at all, and the failure reads as a product bug |
+| H3 | Verify missing-media handling and preview | Phase 1 criteria currently unobserved |
+| H4 | Document the compositor-addon constraint where developers will hit it | Export has **no JS fallback**: a dev checkout cannot export at all, and the failure reads as a product bug |
 
 ## Feature backlog
 
 Ordered by value ÷ cost. Each is a slice that can be finished and verified on its own — no item
 depends on a later one, except where stated.
 
-### F1 — Auto-captions on Windows (local Whisper) · highest value, lowest cost
+### F1 — Auto-captions on Windows (local Whisper) · steps 1–4 done, step 5 open
 
-Already written end to end (`electron/stt/*` — `whisperServer`, `extractAudio`, `modelManager`,
-`chunking`, `ctcAlign`; native `electron/native/whisper-stt/`). Only the binary is missing.
+The helper is written end to end (`electron/stt/*` — `whisperServer`, `extractAudio`,
+`modelManager`, `chunking`, `ctcAlign`; native `electron/native/whisper-stt/`); the binary was the
+missing piece, and it now ships — see Core hardening.
 
-1. Add a whisper build step to the Windows job, before packaging (`build:whisper-binaries` exists but is never invoked).
-2. Make the build **fail** if `whisper-stt-server` is absent from `electron/native/bin/win32-*` — a silent absence is exactly how this rotted.
-3. Extend the `win.extraResources` filter if the binary lands outside `win32-*`.
-4. Ship the ggml model on first use via the existing `modelManager`, not inside the installer.
-5. E2E: transcribe the fixture and assert caption ranges appear with sane timings.
+1. ~~Add a whisper build step to the Windows job, before packaging.~~ Done.
+2. ~~Make the build **fail** if `whisper-stt-server` is absent from `electron/native/bin/win32-*`.~~ Done — this guard is what stops it rotting a second time.
+3. ~~Extend the `win.extraResources` filter if the binary lands outside `win32-*`.~~ Not needed: `win32-*/*` already covers the staged path, and the packaged tree is asserted separately.
+4. ~~Ship the ggml model on first use via `modelManager`, not inside the installer.~~ Confirmed working — the helper fetched and loaded `ggml-small-q8_0` (263.87 MB) on the runner.
+5. **Open — assert captions, not just the helper.** `tests/fixtures/sample.webm` carries no audio, so transcription correctly returns `NoAudioTrackError`. A fixture with synthetic speech (plus a tiny model, to keep CI cheap) is what would make caption *output* verified. Worth noting too: the model is fetched per fresh userData, so three specs download ~264 MB each.
+6. Follow-up, not a blocker: rebuild the Windows helper with the Vulkan backend once the SDK is a declared prerequisite and the `vulkan-1.dll` runtime dependency has been measured.
 
 ### F2 — Detach a clip's audio into an editable track
 
