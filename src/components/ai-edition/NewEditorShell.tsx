@@ -1434,6 +1434,23 @@ export function NewEditorShell() {
 				void pasteRegion();
 				return;
 			}
+			if (matchesShortcut(e, shortcuts.splitClip, isMac)) {
+				// Where is the playhead's call, what is the selection's — and with nothing
+				// selected, whichever clip the playhead is inside, which is what the gesture
+				// means. The playhead is read from the store rather than a render value, like the
+				// other handlers here: during playback it is rewritten every frame.
+				const playhead = useProjectStore.getState().currentTimeSec;
+				const target = tl.clipSelection
+					? tl.clips.find((clip) => clip.id === tl.clipSelection)
+					: tl.clips.find(
+							(clip) => playhead > clip.timelineStartSec && playhead < clip.timelineEndSec,
+						);
+				if (target) {
+					e.preventDefault();
+					void tl.splitClipAt(target.id, playhead);
+					return;
+				}
+			}
 			if (matchesShortcut(e, shortcuts.playPause, isMac)) {
 				e.preventDefault();
 				togglePlay();

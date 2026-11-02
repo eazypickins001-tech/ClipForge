@@ -46,6 +46,7 @@ import {
 	removeRegion as removeRegionInDocument,
 	resequenceClips,
 	setClipSourceRange,
+	splitClip as splitClipInDocument,
 } from "../document/timeline";
 import type {
 	AxcutAudioTrack,
@@ -1581,6 +1582,25 @@ export function useTimeline() {
 		[document, clipSelection, saveDocument],
 	);
 
+	// Cut one clip in two at the playhead. `timelineSec` is the playhead as the ruler reports it;
+	// the document op wants a SOURCE timecode, so the clip's own offset is applied here rather
+	// than making every caller know how a clip maps onto the ruler.
+	const splitClipAt = useCallback(
+		async (clipId: string, timelineSec: number) => {
+			const doc = document;
+			if (!doc) return;
+			const clip = doc.timeline.clips.find((c) => c.id === clipId);
+			if (!clip) return;
+			const atSec = clip.sourceStartSec + (timelineSec - clip.timelineStartSec);
+			const next = splitClipInDocument(doc, clipId, atSec, "user", "Split clip");
+			// The op returns the SAME document when the cut misses the clip — playhead parked on
+			// an edge, or outside it. Saving that would push an undo step the user cannot see.
+			if (next === doc) return;
+			await saveDocument(next, { history: true });
+		},
+		[document, saveDocument],
+	);
+
 	// Mirror of selectRegion: picking a clip retires the pill selection.
 	const selectClip = useCallback(
 		(id: string) => {
@@ -1844,6 +1864,7 @@ export function useTimeline() {
 		moveClip,
 		duplicateClip,
 		removeClip,
+		splitClipAt,
 		selectClip,
 		updateTrim,
 		setTrimEntries,

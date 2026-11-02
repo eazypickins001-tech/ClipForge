@@ -3,6 +3,7 @@ export const SHORTCUT_ACTIONS = [
 	"addZoom",
 	"addTrim",
 	"addSpeed",
+	"splitClip",
 	"addCameraFullscreen",
 	"addAnnotation",
 	"addAudio",
@@ -113,6 +114,10 @@ export const DEFAULT_SHORTCUTS: ShortcutsConfig = {
 	addZoom: { key: "z" },
 	addTrim: { key: "t" },
 	addSpeed: { key: "s" },
+	// Blade. Cuts the selected clip, or the clip under the playhead, at the playhead.
+	// NOT `b`: shortcuts.test.ts reserves plain B so a new action cannot re-create the
+	// "Already used by Add Blur" ghost that a removed action used to squat on it.
+	splitClip: { key: "k" },
 	addCameraFullscreen: { key: "c" },
 	addAnnotation: { key: "a" },
 	addAudio: { key: "m" },
@@ -129,6 +134,7 @@ export const SHORTCUT_LABELS: Record<ShortcutAction, string> = {
 	addZoom: "Add Zoom",
 	addTrim: "Add Trim",
 	addSpeed: "Add Speed",
+	splitClip: "Split Clip",
 	addCameraFullscreen: "Change layout here",
 	addAnnotation: "Add Annotation",
 	addAudio: "Add Audio",

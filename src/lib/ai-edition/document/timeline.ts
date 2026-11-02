@@ -60,6 +60,10 @@ export type RegionKind =
  *  duration (`applyProbedDuration`); the store re-exports it for its own callers. */
 export const PLACEHOLDER_DURATION_SEC = 60;
 
+/** Shortest piece a split may leave on either side. A cut a millisecond from an edge leaves a
+ *  sliver no gesture can grab again. */
+const MIN_SPLIT_SEC = 0.05;
+
 export function byStart(a: { startSec: number }, b: { startSec: number }): number {
 	return a.startSec - b.startSec;
 }
@@ -1079,6 +1083,68 @@ export function duplicateClip(
 }
 
 /**
+ * The single mutator for "cut this clip in two at this point". `atSec` is a SOURCE timecode
+ * inside the clip — what the playhead resolves to — and anything at or outside the clip's own
+ * bounds is a no-op rather than an error, because a miss is a normal outcome of pressing a key
+ * with the playhead parked somewhere useless (same spirit as `removeClip`'s unknown id).
+ *
+ * The left half KEEPS the original clip id, so every pill anchored to the clip (trims, zooms,
+ * annotations, audio takes) stays attached to the piece that starts where the clip started. The
+ * right half is new, and carries `detached`; without it `joinContiguous` would fold the two
+ * straight back into one and the split would look like nothing happened.
+ *
+ * KNOWN LIMITS, left for a follow-up rather than half-done here:
+ *  - `wordRefs` stay with the left half. Dividing them needs word timings, which live in the
+ *    transcript, not in this module.
+ *  - A modifier spanning the cut stays anchored to the left half, so it can now reach past its
+ *    clip. `rederiveRegionMs` re-cuts regions against the new layout but nothing divides them.
+ * Pure.
+ */
+export function splitClip(
+	document: AxcutDocument,
+	clipId: string,
+	atSec: number,
+	origin: "system" | "agent" | "user" = "user",
+	reason: string = "",
+): AxcutDocument {
+	const clips = document.timeline.clips;
+	const index = clips.findIndex((c) => c.id === clipId);
+	if (index < 0) {
+		throw new Error(`Unknown clip ${clipId}.`);
+	}
+	const clip = clips[index];
+	const sourceStart = clip.sourceStartSec;
+	const sourceEnd =
+		clip.sourceEndSec ?? clip.sourceStartSec + (clip.timelineEndSec - clip.timelineStartSec);
+	if (!(atSec >= sourceStart + MIN_SPLIT_SEC) || !(atSec <= sourceEnd - MIN_SPLIT_SEC)) {
+		return document;
+	}
+	const left: AxcutClip = {
+		...clip,
+		sourceEndSec: atSec,
+		timelineEndSec: clip.timelineStartSec + (atSec - sourceStart),
+		origin,
+		reason: reason || clip.reason,
+	};
+	const right: AxcutClip = {
+		...clip,
+		id: createId("clip"),
+		sourceStartSec: atSec,
+		timelineStartSec: left.timelineEndSec,
+		wordRefs: [],
+		detached: true,
+		origin,
+		reason: reason || clip.reason,
+	};
+	return withClipsChanged(document, [
+		...clips.slice(0, index),
+		left,
+		right,
+		...clips.slice(index + 1),
+	]);
+}
+
+/**
  * The single mutator for "place a clip of this asset at this position": the media panel's drop
  * onto the timeline and the agent's `insertClip`. `index` counts the clips before it (0 first,
  * `clips.length` last) and is clamped. The new clip goes through `withClipsChanged` like every
@@ -1379,11 +1445,15 @@ function joinContiguous(clips: AxcutClip[]): {
 	return { clips: out, absorbed };
 }
 
-/** Same media, media timecodes that meet, same framing. Crop is the only property a clip
- *  carries that two otherwise-identical neighbours could legitimately disagree on, so it is
- *  the whole of the guard. */
+/** Same media, media timecodes that meet, same framing — and neither half marked by a split.
+ *  Crop is the only *content* property two otherwise-identical neighbours could legitimately
+ *  disagree on, so it is the whole of the content guard. `detached` is not content: it is the
+ *  user's instruction that a cut stays a cut, and honouring it is what lets `splitClip` produce
+ *  two clips that do not immediately fold back into one. */
 function joinable(left: AxcutClip, right: AxcutClip): boolean {
 	return (
+		!left.detached &&
+		!right.detached &&
 		left.assetId === right.assetId &&
 		left.sourceEndSec !== undefined &&
 		Math.abs(left.sourceEndSec - right.sourceStartSec) < 1e-6 &&

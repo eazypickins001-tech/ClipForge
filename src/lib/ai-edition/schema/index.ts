@@ -228,6 +228,12 @@ export const clipSchema = z
 		// that as the identity region {x:0,y:0,width:1,height:1} rather than
 		// storing the identity explicitly, so untouched clips stay lean.
 		cropRegion: clipCropRegionSchema.optional(),
+		// Set by a split, on the new right-hand half. Without it the two halves are
+		// media-contiguous and same-crop, so `withClipsChanged`'s `joinContiguous` folds them
+		// straight back into the clip the user just cut and the split appears to do nothing.
+		// Optional and absent on every clip written before it, so no schema bump — same
+		// reasoning as `cameraTrack.width`.
+		detached: z.boolean().optional(),
 	})
 	.refine((data) => data.timelineEndSec >= data.timelineStartSec, {
 		message: "timelineEndSec must be greater than or equal to timelineStartSec",
