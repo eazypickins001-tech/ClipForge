@@ -307,6 +307,10 @@ const DECLARED: WritePath[] = [
 	w("src/lib/ai-edition/store/useTimeline.ts", "saveZoomPatch", "save", "gesture"),
 	w("src/lib/ai-edition/store/useTimeline.ts", "setLayoutPreset", "save", "gesture"),
 	w("src/lib/ai-edition/store/useTimeline.ts", "setTrimEntries", "save", "gesture"),
+	// One keypress, one cut, one undo step. The op hands the document back untouched when the
+	// playhead misses the clip, and the action skips the save in that case, so a miss leaves no
+	// step behind.
+	w("src/lib/ai-edition/store/useTimeline.ts", "splitClipAt", "save", "gesture"),
 	// The live halves of the drags.
 	w("src/lib/ai-edition/store/useTimeline.ts", "updateAnnotationLive", "set", "automatic"),
 	w("src/lib/ai-edition/store/useTimeline.ts", "updateAnnotationSpan", "save", "gesture"),
