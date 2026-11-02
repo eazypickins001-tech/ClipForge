@@ -5,12 +5,14 @@
 
 import { clampToBound } from "../../projectDefaults";
 import type {
+	AxcutAudioTrack,
 	AxcutClip,
 	AxcutClipCropRegion,
 	AxcutDocument,
 	AxcutTranscript,
 	AxcutTrimRange,
 } from "../schema";
+import { createAudioTrack } from "../schema";
 
 /**
  * What `resolvePlaybackSegments` returns: a clip-shaped slice of playable film.
@@ -1142,6 +1144,67 @@ export function splitClip(
 		right,
 		...clips.slice(index + 1),
 	]);
+}
+
+/**
+ * "Extract audio" — the gesture CapCut puts on a clip's right-click menu: the clip's own sound
+ * becomes an independent track under the video, and the clip is silenced so nothing plays twice.
+ *
+ * The new track carries the clip's SOURCE range as its anchor plus `offsetMs`, which is what keeps
+ * it in sync when the clip had been trimmed — with no offset it would start at the top of the file
+ * and drift against the picture. Its `kind` stays "voiceover": the enum is voiceover|music, and
+ * this is voice at unity gain, which is exactly what that kind's defaults give. A dedicated
+ * "extracted" kind is a follow-up, not something to fake with a label here.
+ *
+ * The silence is a `muteRange` over the clip's raw-timeline span rather than a per-clip flag, so
+ * it is visible on the timeline and draggable like any other mute.
+ *
+ * An unknown clip, or one too short to hold a span, is a no-op returning the SAME document, so the
+ * store can skip the save and leave no empty undo step behind. Pure.
+ */
+export function detachAudio(document: AxcutDocument, clipId: string, label: string): AxcutDocument {
+	const clip = document.timeline.clips.find((candidate) => candidate.id === clipId);
+	if (!clip) return document;
+	const spanSec = clip.timelineEndSec - clip.timelineStartSec;
+	if (spanSec <= MIN_SPLIT_SEC) return document;
+	const sourceStartSec = clip.sourceStartSec;
+	const sourceEndSec = clip.sourceEndSec ?? sourceStartSec + spanSec;
+	const base = createAudioTrack({
+		assetId: clip.assetId,
+		durationSec: sourceEndSec,
+		kind: "voiceover",
+		timelineStartSec: clip.timelineStartSec,
+		spanSec,
+		label,
+	});
+	const track: AxcutAudioTrack = {
+		...base,
+		clipId: clip.id,
+		sourceStartSec,
+		sourceEndSec,
+		offsetMs: Math.round(sourceStartSec * 1000),
+	};
+	const alreadyMuted = document.timeline.muteRanges.some(
+		(range) =>
+			range.startSec <= clip.timelineStartSec + 1e-6 && range.endSec >= clip.timelineEndSec - 1e-6,
+	);
+	return {
+		...document,
+		audioTracks: [...document.audioTracks, track],
+		timeline: alreadyMuted
+			? document.timeline
+			: {
+					...document.timeline,
+					muteRanges: [
+						...document.timeline.muteRanges,
+						{
+							startSec: clip.timelineStartSec,
+							endSec: clip.timelineEndSec,
+							reason: "Audio extracted",
+						},
+					],
+				},
+	};
 }
 
 /**
