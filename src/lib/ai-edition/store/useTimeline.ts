@@ -36,6 +36,7 @@ import { resolveAspectRatioValue } from "../document/outputFormat";
 import {
 	clearEditRegions,
 	countEditRegions,
+	detachAudio as detachAudioInDocument,
 	duplicateClip as duplicateClipInDocument,
 	insertAssetClip,
 	moveClip as moveClipInDocument,
@@ -1601,6 +1602,22 @@ export function useTimeline() {
 		[document, saveDocument],
 	);
 
+	// CapCut's "Extract audio": the clip's own sound becomes a track under the video and the clip
+	// is silenced, in ONE write — so undo can never leave the track without the mute that stops it
+	// doubling the original.
+	const detachAudioAt = useCallback(
+		async (clipId: string, label: string) => {
+			const doc = document;
+			if (!doc) return;
+			const next = detachAudioInDocument(doc, clipId, label);
+			// The same document back means nothing was extracted — unknown clip, or a span that is
+			// already silent. Saving would push an undo step the user cannot see.
+			if (next === doc) return;
+			await saveDocument(next, { history: true });
+		},
+		[document, saveDocument],
+	);
+
 	// Mirror of selectRegion: picking a clip retires the pill selection.
 	const selectClip = useCallback(
 		(id: string) => {
@@ -1865,6 +1882,7 @@ export function useTimeline() {
 		duplicateClip,
 		removeClip,
 		splitClipAt,
+		detachAudioAt,
 		selectClip,
 		updateTrim,
 		setTrimEntries,

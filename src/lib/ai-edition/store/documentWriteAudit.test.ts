@@ -311,6 +311,10 @@ const DECLARED: WritePath[] = [
 	// playhead misses the clip, and the action skips the save in that case, so a miss leaves no
 	// step behind.
 	w("src/lib/ai-edition/store/useTimeline.ts", "splitClipAt", "save", "gesture"),
+	// Extract audio: one gesture writes the new track and the mute covering the clip together, so
+	// the pair can never be half-applied by an undo. A clip already carrying a full-span mute
+	// returns the same document and skips the save.
+	w("src/lib/ai-edition/store/useTimeline.ts", "detachAudioAt", "save", "gesture"),
 	// The live halves of the drags.
 	w("src/lib/ai-edition/store/useTimeline.ts", "updateAnnotationLive", "set", "automatic"),
 	w("src/lib/ai-edition/store/useTimeline.ts", "updateAnnotationSpan", "save", "gesture"),

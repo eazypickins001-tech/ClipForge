@@ -231,6 +231,7 @@
 		"editClipTip": "클립 편집: 자르기, 시작, 종료",
 		"splitClipHint": "Put the playhead inside a clip to split it.",
 		"splitClip": "Split",
+		"extractAudio": "Extract audio",
 		"captionsDescription": "대본에서 단어 단위 타이밍의 자막을 생성하여 타임라인에 배치합니다.",
 		"generateCaptions": "자막 생성",
 		"cropDescription": "녹화 화면을 다시 프레이밍 — 화면 비율을 선택하고 유지할 영역으로 확대합니다.",

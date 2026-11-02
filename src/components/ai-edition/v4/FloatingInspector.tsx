@@ -238,6 +238,35 @@ export function FloatingInspector({
 						<Slice size={17} />
 					</button>
 				</Tooltip>
+				{/* Extract audio, CapCut's gesture: the clip's own sound moves to a track under the
+				    video and the clip goes silent. Same clip resolution as Split — the selection
+				    wins, otherwise whatever sits under the playhead — and the track is named after
+				    the asset, the way CapCut names it after the video. */}
+				<Tooltip content={te("inspector.extractAudio")} {...RAIL_TOOLTIP}>
+					<button
+						type="button"
+						aria-label={te("inspector.extractAudio")}
+						disabled={clips.length === 0}
+						onClick={() => {
+							if (selection) tl.clearSelection();
+							const state = useProjectStore.getState();
+							const playhead = state.currentTimeSec;
+							const target = clips.find(
+								(clip) => playhead > clip.timelineStartSec && playhead < clip.timelineEndSec,
+							);
+							if (!target) {
+								toast.info(te("inspector.splitClipHint"));
+								return;
+							}
+							const label =
+								state.document?.assets.find((asset) => asset.id === target.assetId)?.label ??
+								target.assetId;
+							void tl.detachAudioAt(target.id, label);
+						}}
+					>
+						<AudioLines size={17} />
+					</button>
+				</Tooltip>
 				{/* A portal, like the timeline's menus: drawn inside the stage, the list was clipped by
 				    the stage's edge, and the rows past it sat under the timeline, out of reach. */}
 				<Popover open={clipPickerOpen && clips.length > 1} onOpenChange={setClipPickerOpen}>

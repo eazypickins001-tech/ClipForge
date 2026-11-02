@@ -231,6 +231,7 @@
 		"editClipTip": "Editar clipe: corte, início e fim",
 		"splitClipHint": "Put the playhead inside a clip to split it.",
 		"splitClip": "Split",
+		"extractAudio": "Extract audio",
 		"captionsDescription": "Gere legendas sincronizadas por palavra a partir da transcrição e solte-as na linha do tempo.",
 		"generateCaptions": "Gerar legendas",
 		"cropDescription": "Reenquadre a gravação — escolha uma proporção e dê zoom na região que deseja manter.",
