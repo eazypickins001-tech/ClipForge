@@ -18,6 +18,7 @@
 		"noVideoLoaded": "Aucune vidéo chargée",
 		"previewCompositorUnavailable": "Aperçu indisponible sur cette machine",
 		"previewMediaMissingHint": "The recording or import this project uses is no longer at its original path. Put it back, or import it again.",
+		"relinkMedia": "Locate file…",
 		"previewMediaMissing": "This project's media file is missing",
 		"trimNoFilm": "Rien à couper ici : aucun film ne se trouve sous ces mots.",
 		"unableToDetermineSourcePath": "Impossible de déterminer le chemin de la vidéo source",

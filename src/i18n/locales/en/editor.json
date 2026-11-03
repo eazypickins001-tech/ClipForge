@@ -20,6 +20,7 @@
 		"noVideoLoaded": "No video loaded",
 		"previewCompositorUnavailable": "Preview unavailable on this machine",
 		"previewMediaMissingHint": "The recording or import this project uses is no longer at its original path. Put it back, or import it again.",
+		"relinkMedia": "Locate file…",
 		"previewMediaMissing": "This project's media file is missing",
 		"trimNoFilm": "Nothing to cut there — no film sits under those words.",
 		"unableToDetermineSourcePath": "Unable to determine source video path",

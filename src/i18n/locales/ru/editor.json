@@ -20,6 +20,7 @@
 		"noVideoLoaded": "Видео не загружено",
 		"previewCompositorUnavailable": "Предпросмотр недоступен на этом компьютере",
 		"previewMediaMissingHint": "The recording or import this project uses is no longer at its original path. Put it back, or import it again.",
+		"relinkMedia": "Locate file…",
 		"previewMediaMissing": "This project's media file is missing",
 		"trimNoFilm": "Здесь нечего вырезать — под этими словами нет видео.",
 		"unableToDetermineSourcePath": "Не удалось определить путь к исходному видео",

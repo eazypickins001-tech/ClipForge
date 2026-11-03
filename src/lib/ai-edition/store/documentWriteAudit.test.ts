@@ -215,6 +215,9 @@ const DECLARED: WritePath[] = [
 	// THE round-3 fix. This is the shape that defeated round 2: a store action that
 	// writes on someone else's behalf. It forwards now, so its callers decide.
 	w("src/lib/ai-edition/store/projectStore.ts", "replaceTimeline", "save", "forwarded"),
+	// Missing media: the user picks the file in a dialog, so it is a direct gesture. One write —
+	// path only — and identity on an unknown asset or an unchanged path means no undo step.
+	w("src/lib/ai-edition/store/projectStore.ts", "relinkAsset", "save", "gesture"),
 
 	// A transcription verdict remembered on the asset, and a transcript arriving
 	// from a background whisper job. Neither is an edit.

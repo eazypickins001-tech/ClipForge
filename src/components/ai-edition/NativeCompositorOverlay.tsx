@@ -420,9 +420,37 @@ export function NativeCompositorOverlay({
 						: t("errors.previewCompositorUnavailable")}
 				</strong>
 				{mediaMissing ? (
-					<span style={{ maxWidth: "48ch", fontSize: "0.8125rem", opacity: 0.75 }}>
-						{t("errors.previewMediaMissingHint")}
-					</span>
+					<>
+						<span style={{ maxWidth: "48ch", fontSize: "0.8125rem", opacity: 0.75 }}>
+							{t("errors.previewMediaMissingHint")}
+						</span>
+						{activeClip ? (
+							<button
+								type="button"
+								onClick={async () => {
+									// The picker already exists for imports; reusing it keeps this from
+									// needing new IPC. Only the path moves on the asset, so the cut,
+									// the trims and every region are restored rather than rebuilt.
+									const picked = await window.electronAPI?.openVideoFilePicker();
+									if (!picked?.success || !picked.path) return;
+									await useProjectStore.getState().relinkAsset(activeClip.assetId, picked.path);
+								}}
+								style={{
+									marginTop: 4,
+									padding: "7px 14px",
+									borderRadius: 9,
+									border: "1px solid var(--border)",
+									background: "var(--surface-1)",
+									color: "var(--fg)",
+									fontSize: 12.5,
+									fontWeight: 600,
+									cursor: "pointer",
+								}}
+							>
+								{t("errors.relinkMedia")}
+							</button>
+						) : null}
+					</>
 				) : null}
 				<span style={{ maxWidth: "48ch", fontSize: "0.75rem", opacity: 0.55 }}>{error}</span>
 			</div>

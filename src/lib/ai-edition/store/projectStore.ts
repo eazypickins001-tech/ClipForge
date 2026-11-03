@@ -3,6 +3,7 @@ import { create } from "zustand";
 import { toFileUrl } from "@/components/video-editor/projectPersistence";
 import { toastText } from "@/i18n/toastText";
 import { nativeBridgeClient } from "@/native/client";
+import { relinkAsset as relinkAssetInDocument } from "../document/assets";
 import { placeAudioTrackInDocument } from "../document/audioTracks";
 import { createId } from "../document/ids";
 import { type Interval, replaceTimeline as replaceTimelineOp } from "../document/timeline";
@@ -187,6 +188,9 @@ export interface ProjectState {
 	) => Promise<string | null>;
 	setSelectedAudioTrackId: (id: string | null) => void;
 	removeAsset: (assetId: string) => Promise<void>;
+	/** Missing media: point an asset at its file again. Only the path moves, so the whole edit
+	 *  survives — a relink is not a re-import. */
+	relinkAsset: (assetId: string, originalPath: string) => Promise<void>;
 	/**
 	 * Write the document to disk. Resolves `true` when it took effect, `false` when it
 	 * did not.
@@ -529,6 +533,18 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
 		const trackId = await get().addAudioTrack(asset.id);
 		if (!trackId) return null;
 		return asset;
+	},
+
+	// Missing media: point the asset at the file the user picks. Only the path moves, so the
+	// timeline, the trims and every region survive — a relink is not a re-import.
+	async relinkAsset(assetId, originalPath) {
+		const document = get().document;
+		if (!document) return;
+		const next = relinkAssetInDocument(document, assetId, originalPath);
+		// Identity means nothing changed — an unknown asset, or the path already in use. Saving it
+		// would push an undo step the user cannot see.
+		if (next === document) return;
+		await get().saveDocument(next, { history: true });
 	},
 
 	async removeAsset(assetId) {

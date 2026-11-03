@@ -20,6 +20,7 @@
 		"noVideoLoaded": "لم يتم تحميل أي فيديو",
 		"previewCompositorUnavailable": "المعاينة غير متوفرة على هذا الجهاز",
 		"previewMediaMissingHint": "The recording or import this project uses is no longer at its original path. Put it back, or import it again.",
+		"relinkMedia": "Locate file…",
 		"previewMediaMissing": "This project's media file is missing",
 		"trimNoFilm": "لا شيء لقصّه هناك — لا توجد لقطات أسفل تلك الكلمات.",
 		"unableToDetermineSourcePath": "تعذر تحديد مسار الفيديو المصدر",
