@@ -238,9 +238,15 @@ export const DEFAULT_PROJECT_APPEARANCE: ProjectAppearanceDefaults = {
 	wallpaperMotion: "none",
 	frame: "none",
 	frameTheme: "light",
-	// Auto: the frame follows the recording, its crop, the camera layout and the padding.
-	// Documents from before it stored no ratio and read 16:9; the v8 upgrader pins that.
-	aspectRatio: "auto",
+	// Mobile-first: a new project's canvas is portrait, because that is the shape most of what
+	// gets published now is cut for. This was `"auto"` — the frame following the recording's own
+	// shape — and `"auto"`/`"native"` remain selectable in the format picker, so this changes the
+	// starting point, not the available choices.
+	//
+	// Documents from before a ratio was stored keep reading 16:9: the v8 upgrader pins that, and
+	// it does so with a literal rather than through this constant, precisely so a default can move
+	// without rewriting history.
+	aspectRatio: "9:16",
 	// 0.2 peaked at 9% opacity: a shadow nobody could see. 0.6 is 27%, the card lifts off the
 	// wallpaper without a halo.
 	shadowIntensity: 0.6,

@@ -42,8 +42,9 @@ describe("getEditorSettings", () => {
 	it("returns the defaults when the document has no legacyEditor", () => {
 		const snap = getEditorSettings(baseDoc);
 		expect(snap.wallpaper).toBe(DEFAULT_EDITOR_SETTINGS.wallpaper);
-		// A new project stores no ratio and reads Auto; older documents had 16:9 pinned by v8.
-		expect(snap.aspectRatio).toBe("auto");
+		// The factory canvas is portrait now (mobile-first). Older documents had 16:9 pinned by
+		// the v8 upgrader, which uses a literal rather than this default, so history is intact.
+		expect(snap.aspectRatio).toBe("9:16");
 		expect(snap.shadowIntensity).toBe(DEFAULT_EDITOR_SETTINGS.shadowIntensity);
 		expect(snap.backgroundBlur).toBe(0);
 		expect(snap.webcamLayoutPreset).toBe(DEFAULT_WEBCAM_LAYOUT_PRESET);
