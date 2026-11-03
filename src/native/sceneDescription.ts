@@ -39,7 +39,7 @@ import {
 	readSpeedRegions,
 	resolvePlaybackSegments,
 } from "@/lib/ai-edition/document/timeline";
-import type { AxcutAudioTrack, AxcutClip, AxcutDocument } from "@/lib/ai-edition/schema";
+import type { AxcutClip, AxcutDocument } from "@/lib/ai-edition/schema";
 import { isVoiceKind } from "@/lib/ai-edition/schema";
 import { nativeShaderEffectValue } from "@/lib/ai-edition/shaderEffects";
 import { getEditorSettings } from "@/lib/ai-edition/store/editorSettings";
@@ -588,7 +588,9 @@ export interface SceneDescription {
 		fadeInSec: number;
 		fadeOutSec: number;
 		/** A voiceover is voice: the export levels it like the recording's own audio. */
-		kind: AxcutAudioTrack["kind"];
+		// What the native mixer is told, which is NOT the document's kind verbatim: it knows
+		// `voiceover` and `music`, and an `extracted` track is voice. See the emitter below.
+		kind: "voiceover" | "music";
 	}>;
 	/**
 	 * The "mouse clicks" toggle (see `src/lib/ai-edition/clickSound.ts`): the recorded clicks as
@@ -964,7 +966,14 @@ export function buildSceneDescription(
 			gainDb: track.gainDb,
 			fadeInSec: track.fadeInMs / 1000,
 			fadeOutSec: track.fadeOutMs / 1000,
-			kind: track.kind,
+			// The native mixer's `SceneAudioTrackKind` knows two kinds — `music` and `voiceover` —
+			// and all it does with them is decide whether the track is levelled with the voice and
+			// ducks the music. An `extracted` track IS voice (see `isVoiceKind`), so it crosses
+			// this boundary as one. The document keeps the truthful kind; the native enum does not
+			// need a third variant that would behave exactly like the second — and sending one it
+			// does not know fails the WHOLE scene parse ("unknown variant `extracted`"), which
+			// takes the preview and the export down with it.
+			kind: isVoiceKind(track.kind) ? ("voiceover" as const) : ("music" as const),
 		};
 		// The window the file has left after the offset. Without a probed duration
 		// there is nothing to loop over and nothing to cap the tail with, so the

@@ -32,7 +32,7 @@ const SPEECH_VIDEO = path.join(FIXTURES_DIR, "speech-sample.mp4");
 
 type SavedDocument = {
 	timeline?: {
-		clips?: Array<{ id?: string }>;
+		clips?: Array<{ id?: string; muted?: boolean }>;
 		muteRanges?: Array<{ startSec?: number; endSec?: number; reason?: string }>;
 	};
 	audioTracks?: Array<{ kind?: string; assetId?: string; clipId?: string }>;
@@ -133,8 +133,10 @@ test("Extract audio moves the sound to its own track and silences the clip", asy
 		expect(doc?.audioTracks?.[0]?.kind).toBe("extracted");
 		// Anchored to the clip it came out of, so the two stay together.
 		expect(doc?.audioTracks?.[0]?.clipId).toBe(doc?.timeline?.clips?.[0]?.id);
-		// And the clip is silenced over its own span, or the sound would play twice.
-		expect(doc?.timeline?.muteRanges?.length).toBe(1);
+		// And the clip itself is silenced, or the sound would play twice. This used to be a mute
+		// range, which nothing read: the take kept playing under the track it had been moved to.
+		expect(doc?.timeline?.clips?.[0]?.muted).toBe(true);
+		expect(doc?.timeline?.muteRanges).toEqual([]);
 	} finally {
 		await closeApp(app);
 	}
