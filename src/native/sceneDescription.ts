@@ -744,6 +744,12 @@ export function buildNativeClipList(document: AxcutDocument): CompositorClipInpu
 				// job and marking its segment silent (see `build_audio_concat_plan` in audio.rs),
 				// which is the whole mechanism behind the clip's mute.
 				hasAudio: !clip.muted,
+				// The clip's own finishing, from the clip audio panel. Inert until the native mixer
+				// reads them (serde ignores fields it does not know), which is why they ship here
+				// ahead of the Rust half.
+				gainDb: clip.gainDb ?? 0,
+				fadeInSec: (clip.fadeInMs ?? 0) / 1000,
+				fadeOutSec: (clip.fadeOutMs ?? 0) / 1000,
 			},
 		];
 	});
@@ -1082,6 +1088,9 @@ export function buildSceneDescription(
 				sourceEndSec: resolveClipSourceEndSec(clip, asset),
 				webcamOffsetSec: camera.offsetSec,
 				hasAudio: !clip.muted,
+				gainDb: clip.gainDb ?? 0,
+				fadeInSec: (clip.fadeInMs ?? 0) / 1000,
+				fadeOutSec: (clip.fadeOutMs ?? 0) / 1000,
 				// A held segment has an empty source window and exists only for the frames it
 				// holds; every other clip holds nothing.
 			},

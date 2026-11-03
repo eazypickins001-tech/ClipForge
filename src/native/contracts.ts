@@ -208,6 +208,14 @@ export interface CompositorClipInput {
 	 *  convention). Populated by `buildSceneDescription` and `buildNativeClipList`;
 	 *  see the comment on the producer side for the exact rule. */
 	hasAudio: boolean;
+	/** The clip's own audio finishing, from the clip audio panel. Seconds for the fades, dB for
+	 *  the level. Optional because a call site that has no clip audio (the export dialog's
+	 *  fixture path) is saying exactly that: absent reads as 0 dB and no fades, on both sides.
+	 *  Emitted ahead of the mixer that will read them — serde ignores fields it does not know, so
+	 *  this half ships without changing what the current native build does. */
+	gainDb?: number;
+	fadeInSec?: number;
+	fadeOutSec?: number;
 }
 
 /** Bilan d'un export natif (mesure enveloppante §10 : frames, durée, fps). */

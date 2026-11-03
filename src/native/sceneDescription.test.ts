@@ -553,6 +553,29 @@ describe("buildSceneDescription.clips", () => {
 		expect(buildSceneDescription(doc).clips[0].hasAudio).toBe(false);
 	});
 
+	it("carries the clip's own finishing, converting the fades to seconds", () => {
+		// The document stores fades in ms because the panel's slider is in ms; the scene speaks
+		// seconds everywhere. This is the boundary where that changes, so it gets an assertion.
+		const asset = makeAsset({ id: "a", originalPath: "/screen.mp4" });
+		const clip = makeClip({
+			id: "c1",
+			assetId: "a",
+			sourceStartSec: 0,
+			sourceEndSec: 4,
+			timelineStartSec: 0,
+			timelineEndSec: 4,
+		});
+		const doc = makeDoc({
+			assets: [asset],
+			clips: [{ ...clip, gainDb: -6, fadeInMs: 500, fadeOutMs: 250 }],
+		});
+
+		const [emitted] = buildSceneDescription(doc).clips;
+		expect(emitted.gainDb).toBe(-6);
+		expect(emitted.fadeInSec).toBe(0.5);
+		expect(emitted.fadeOutSec).toBe(0.25);
+	});
+
 	it("carries the mute per clip, not for the whole scene", () => {
 		const asset = makeAsset({ id: "a", originalPath: "/screen.mp4" });
 		const clip1 = makeClip({
