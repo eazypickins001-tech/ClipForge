@@ -11,6 +11,15 @@ export function isExportId(value: unknown): value is string {
 	return typeof value === "string" && /^[A-Za-z0-9_-]{1,128}$/.test(value);
 }
 
+/**
+ * The throwaway MP4 an audio export renders beside its output and then takes the audio out of.
+ * It is the only file an export is allowed to delete, so the name is the guard: `audioRenderPath`
+ * gives it this suffix and nothing else in the app writes one.
+ */
+export function isExportRenderPath(value: unknown): value is string {
+	return typeof value === "string" && value.toLowerCase().endsWith(".render.mp4");
+}
+
 /** Controls never leave main. Unknown and foreign IDs have the same result. */
 export class ExportJobs {
 	private readonly jobs = new Map<number, { exportId: string; cancel: () => boolean }>();

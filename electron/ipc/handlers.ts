@@ -163,6 +163,7 @@ import {
 import { getSttManager } from "../stt";
 import { createRunnerWindow } from "../windows";
 import { getSourcesByType, shouldEnumerateSourceTypesSeparately } from "./desktopSourceTypes";
+import { isExportRenderPath } from "./exportJobs";
 import { registerNativeBridgeHandlers } from "./nativeBridge";
 import { createNativeMacMidCaptureErrorWatch } from "./nativeMacMidCaptureErrorWatch";
 import { registerRecordingPrefsHandlers } from "./recordingPrefs";
@@ -4290,6 +4291,29 @@ export function registerIpcHandlers(
 				message: "Failed to save exported video",
 				error: String(error),
 			};
+		}
+	});
+
+	// An audio export renders the project to a throwaway MP4 beside the output and takes the
+	// audio stream out of it, so that render has to go or it sits next to the user's WAV at a
+	// few hundred MB. Guarded like the write above, and narrowed to the name that render is
+	// given, so a stale path cannot delete anything the user owns.
+	ipcMain.handle("delete-export-render", async (_, filePath: string) => {
+		try {
+			if (typeof filePath !== "string" || !path.isAbsolute(filePath)) {
+				return { success: false, message: "Invalid path" };
+			}
+			if (!isExportRenderPath(filePath)) {
+				return { success: false, message: "Not an export render" };
+			}
+
+			await fs.unlink(path.normalize(filePath));
+			return { success: true };
+		} catch (error) {
+			// Already gone is the outcome this was after.
+			if ((error as NodeJS.ErrnoException)?.code === "ENOENT") return { success: true };
+			console.warn("Failed to delete the export render:", error);
+			return { success: false, message: String(error) };
 		}
 	});
 

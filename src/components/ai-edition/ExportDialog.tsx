@@ -447,22 +447,29 @@ export function ExportDialog({ open, onClose, document }: ExportDialogProps) {
 					// audio stream is taken out of that file. Same mix, gains and ducking the MP4
 					// would have had, because it IS that render.
 					const renderPath = audioRenderPath(pickedPath);
-					await exportMultiNative(
-						exportClips,
-						renderPath,
-						sceneJson,
-						{ width: 640, height: 360, fps, codec: "h264", bitrate: 1_000_000 },
-						job.id,
-					);
-					if (activeExport.current !== job) return;
-					const rendered = await fetch(toFileUrl(renderPath));
-					if (!rendered.ok) {
-						throw new Error(`Failed to read the rendered video back: ${renderPath}`);
-					}
-					const audio = await extractAudio(await rendered.blob(), audioFormat);
-					const written = await window.electronAPI?.writeExportToPath(audio, pickedPath);
-					if (!written?.success) {
-						throw new Error(written?.message ?? "Failed to write the audio file");
+					try {
+						await exportMultiNative(
+							exportClips,
+							renderPath,
+							sceneJson,
+							{ width: 640, height: 360, fps, codec: "h264", bitrate: 1_000_000 },
+							job.id,
+						);
+						if (activeExport.current !== job) return;
+						const rendered = await fetch(toFileUrl(renderPath));
+						if (!rendered.ok) {
+							throw new Error(`Failed to read the rendered video back: ${renderPath}`);
+						}
+						const audio = await extractAudio(await rendered.blob(), audioFormat);
+						const written = await window.electronAPI?.writeExportToPath(audio, pickedPath);
+						if (!written?.success) {
+							throw new Error(written?.message ?? "Failed to write the audio file");
+						}
+					} finally {
+						// The render was only a carrier for the audio, and it is a few hundred MB on a
+						// long project: it goes whether or not the extraction worked, and failing to
+						// delete it must never fail an export that already succeeded.
+						await window.electronAPI?.deleteExportRender?.(renderPath)?.catch(() => undefined);
 					}
 				} else if (format === "gif") {
 					stats = await exportGifNative(

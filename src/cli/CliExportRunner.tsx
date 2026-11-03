@@ -185,23 +185,29 @@ async function runExport(request: CliExportRequest): Promise<CliDoneResult> {
 			// The audio of the MP4 this project exports to, rendered at the smallest size: the
 			// picture is thrown away, the frame rate stays the one the audio is laid out on.
 			const renderPath = audioRenderPath(outPath);
-			const dims = dimsFor("medium");
-			await exportMultiNative(clips, renderPath, sceneJson, {
-				width: dims.width,
-				height: dims.height,
-				fps: mp4FrameRate,
-				codec: "h264",
-				bitrate: dims.bitrate,
-			});
-			window.electronAPI.cliProgress({ percentage: 100, phase: "extracting-audio" });
-			const rendered = await fetch(toFileUrl(renderPath));
-			if (!rendered.ok) throw new Error(`Failed to read the rendered video back: ${renderPath}`);
-			const audio = await extractAudio(await rendered.blob(), audioFormat);
-			const saveResult = await window.electronAPI.writeExportToPath(audio, outPath);
-			if (!saveResult.success) {
-				throw new Error(saveResult.message ?? `Failed to write the audio to ${outPath}`);
+			try {
+				const dims = dimsFor("medium");
+				await exportMultiNative(clips, renderPath, sceneJson, {
+					width: dims.width,
+					height: dims.height,
+					fps: mp4FrameRate,
+					codec: "h264",
+					bitrate: dims.bitrate,
+				});
+				window.electronAPI.cliProgress({ percentage: 100, phase: "extracting-audio" });
+				const rendered = await fetch(toFileUrl(renderPath));
+				if (!rendered.ok) throw new Error(`Failed to read the rendered video back: ${renderPath}`);
+				const audio = await extractAudio(await rendered.blob(), audioFormat);
+				const saveResult = await window.electronAPI.writeExportToPath(audio, outPath);
+				if (!saveResult.success) {
+					throw new Error(saveResult.message ?? `Failed to write the audio to ${outPath}`);
+				}
+				return { success: true, outputPath: outPath, format };
+			} finally {
+				// The render carried the audio and is done with: it does not belong beside the file
+				// the user asked for.
+				await window.electronAPI.deleteExportRender(renderPath)?.catch(() => undefined);
 			}
-			return { success: true, outputPath: outPath, format };
 		}
 
 		// MP4: native writes outPath directly. When a voiceover is requested, mix

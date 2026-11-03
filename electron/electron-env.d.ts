@@ -316,6 +316,10 @@ interface Window {
 			message?: string;
 			error?: string;
 		}>;
+		deleteExportRender: (filePath: string) => Promise<{
+			success: boolean;
+			message?: string;
+		}>;
 		openVideoFilePicker: () => Promise<{
 			success: boolean;
 			path?: string;

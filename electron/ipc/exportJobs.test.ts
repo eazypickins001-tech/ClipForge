@@ -1,7 +1,7 @@
 import { EventEmitter } from "node:events";
 import type { WebContents } from "electron";
 import { describe, expect, it, vi } from "vitest";
-import { ExportJobs, isExportId } from "./exportJobs";
+import { ExportJobs, isExportId, isExportRenderPath } from "./exportJobs";
 
 function owner(id = 1) {
 	return Object.assign(new EventEmitter(), {
@@ -112,5 +112,17 @@ describe("export jobs", () => {
 			"Invalid export ID",
 		);
 		expect(start).not.toHaveBeenCalled();
+	});
+
+	it("names an export render, and nothing else, as deletable", () => {
+		// What an audio export actually leaves behind.
+		expect(isExportRenderPath("C:/Users/me/Videos/take.wav.render.mp4")).toBe(true);
+		expect(isExportRenderPath("C:/Users/me/Videos/take.wav.RENDER.MP4")).toBe(true);
+		// The user's own files, including the export that render carried.
+		expect(isExportRenderPath("C:/Users/me/Videos/take.wav")).toBe(false);
+		expect(isExportRenderPath("C:/Users/me/Videos/take.mp4")).toBe(false);
+		expect(isExportRenderPath("C:/Users/me/Documents/render.mp4")).toBe(false);
+		expect(isExportRenderPath("")).toBe(false);
+		expect(isExportRenderPath(undefined)).toBe(false);
 	});
 });
