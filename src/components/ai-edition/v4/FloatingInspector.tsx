@@ -25,6 +25,7 @@ import {
 	Trash2,
 	Type,
 	Undo2,
+	Volume2,
 	X,
 	ZoomIn,
 } from "lucide-react";
@@ -133,6 +134,10 @@ interface FloatingInspectorProps {
 	 * through a facet body. */
 	clips: AxcutClip[];
 	onEditClip: (clip: AxcutClip) => void;
+	/** Opens the clip's audio panel — volume, mute and fades, which is CapCut's Volume sheet.
+	 *  Same clip resolution as Split and Extract audio: the selection wins, otherwise the clip
+	 *  under the playhead. */
+	onEditClipAudio: (clip: AxcutClip) => void;
 	transcriptProps: TranscriptProps;
 	/** Drives the selected-element settings pane (zoom/speed/annotation/trim) —
 	 * takes over the inspector, forcing it open, whenever a timeline region is
@@ -148,6 +153,7 @@ export function FloatingInspector({
 	onToggleOpen,
 	clips,
 	onEditClip,
+	onEditClipAudio,
 	transcriptProps,
 	tl,
 }: FloatingInspectorProps) {
@@ -265,6 +271,30 @@ export function FloatingInspector({
 						}}
 					>
 						<AudioLines size={17} />
+					</button>
+				</Tooltip>
+				{/* The clip's own sound, in one panel: CapCut's Volume sheet, where the speaker
+				    sits beside the slider and crosses out when it is off. Same clip resolution as
+				    the two buttons above — the selection wins, otherwise the playhead's clip. */}
+				<Tooltip content={ts("audio.outputGain")} {...RAIL_TOOLTIP}>
+					<button
+						type="button"
+						aria-label={ts("audio.outputGain")}
+						disabled={clips.length === 0}
+						onClick={() => {
+							if (selection) tl.clearSelection();
+							const playhead = useProjectStore.getState().currentTimeSec;
+							const target = clips.find(
+								(clip) => playhead > clip.timelineStartSec && playhead < clip.timelineEndSec,
+							);
+							if (!target) {
+								toast.info(te("inspector.splitClipHint"));
+								return;
+							}
+							onEditClipAudio(target);
+						}}
+					>
+						<Volume2 size={17} />
 					</button>
 				</Tooltip>
 				{/* A portal, like the timeline's menus: drawn inside the stage, the list was clipped by

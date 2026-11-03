@@ -59,6 +59,7 @@ import { nativeBridgeClient } from "@/native";
 import type { AiEditionProjectSummary } from "@/native/contracts";
 import { resolveVisibleClips } from "@/native/sceneDescription";
 import { useNativePlaybackSync } from "@/native/useNativePlaybackSync";
+import { ClipAudioModal } from "./ClipAudioModal";
 import { ExportDialog } from "./ExportDialog";
 import { importProjectFile } from "./importProjectFile";
 import { insertionsEnabled } from "./insertionsEnabled";
@@ -285,6 +286,9 @@ export function NewEditorShell() {
 	// "Edit clip" rail button — a single shell-level instance instead of one
 	// mounted per trigger site.
 	const [editClipTarget, setEditClipTarget] = useState<AxcutClip | null>(null);
+	// The clip's own audio panel (volume, mute, fades) — CapCut's Volume sheet. Same shape as
+	// `editClipTarget` above: one shell-level instance, opened from the inspector's rail.
+	const [clipAudioTarget, setClipAudioTarget] = useState<AxcutClip | null>(null);
 	const [exportOpen, setExportOpen] = useState(false);
 	const [unsavedPrompt, setUnsavedPrompt] = useState<{
 		action: "close" | "new" | "open" | "record";
@@ -1784,6 +1788,7 @@ export function NewEditorShell() {
 								onToggleOpen={() => setInspectorOpen((v) => !v)}
 								clips={tl.clips}
 								onEditClip={setEditClipTarget}
+								onEditClipAudio={setClipAudioTarget}
 								transcriptProps={transcriptProps}
 							/>
 						</>
@@ -1847,6 +1852,18 @@ export function NewEditorShell() {
 				open={newProjectOpen}
 				onClose={() => setNewProjectOpen(false)}
 				onCreate={handleCreateProject}
+			/>
+			<ClipAudioModal
+				open={clipAudioTarget !== null}
+				onClose={() => setClipAudioTarget(null)}
+				clip={clipAudioTarget}
+				// One gesture, one write, one undo step — the panel commits on release, so a
+				// slider sweep is not sixty saves.
+				onChange={(patch) => {
+					if (!clipAudioTarget) return;
+					const clipId = clipAudioTarget.id;
+					void enqueueTimelineWrite(() => tl.updateClipAudio(clipId, patch));
+				}}
 			/>
 			<EditClipModal
 				open={editClipTarget !== null}
