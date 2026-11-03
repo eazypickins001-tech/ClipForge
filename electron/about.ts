@@ -53,10 +53,18 @@ export interface AboutFacts {
  *  `COPYRIGHT` is deliberately NOT part of it: the macOS About panel has its own field for
  *  that line, and putting it here too would print it twice on the one platform that asked
  *  for it separately. The surface that shows the box adds it. */
+/** Baked in at build time by `define` in vite.config.ts. Absent under vitest, hence the guard
+ *  below — a bare reference there would throw at import time and take the whole suite with it. */
+declare const __BUILD_COMMIT__: string;
+const BUILD_COMMIT = typeof __BUILD_COMMIT__ === "string" ? __BUILD_COMMIT__ : "dev";
+
 export function formatAboutDetail(facts: AboutFacts): string {
 	return [
 		`Electron ${facts.electron} · Chromium ${facts.chrome} · Node ${facts.node}`,
 		`${facts.platform} ${facts.arch} · ${facts.channel}`,
+		// The version alone cannot tell two builds apart: every build made today is 0.1.0.
+		// The commit is what makes a bug report traceable to a tree.
+		`build ${BUILD_COMMIT}`,
 		WEBSITE_URL,
 	].join("\n");
 }

@@ -112,6 +112,18 @@ if (process.platform === "linux") {
 
 disableHttpCacheForDevServer(app.commandLine, process.env);
 
+// One tree, always. Electron derives userData from `app.getName()`, and that resolved to two
+// different values across builds (package.json's `name` "clipforge" vs electron-builder's
+// `productName` "ClipForge"), so this machine ended up with TWO complete libraries —
+// %APPDATA%\clipforge and %APPDATA%\ClipForge — each with its own projects, recordings and
+// models. Pinned here, before anything reads it.
+//
+// An explicit --user-data-dir wins: the e2e harness passes one so each spec gets a private tree,
+// and overriding it would have every spec share state.
+if (!app.commandLine.getSwitchValue("user-data-dir")) {
+	app.setPath("userData", path.join(app.getPath("appData"), "clipforge"));
+}
+
 installMainProcessErrorGuards({ userDataDir: app.getPath("userData") });
 
 const recordingsDirManager = new RecordingsDirManager(app.getPath("userData"), () => isRecording);

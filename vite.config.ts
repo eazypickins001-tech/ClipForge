@@ -36,6 +36,11 @@ export default defineConfig({
 				},
 				vite: {
 					build: {},
+					// Baked into the main bundle so About can name the exact build. GITHUB_SHA is
+					// set by the workflow; a local build says "dev" rather than inventing a SHA.
+					define: {
+						__BUILD_COMMIT__: JSON.stringify((process.env.GITHUB_SHA ?? "dev").slice(0, 7)),
+					},
 					// The main process runs code from `src/lib` too (the agent's tools, the MCP
 					// server): it resolves `@/` as the renderer does, or every such import fails
 					// the build.

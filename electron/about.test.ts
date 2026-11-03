@@ -27,6 +27,8 @@ describe("formatAboutDetail", () => {
 			[
 				"Electron 41.2.1 · Chromium 138.0.7204.100 · Node 22.22.1",
 				"darwin arm64 · dmg",
+				// `__BUILD_COMMIT__` is a build-time define, so under vitest the guard yields "dev".
+				"build dev",
 				WEBSITE_URL,
 			].join("\n"),
 		);
