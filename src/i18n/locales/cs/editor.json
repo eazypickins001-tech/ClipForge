@@ -156,6 +156,8 @@
 		"importMedia": "Importovat média",
 		"added": "Přidáno {{label}}",
 		"addToTimeline": "Přidat na časovou osu",
+		"deleteMediaConfirm": "Remove this media from the project? Any clip using it will be removed too.",
+		"deleteMedia": "Delete media",
 		"addedToTimeline": "{{label}} přidán na časovou osu",
 		"sourceTranscript": "Zdrojový přepis",
 		"close": "Zavřít",

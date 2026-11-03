@@ -156,6 +156,8 @@
 		"importMedia": "미디어 가져오기",
 		"added": "{{label}} 추가됨",
 		"addToTimeline": "타임라인에 추가",
+		"deleteMediaConfirm": "Remove this media from the project? Any clip using it will be removed too.",
+		"deleteMedia": "Delete media",
 		"addedToTimeline": "{{label}}이(가) 타임라인에 추가됨",
 		"sourceTranscript": "소스 대본",
 		"close": "닫기",

@@ -156,6 +156,8 @@
 		"importMedia": "Import media",
 		"added": "Added {{label}}",
 		"addToTimeline": "Add to timeline",
+		"deleteMediaConfirm": "Remove this media from the project? Any clip using it will be removed too.",
+		"deleteMedia": "Delete media",
 		"addedToTimeline": "Added {{label}} to the timeline",
 		"sourceTranscript": "Transcript",
 		"close": "Close",

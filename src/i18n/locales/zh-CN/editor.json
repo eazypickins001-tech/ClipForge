@@ -156,6 +156,8 @@
 		"importMedia": "导入媒体",
 		"added": "已添加 {{label}}",
 		"addToTimeline": "添加到时间线",
+		"deleteMediaConfirm": "Remove this media from the project? Any clip using it will be removed too.",
+		"deleteMedia": "Delete media",
 		"addedToTimeline": "已将 {{label}} 添加到时间线",
 		"sourceTranscript": "来源转录文本",
 		"close": "关闭",

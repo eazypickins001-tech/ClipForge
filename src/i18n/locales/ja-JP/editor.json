@@ -156,6 +156,8 @@
 		"importMedia": "メディアをインポート",
 		"added": "{{label}} を追加しました",
 		"addToTimeline": "タイムラインに追加",
+		"deleteMediaConfirm": "Remove this media from the project? Any clip using it will be removed too.",
+		"deleteMedia": "Delete media",
 		"addedToTimeline": "{{label}} をタイムラインに追加しました",
 		"sourceTranscript": "ソースの文字起こし",
 		"close": "閉じる",

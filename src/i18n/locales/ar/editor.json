@@ -156,6 +156,8 @@
 		"importMedia": "استيراد وسائط",
 		"added": "تمت إضافة {{label}}",
 		"addToTimeline": "إضافة إلى الخط الزمني",
+		"deleteMediaConfirm": "Remove this media from the project? Any clip using it will be removed too.",
+		"deleteMedia": "Delete media",
 		"addedToTimeline": "تمت إضافة {{label}} إلى الخط الزمني",
 		"sourceTranscript": "نص المصدر",
 		"close": "إغلاق",

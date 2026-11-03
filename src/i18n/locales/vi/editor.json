@@ -156,6 +156,8 @@
 		"importMedia": "Nhập media",
 		"added": "Đã thêm {{label}}",
 		"addToTimeline": "Thêm vào dòng thời gian",
+		"deleteMediaConfirm": "Remove this media from the project? Any clip using it will be removed too.",
+		"deleteMedia": "Delete media",
 		"addedToTimeline": "Đã thêm {{label}} vào dòng thời gian",
 		"sourceTranscript": "Bản ghi lời thoại nguồn",
 		"close": "Đóng",

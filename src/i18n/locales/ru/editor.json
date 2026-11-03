@@ -156,6 +156,8 @@
 		"importMedia": "Импортировать медиа",
 		"added": "Добавлено: {{label}}",
 		"addToTimeline": "Добавить на таймлайн",
+		"deleteMediaConfirm": "Remove this media from the project? Any clip using it will be removed too.",
+		"deleteMedia": "Delete media",
 		"addedToTimeline": "{{label}} добавлено на таймлайн",
 		"sourceTranscript": "Транскрипт источника",
 		"close": "Закрыть",

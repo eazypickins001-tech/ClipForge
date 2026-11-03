@@ -156,6 +156,8 @@
 		"importMedia": "Medya içe aktar",
 		"added": "{{label}} eklendi",
 		"addToTimeline": "Zaman çizelgesine ekle",
+		"deleteMediaConfirm": "Remove this media from the project? Any clip using it will be removed too.",
+		"deleteMedia": "Delete media",
 		"addedToTimeline": "{{label}} zaman çizelgesine eklendi",
 		"sourceTranscript": "Kaynak Metin Dökümü",
 		"close": "Kapat",

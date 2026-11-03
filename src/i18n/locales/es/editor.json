@@ -156,6 +156,8 @@
 		"importMedia": "Importar contenido",
 		"added": "{{label}} añadido",
 		"addToTimeline": "Añadir a la línea de tiempo",
+		"deleteMediaConfirm": "Remove this media from the project? Any clip using it will be removed too.",
+		"deleteMedia": "Delete media",
 		"addedToTimeline": "{{label}} añadido a la línea de tiempo",
 		"sourceTranscript": "Transcripción de la fuente",
 		"close": "Cerrar",

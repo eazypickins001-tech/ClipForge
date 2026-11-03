@@ -1,4 +1,4 @@
-import { ArrowDown, Film, Plus, RotateCw, Search, X } from "lucide-react";
+import { ArrowDown, Film, Plus, RotateCw, Search, Trash2, X } from "lucide-react";
 import { useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { Tooltip } from "@/components/ui/tooltip";
@@ -314,6 +314,39 @@ export function MediaStage({
 							>
 								<Plus size={14} />
 								{t("mediaStage.addToTimeline")}
+							</button>
+
+							{/* Removal lives in the detail panel rather than on the card: the card is a
+							    <button>, and a nested button is invalid markup that would swallow its
+							    clicks. The store owns this — `removeAsset` goes through the bridge, which
+							    drops the asset and everything that referenced it — so nothing is left
+							    pointing at media that no longer exists. */}
+							<button
+								type="button"
+								onClick={() => {
+									if (!window.confirm(t("mediaStage.deleteMediaConfirm"))) return;
+									setDetailOpen(false);
+									void useProjectStore.getState().removeAsset(selected.id);
+								}}
+								style={{
+									width: "100%",
+									height: 34,
+									display: "inline-flex",
+									alignItems: "center",
+									justifyContent: "center",
+									gap: 7,
+									marginBottom: 16,
+									borderRadius: 9,
+									border: "1px solid var(--border)",
+									background: "transparent",
+									color: "var(--danger)",
+									fontSize: 12.5,
+									fontWeight: 600,
+									cursor: "pointer",
+								}}
+							>
+								<Trash2 size={14} />
+								{t("mediaStage.deleteMedia")}
 							</button>
 
 							<div style={{ marginBottom: 16 }}>
