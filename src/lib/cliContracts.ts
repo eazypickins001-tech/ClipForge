@@ -22,6 +22,25 @@ export function audioRenderPath(outPath: string): string {
 	return `${outPath}.render.mp4`;
 }
 
+/**
+ * The size an audio export renders at. The picture is thrown away, so it only has to be small —
+ * but the compositor refuses an export whose shape differs from the scene's own output frame by
+ * more than a hair (`resolve_output_size`, 3% either way), so the shape is the scene's and only
+ * the scale drops. A landscape 640x360 against a portrait 1088x1920 project is exactly the
+ * refusal that made this a function.
+ */
+export function audioRenderDims(
+	output: { width: number; height: number },
+	longest = 360,
+): { width: number; height: number } {
+	// Even dimensions: the compositor rasterises to this size (NV12 4:2:0).
+	const even = (n: number) => Math.max(2, Math.round(n) & ~1);
+	const side = Math.max(output.width, output.height);
+	if (side <= longest) return { width: even(output.width), height: even(output.height) };
+	const scale = longest / side;
+	return { width: even(output.width * scale), height: even(output.height * scale) };
+}
+
 export interface CliExportRequest {
 	kind: "export";
 	/** Absolute path to the .openscreen project file. */

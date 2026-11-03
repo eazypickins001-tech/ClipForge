@@ -23,7 +23,7 @@ import type { AxcutDocument } from "@/lib/ai-edition/schema";
 import { getEditorSettings } from "@/lib/ai-edition/store/editorSettings";
 import { assetCameraSource } from "@/lib/ai-edition/timeline/camera";
 import { resolveClipSourceEndSec } from "@/lib/ai-edition/timeline/clipDuration";
-import { type AudioExportFormat, audioRenderPath } from "@/lib/cliContracts";
+import { type AudioExportFormat, audioRenderDims, audioRenderPath } from "@/lib/cliContracts";
 import {
 	type ExportFormat,
 	type ExportProgress,
@@ -447,12 +447,15 @@ export function ExportDialog({ open, onClose, document }: ExportDialogProps) {
 					// audio stream is taken out of that file. Same mix, gains and ducking the MP4
 					// would have had, because it IS that render.
 					const renderPath = audioRenderPath(pickedPath);
+					// The compositor refuses an export of a different shape than the scene's frame,
+					// so this is the scene's shape at a small scale rather than a fixed small size.
+					const renderDims = audioRenderDims(sceneDesc.output);
 					try {
 						await exportMultiNative(
 							exportClips,
 							renderPath,
 							sceneJson,
-							{ width: 640, height: 360, fps, codec: "h264", bitrate: 1_000_000 },
+							{ ...renderDims, fps, codec: "h264", bitrate: 1_000_000 },
 							job.id,
 						);
 						if (activeExport.current !== job) return;
