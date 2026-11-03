@@ -415,9 +415,12 @@ export function applyPreviewAudioSettings(
 	elements: Array<HTMLAudioElement | null>,
 	gainDb: number,
 	voiceGainDb = 0,
+	/** The recording's own mute, 0 or 1. The export silences a muted clip by declaring it has no
+	 *  audio (`hasAudio: false`); this is the preview's half of the same promise. */
+	clipGain = 1,
 ): void {
 	const outputGain = audioGainScalar(gainDb);
-	const voiceGain = audioGainScalar(voiceGainDb);
+	const voiceGain = audioGainScalar(voiceGainDb) * Math.min(1, Math.max(0, clipGain));
 	if (!graph) {
 		for (const element of elements) {
 			if (element) element.volume = Math.min(1, outputGain * voiceGain);
@@ -1031,6 +1034,19 @@ export function VirtualPreview({
 			// applies the global gain on top, matching the export); the `.volume` path is
 			// the fallback for when the graph is unavailable — there a boost caps at 0 dB.
 			const globalGain = audioGainScalar(audioGainDbRef.current);
+			// The recording's own sound, silenced when the clip under the playhead is muted. This
+			// is the preview's half of what `hasAudio: false` does to the export, applied here in
+			// the tick rather than from an effect: the playhead crosses clips while the graph
+			// stays connected, so an effect keyed on the document would be a frame late at every
+			// boundary — the one moment the mute has to be right.
+			const previewClip = clipsRef.current.find((clip) => clip.id === activeClipIdRef.current);
+			applyPreviewAudioSettings(
+				audioGraphRef.current,
+				[primaryAudioRef.current, supplementalAudioRef.current],
+				audioGainDbRef.current,
+				voiceGainDbRef.current,
+				previewClip?.muted ? 0 : 1,
+			);
 			// Speed-aware: under a 2x region the raw playhead races, and a projection
 			// blind to speed raced the audio's target position with it — the track
 			// was never given a faster `playbackRate`, but seeking it twice as fast
