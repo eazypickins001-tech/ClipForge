@@ -929,12 +929,14 @@ describe("executeAgentTool", () => {
 			animation: "typewriter",
 		});
 		expect(title?.style).toMatchObject({
-			fontSize: 72,
 			color: "#ffcc00",
 			backgroundColor: "transparent",
 			fontWeight: "normal",
 			textAnimation: "typewriter",
 		});
+		// The factory frame is portrait, so a 72 px title is wider than the frame: it is scaled
+		// down to fit rather than hanging out of it.
+		expect(title?.style.fontSize).toBeLessThan(72);
 		// Bigger text, bigger box: the box is the text's.
 		expect(title?.size.width).toBeGreaterThan(plain?.size.width ?? 0);
 	});
@@ -960,7 +962,11 @@ describe("executeAgentTool", () => {
 			JSON.stringify({ annotationId: id, text: "A much longer callout than before" }),
 		).document?.annotations.find((a) => a.id === id);
 		expect(retexted?.size.width).toBeGreaterThan(moved?.size.width ?? 0);
-		expect(centreOf(retexted)).toEqual({ x: expect.closeTo(30, 5), y: expect.closeTo(30, 5) });
+		// Portrait frame: the refitted box is wider than twice the centre's distance from the left
+		// edge, so the centre holds only as far as keeping the box inside the frame allows.
+		const centre = centreOf(retexted);
+		expect(centre?.y).toBeCloseTo(30, 5);
+		expect(centre?.x).toBeCloseTo(Math.max(30, (retexted?.size.width ?? 0) / 2), 5);
 	});
 
 	it("setAspectRatio sets the video's shape, keeping frame text where it was", () => {

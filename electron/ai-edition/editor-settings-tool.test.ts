@@ -87,7 +87,7 @@ describe("setEditorSettings", () => {
 		expect(settings.cursor.asArrow).toEqual(["text"]);
 
 		const snapshot = read(document);
-		expect(snapshot.settings).toMatchObject({ padding: 20, aspectRatio: "auto" });
+		expect(snapshot.settings).toMatchObject({ padding: 20, aspectRatio: "9:16" });
 		expect(snapshot.settings.cursor).toMatchObject({ size: 2, theme: "glass-lens" });
 		// What is read is what the tool takes: the whole block goes back in unchanged.
 		expect(set(document, snapshot.settings).ok).toBe(true);

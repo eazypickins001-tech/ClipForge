@@ -8,7 +8,14 @@ import { inflateRawSync } from "node:zlib";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 const require = createRequire(import.meta.url);
-const { blake2b } = require("@noble/hashes/blake2.js");
+// app-builder-lib's own dependency brings @noble/hashes, but npm nests it, so a bare require
+// finds it only where something else hoisted it -- on a developer machine that can even be a
+// node_modules above the checkout, which makes this pass locally and fail in CI. Resolve it
+// from app-builder-lib, which searches its tree first and the top level after.
+const appBuilderLibRoot = path.dirname(require.resolve("app-builder-lib/package.json"));
+const { blake2b } = require(
+	require.resolve("@noble/hashes/blake2.js", { paths: [appBuilderLibRoot] }),
+);
 const { appendBlockmap } = require("app-builder-lib/out/targets/differentialUpdateInfoBuilder");
 const { artifactBuildCompleted, afterAllArtifactBuild } = require("./appimage-updates.cjs");
 const temporaryDirectories = [];
