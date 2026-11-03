@@ -16,6 +16,7 @@
 
 import { collapseTracksToPills } from "../document/audioTracks";
 import type { AxcutAsset, AxcutAudioTrack, AxcutClip, AxcutTranscript, AxcutWord } from "../schema";
+import { isVoiceKind } from "../schema";
 import { type RawSpan, type RemovedRawSpan, removalAt } from "./programme-time";
 import { takeProgramme } from "./take-programme";
 
@@ -326,7 +327,7 @@ export function voiceoverPlacements(
 	removed: readonly RemovedRawSpan[] = [],
 ): TranscriptPlacement[] {
 	return collapseTracksToPills(audioTracks)
-		.filter((pill) => pill.kind === "voiceover" && !pill.loop)
+		.filter((pill) => isVoiceKind(pill.kind) && !pill.loop)
 		.sort((a, b) => a.startMs - b.startMs || a.id.localeCompare(b.id))
 		.flatMap((pill) =>
 			takeProgramme(pill, removed)

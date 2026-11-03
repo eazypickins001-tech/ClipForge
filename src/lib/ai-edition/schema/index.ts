@@ -693,7 +693,10 @@ export const audioTrackSchema = endGteStart(
 		endMs: z.number().nonnegative(),
 		...clipAnchorShape,
 		assetId: z.string().min(1),
-		kind: z.enum(["voiceover", "music"]).default("music"),
+		// `extracted` is the audio taken out of a clip (Extract audio): the take's own voice, on a
+		// lane of its own. It behaves as voice everywhere — see `isVoiceKind` — and it is named
+		// separately so that behaving as voice is a decision rather than an accident of the enum.
+		kind: z.enum(["voiceover", "extracted", "music"]).default("music"),
 		// Full source duration of the underlying file, cached here so the timeline
 		// can lay out the pill before the asset is re-probed on load.
 		durationSec: z.number().nonnegative().default(0),
@@ -1485,9 +1488,19 @@ export function ensureDocument(value: unknown): AxcutDocument {
 }
 
 /**
+ * The kinds whose track is a person speaking: a recorded voiceover, and the audio taken out of a
+ * clip. They are levelled by the export, they duck the music, and a cut takes their words with
+ * them — everything voice does to a voiceover keeps happening to an extracted take, which is why
+ * naming it honestly is a change of label rather than of mix.
+ */
+export function isVoiceKind(kind: AxcutAudioTrack["kind"]): boolean {
+	return kind === "voiceover" || kind === "extracted";
+}
+
+/**
  * The level and ramps a track starts with. A music bed sits UNDER the voice, at −18 dB,
- * and eases in and out over a second instead of cutting in; a voiceover is voice, levelled
- * by the export like the recording itself, so it starts flat.
+ * and eases in and out over a second instead of cutting in; voice is levelled by the
+ * export like the recording itself, so it starts flat.
  *
  * Applied when a track is created, and by the inspector's reset. Deliberately NOT the
  * schema's parse defaults above: a track saved before these existed keeps the level its
@@ -1496,9 +1509,9 @@ export function ensureDocument(value: unknown): AxcutDocument {
 export function audioTrackDefaults(
 	kind: AxcutAudioTrack["kind"],
 ): Pick<AxcutAudioTrack, "gainDb" | "fadeInMs" | "fadeOutMs"> {
-	return kind === "music"
-		? { gainDb: -18, fadeInMs: 1000, fadeOutMs: 1000 }
-		: { gainDb: 0, fadeInMs: 0, fadeOutMs: 0 };
+	return isVoiceKind(kind)
+		? { gainDb: 0, fadeInMs: 0, fadeOutMs: 0 }
+		: { gainDb: -18, fadeInMs: 1000, fadeOutMs: 1000 };
 }
 
 /**
@@ -1517,7 +1530,7 @@ export function audioTrackDefaults(
 export function createAudioTrack(input: {
 	assetId: string;
 	durationSec: number;
-	kind?: "voiceover" | "music";
+	kind?: "voiceover" | "extracted" | "music";
 	/** Raw ruler head. The span runs from here for `durationSec`, or for
 	 *  `spanSec` when the caller wants a shorter placement than the file. */
 	timelineStartSec?: number;

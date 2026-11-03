@@ -40,6 +40,7 @@ import {
 	resolvePlaybackSegments,
 } from "@/lib/ai-edition/document/timeline";
 import type { AxcutAudioTrack, AxcutClip, AxcutDocument } from "@/lib/ai-edition/schema";
+import { isVoiceKind } from "@/lib/ai-edition/schema";
 import { nativeShaderEffectValue } from "@/lib/ai-edition/shaderEffects";
 import { getEditorSettings } from "@/lib/ai-edition/store/editorSettings";
 import { assetCameraSource } from "@/lib/ai-edition/timeline/camera";
@@ -977,7 +978,7 @@ export function buildSceneDescription(
 		// words whose redness has to be true. A LOOPING voiceover keeps it too — step 6 of
 		// #560 refuses that combination outright, and inventing semantics for something
 		// about to be banned would be the worse answer.
-		if (track.kind === "voiceover" && !track.loop) {
+		if (isVoiceKind(track.kind) && !track.loop) {
 			const rawSpanSec = Math.max(0, track.endMs / 1000 - track.startMs / 1000);
 			// Unprobed assets have no real duration to cap with; the RAW span is how much
 			// file the take covers, which is the honest fallback once the cuts are taken out.

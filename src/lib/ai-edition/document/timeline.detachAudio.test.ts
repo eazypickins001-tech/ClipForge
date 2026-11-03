@@ -97,6 +97,9 @@ describe("detachAudio", () => {
 		};
 
 		const [track] = detachAudio(doc, "clip_1", "take.mp4").audioTracks;
+		// Named for where it came from: the take's own voice, not a voiceover. It still behaves
+		// as voice (isVoiceKind), which is what keeps the mix identical.
+		expect(track.kind).toBe("extracted");
 		expect(track.offsetMs).toBe(3000);
 		expect(track.sourceStartSec).toBe(3);
 		expect(track.sourceEndSec).toBe(8);

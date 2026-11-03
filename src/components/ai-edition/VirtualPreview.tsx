@@ -25,6 +25,7 @@ import type {
 	AxcutTrimRange,
 	AxcutZoomRegion,
 } from "@/lib/ai-edition/schema";
+import { isVoiceKind } from "@/lib/ai-edition/schema";
 import { audioGainScalar } from "@/lib/ai-edition/store/editorSettings";
 import { useEditorSettings } from "@/lib/ai-edition/store/useEditorSettings";
 import { removedRawSpans } from "@/lib/ai-edition/timeline/programme-time";
@@ -645,7 +646,7 @@ export function VirtualPreview({
 	const voicePathsKey = [
 		activeSource?.filePath,
 		...audioTracks
-			.filter((track) => track.kind === "voiceover")
+			.filter((track) => isVoiceKind(track.kind))
 			.map((track) => audioSources.find((source) => source.id === track.assetId)?.filePath),
 	]
 		.filter((path): path is string => Boolean(path))
@@ -778,7 +779,9 @@ export function VirtualPreview({
 				source.connect(trackGain);
 				trackGain.connect(graph.gain);
 				// A voiceover is voice: the music ducks under it as under the recording.
-				if (audioTracksRef.current.find((track) => track.id === trackId)?.kind === "voiceover") {
+				if (
+					isVoiceKind(audioTracksRef.current.find((track) => track.id === trackId)?.kind ?? "music")
+				) {
 					trackGain.connect(graph.analyser);
 				}
 				audioTrackGainNodesRef.current.set(trackId, trackGain);
@@ -906,7 +909,7 @@ export function VirtualPreview({
 		const removed = removedRawSpans(clips, playbackTrimRanges);
 		const takes = takesByHeadFragment(audioTracks);
 		for (const pill of takes.values()) {
-			if (pill.kind !== "voiceover" || pill.loop) continue;
+			if (!isVoiceKind(pill.kind) || pill.loop) continue;
 			pieces.set(trackGroupId(pill), takeProgramme(pill, removed));
 		}
 		return { pieces, takes };

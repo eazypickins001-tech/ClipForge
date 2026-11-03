@@ -1172,7 +1172,9 @@ export function detachAudio(document: AxcutDocument, clipId: string, label: stri
 	const base = createAudioTrack({
 		assetId: clip.assetId,
 		durationSec: sourceEndSec,
-		kind: "voiceover",
+		// `extracted`, not `voiceover`: this is the take's own voice, named for where it came
+		// from. It behaves as voice everywhere (`isVoiceKind`), so the mix is unchanged.
+		kind: "extracted",
 		timelineStartSec: clip.timelineStartSec,
 		spanSec,
 		label,

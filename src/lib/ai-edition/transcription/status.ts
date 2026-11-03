@@ -8,6 +8,7 @@
 
 import { STT_MEDIA_UNREADABLE } from "../../../../electron/stt/transcriptionContract";
 import type { AxcutDocument, AxcutTranscript } from "../schema";
+import { isVoiceKind } from "../schema";
 import { voiceoverPlacements } from "../timeline/aggregated-transcript";
 
 /** Why a transcription run could not produce anything. */
@@ -423,9 +424,7 @@ export function assetCanCarrySpeech(document: AxcutDocument, assetId: string): b
 	const asset = document.assets.find((a) => a.id === assetId);
 	if (!asset) return false;
 	if (asset.kind !== "audio") return true;
-	return document.audioTracks.some(
-		(track) => track.assetId === assetId && track.kind === "voiceover",
-	);
+	return document.audioTracks.some((track) => track.assetId === assetId && isVoiceKind(track.kind));
 }
 
 export function transcriptRelevantAssetIds(document: AxcutDocument | null): string[] {
