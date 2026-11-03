@@ -145,7 +145,7 @@ jobs:
       #    proves audio → whisper → document, which packaging alone never could.
       #
       # Keeping the excluded ones out means a red job here is always news.
-      - name: Smoke-test the packaged app (export, trim/save/reopen, transcription)
+      - name: Smoke-test the packaged app (export, trim/save/reopen, clip edits, transcription)
         shell: pwsh
         run: |
           $exe = (Get-ChildItem -Path release -Recurse -Filter ClipForge.exe | Select-Object -First 1).FullName
@@ -159,7 +159,7 @@ jobs:
           if (-not (Test-Path $whisper)) { throw "whisper-stt-server.exe is missing from the packaged app" }
           Write-Host "Whisper helper packaged: $whisper"
           Write-Host "Testing $exe"
-          npx playwright test tests/e2e/gif-export.spec.ts tests/e2e/phase1-acceptance.spec.ts tests/e2e/transcription.spec.ts --grep-invert "cancels a running native GIF" --timeout 600000 --reporter list
+          npx playwright test tests/e2e/gif-export.spec.ts tests/e2e/phase1-acceptance.spec.ts tests/e2e/clip-edits.spec.ts tests/e2e/transcription.spec.ts --grep-invert "cancels a running native GIF" --timeout 600000 --reporter list
 
       # Without this, a failure on the runner is a message with no state attached: the
       # first run's trim failure could not be explained from its log alone.
