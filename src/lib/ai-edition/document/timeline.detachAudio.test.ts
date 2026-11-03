@@ -70,18 +70,21 @@ describe("detachAudio", () => {
 		expect(track.gainDb).toBe(0);
 	});
 
-	it("silences the clip over its span so nothing plays twice", () => {
+	it("silences the clip itself, so nothing plays twice", () => {
 		const doc = detachAudio(makeDoc(), "clip_1", "take.mp4");
 
-		expect(doc.timeline.muteRanges).toEqual([
-			{ startSec: 0, endSec: 10, reason: "Audio extracted" },
-		]);
+		// The clip's own flag, not a mute range. The range this used to write was read by
+		// nothing — no renderer path, no scene field, no native mixer — so extraction moved the
+		// sound to a new track and left the old one playing underneath it.
+		expect(doc.timeline.clips[0].muted).toBe(true);
+		expect(doc.timeline.muteRanges).toEqual([]);
 	});
 
 	it("leaves the clip in place — extraction is not a delete", () => {
 		const doc = detachAudio(makeDoc(), "clip_1", "take.mp4");
 		expect(doc.timeline.clips).toHaveLength(1);
-		expect(doc.timeline.clips[0]).toEqual(makeDoc().timeline.clips[0]);
+		// Same media range it had; the mute is the only thing added.
+		expect(doc.timeline.clips[0]).toEqual({ ...makeDoc().timeline.clips[0], muted: true });
 	});
 
 	it("carries the source offset when the clip was trimmed, so the track stays in sync", () => {
@@ -105,13 +108,6 @@ describe("detachAudio", () => {
 		expect(track.sourceEndSec).toBe(8);
 		expect(track.startMs).toBe(0);
 		expect(track.endMs).toBe(5000);
-	});
-
-	it("does not stack a second mute over a span that is already silent", () => {
-		const doc = makeDoc();
-		doc.timeline.muteRanges = [{ startSec: 0, endSec: 10, reason: "already" }];
-
-		expect(detachAudio(doc, "clip_1", "take.mp4").timeline.muteRanges).toHaveLength(1);
 	});
 
 	it("is a no-op for an unknown clip, returning the same document", () => {

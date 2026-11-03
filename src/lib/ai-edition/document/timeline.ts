@@ -1152,12 +1152,13 @@ export function splitClip(
  *
  * The new track carries the clip's SOURCE range as its anchor plus `offsetMs`, which is what keeps
  * it in sync when the clip had been trimmed — with no offset it would start at the top of the file
- * and drift against the picture. Its `kind` stays "voiceover": the enum is voiceover|music, and
- * this is voice at unity gain, which is exactly what that kind's defaults give. A dedicated
- * "extracted" kind is a follow-up, not something to fake with a label here.
+ * and drift against the picture. Its `kind` is `extracted`: the take's own voice on a lane of its
+ * own, which behaves as voice everywhere (`isVoiceKind`).
  *
- * The silence is a `muteRange` over the clip's raw-timeline span rather than a per-clip flag, so
- * it is visible on the timeline and draggable like any other mute.
+ * The silence is the clip's own `muted` flag. It used to be a `muteRange` over the clip's span, and
+ * that range was read by NOTHING — no renderer path, no scene field, no native mixer — so
+ * extraction moved the sound to a new track and left the old one playing underneath it. `muted` is
+ * what the export honours (as `hasAudio: false`), so the sound really does move.
  *
  * An unknown clip, or one too short to hold a span, is a no-op returning the SAME document, so the
  * store can skip the save and leave no empty undo step behind. Pure.
@@ -1186,27 +1187,9 @@ export function detachAudio(document: AxcutDocument, clipId: string, label: stri
 		sourceEndSec,
 		offsetMs: Math.round(sourceStartSec * 1000),
 	};
-	const alreadyMuted = document.timeline.muteRanges.some(
-		(range) =>
-			range.startSec <= clip.timelineStartSec + 1e-6 && range.endSec >= clip.timelineEndSec - 1e-6,
-	);
-	return {
-		...document,
-		audioTracks: [...document.audioTracks, track],
-		timeline: alreadyMuted
-			? document.timeline
-			: {
-					...document.timeline,
-					muteRanges: [
-						...document.timeline.muteRanges,
-						{
-							startSec: clip.timelineStartSec,
-							endSec: clip.timelineEndSec,
-							reason: "Audio extracted",
-						},
-					],
-				},
-	};
+	return setClipAudio({ ...document, audioTracks: [...document.audioTracks, track] }, clip.id, {
+		muted: true,
+	});
 }
 
 /**
@@ -1313,6 +1296,26 @@ export function setClipSourceRange(
 			: c,
 	);
 	return withClipsChanged(document, arr);
+}
+
+/**
+ * The clip audio panel's mutator: volume, mute and the two fades, on ONE clip. Modelled on
+ * `setClipSourceRange` — map, then `withClipsChanged` — so an untouched clip is the same object
+ * and `saveDocument` can tell there is nothing to record.
+ *
+ * `joinable` compares every field written here on purpose. Without that, two media-contiguous
+ * clips that differed only in their audio would fold into one on the next edit, and the left
+ * half's settings would silently become both halves'.
+ */
+export function setClipAudio(
+	document: AxcutDocument,
+	clipId: string,
+	patch: Partial<Pick<AxcutClip, "gainDb" | "muted" | "fadeInMs" | "fadeOutMs">>,
+): AxcutDocument {
+	return withClipsChanged(
+		document,
+		document.timeline.clips.map((clip) => (clip.id === clipId ? { ...clip, ...patch } : clip)),
+	);
 }
 
 /**
@@ -1510,11 +1513,12 @@ function joinContiguous(clips: AxcutClip[]): {
 	return { clips: out, absorbed };
 }
 
-/** Same media, media timecodes that meet, same framing — and neither half marked by a split.
- *  Crop is the only *content* property two otherwise-identical neighbours could legitimately
- *  disagree on, so it is the whole of the content guard. `detached` is not content: it is the
- *  user's instruction that a cut stays a cut, and honouring it is what lets `splitClip` produce
- *  two clips that do not immediately fold back into one. */
+/** Same media, media timecodes that meet, same framing, same audio — and neither half marked by a
+ *  split. Crop and the clip's own audio are the *content* properties two otherwise-identical
+ *  neighbours could legitimately disagree on, so they are the whole of the content guard: folding
+ *  a muted clip into its unmuted neighbour would play the sound the user just silenced.
+ *  `detached` is not content: it is the user's instruction that a cut stays a cut, and honouring
+ *  it is what lets `splitClip` produce two clips that do not immediately fold back into one. */
 function joinable(left: AxcutClip, right: AxcutClip): boolean {
 	return (
 		!left.detached &&
@@ -1522,7 +1526,11 @@ function joinable(left: AxcutClip, right: AxcutClip): boolean {
 		left.assetId === right.assetId &&
 		left.sourceEndSec !== undefined &&
 		Math.abs(left.sourceEndSec - right.sourceStartSec) < 1e-6 &&
-		JSON.stringify(left.cropRegion ?? null) === JSON.stringify(right.cropRegion ?? null)
+		JSON.stringify(left.cropRegion ?? null) === JSON.stringify(right.cropRegion ?? null) &&
+		(left.gainDb ?? 0) === (right.gainDb ?? 0) &&
+		(left.muted ?? false) === (right.muted ?? false) &&
+		(left.fadeInMs ?? 0) === (right.fadeInMs ?? 0) &&
+		(left.fadeOutMs ?? 0) === (right.fadeOutMs ?? 0)
 	);
 }
 

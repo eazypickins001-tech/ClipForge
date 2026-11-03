@@ -522,9 +522,8 @@ describe("buildSceneDescription.clips", () => {
 
 	it("sets hasAudio=true for a clip whose screen asset has an originalPath", () => {
 		// ponytail: the rule is "screen recordings from this app always carry a decodable
-		// audio track" (per product convention + ffprobe on real recordings). The visibleClips
-		// filter above guarantees only clips with originalPath reach the producer, so every
-		// produced CompositorClipInput must carry hasAudio=true today.
+		// audio track" (per product convention + ffprobe on real recordings) — unless the clip
+		// is muted, which is the one thing that says otherwise. See the test below.
 		const asset = makeAsset({ id: "a", originalPath: "/screen.mp4" });
 		const clip = makeClip({
 			id: "c1",
@@ -538,7 +537,23 @@ describe("buildSceneDescription.clips", () => {
 		expect(buildSceneDescription(doc).clips[0].hasAudio).toBe(true);
 	});
 
-	it("sets hasAudio=true consistently across multiple clips in the same scene", () => {
+	it("sets hasAudio=false for a MUTED clip, which is how the export silences it", () => {
+		// The whole mechanism behind the clip's mute: the pipeline skips a clip's audio job when
+		// it declares none, and marks its segment silent. Nothing else carries the mute natively.
+		const asset = makeAsset({ id: "a", originalPath: "/screen.mp4" });
+		const clip = makeClip({
+			id: "c1",
+			assetId: "a",
+			sourceStartSec: 0,
+			sourceEndSec: 4,
+			timelineStartSec: 0,
+			timelineEndSec: 4,
+		});
+		const doc = makeDoc({ assets: [asset], clips: [{ ...clip, muted: true }] });
+		expect(buildSceneDescription(doc).clips[0].hasAudio).toBe(false);
+	});
+
+	it("carries the mute per clip, not for the whole scene", () => {
 		const asset = makeAsset({ id: "a", originalPath: "/screen.mp4" });
 		const clip1 = makeClip({
 			id: "c1",
@@ -556,10 +571,13 @@ describe("buildSceneDescription.clips", () => {
 			timelineStartSec: 4,
 			timelineEndSec: 8,
 		});
-		const doc = makeDoc({ assets: [asset], clips: [clip1, clip2] });
+		const doc = makeDoc({
+			assets: [asset],
+			clips: [clip1, { ...clip2, muted: true }],
+		});
 		const { clips } = buildSceneDescription(doc);
 		expect(clips).toHaveLength(2);
-		expect(clips.every((c) => c.hasAudio === true)).toBe(true);
+		expect(clips.map((c) => c.hasAudio)).toEqual([true, false]);
 	});
 });
 

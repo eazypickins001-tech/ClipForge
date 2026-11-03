@@ -728,9 +728,9 @@ export function buildNativeClipList(document: AxcutDocument): CompositorClipInpu
 		// the single canonical precedence used by every consumer (clip.probe → asset.duration
 		// → timeline-length guess). See `resolveClipSourceEndSec` for the full order.
 		const sourceEndSec = resolveClipSourceEndSec(clip, asset);
-		// ponytail: `hasAudio` stays optimistic for the same reason as in
-		// `buildSceneDescription` — nothing populates `asset.audio` yet, and the
-		// native side degrades cleanly on a stream-less file.
+		// ponytail: `hasAudio` stays optimistic about the FILE, for the same reason as in
+		// `buildSceneDescription` — nothing populates `asset.audio` yet, and the native side
+		// degrades cleanly on a stream-less file. Mute is the one thing that overrides it.
 		return [
 			{
 				screenPath: asset.originalPath,
@@ -738,7 +738,10 @@ export function buildNativeClipList(document: AxcutDocument): CompositorClipInpu
 				sourceStartSec: clip.sourceStartSec,
 				sourceEndSec,
 				webcamOffsetSec: camera.offsetSec,
-				hasAudio: true,
+				// A muted clip declares no audio: the pipeline answers that by skipping its audio
+				// job and marking its segment silent (see `build_audio_concat_plan` in audio.rs),
+				// which is the whole mechanism behind the clip's mute.
+				hasAudio: !clip.muted,
 			},
 		];
 	});
@@ -1058,6 +1061,10 @@ export function buildSceneDescription(
 		// audio" — a capture made with no mic and no system audio has no audio
 		// stream at all (issue #348). Swap to `Boolean(asset.audio)` the day the
 		// probe fills it in.
+		//
+		// A muted clip declares none regardless. This is the mechanism behind the clip audio
+		// panel's mute, and behind Extract audio — whose clip is muted too, so the sound really
+		// does leave the picture rather than playing under the track it was moved to.
 		return [
 			{
 				screenPath: asset.originalPath,
@@ -1065,7 +1072,7 @@ export function buildSceneDescription(
 				sourceStartSec: clip.sourceStartSec,
 				sourceEndSec: resolveClipSourceEndSec(clip, asset),
 				webcamOffsetSec: camera.offsetSec,
-				hasAudio: true,
+				hasAudio: !clip.muted,
 				// A held segment has an empty source window and exists only for the frames it
 				// holds; every other clip holds nothing.
 			},

@@ -46,11 +46,13 @@ import {
 	removeClip as removeClipInDocument,
 	removeRegion as removeRegionInDocument,
 	resequenceClips,
+	setClipAudio,
 	setClipSourceRange,
 	splitClip as splitClipInDocument,
 } from "../document/timeline";
 import type {
 	AxcutAudioTrack,
+	AxcutClip,
 	AxcutClipCropRegion,
 	AxcutDocument,
 	AxcutShaderEffectRange,
@@ -1781,6 +1783,25 @@ export function useTimeline() {
 		[saveDocument],
 	);
 
+	/**
+	 * The clip audio panel's write: volume, mute and the two fades on one clip, as the user
+	 * sets them. One gesture, one save, one undo step — the same shape as `updateAudioTrack`.
+	 *
+	 * `history: true` because this is the user's own edit. The panel commits on release rather
+	 * than on every frame of the drag, so a slider sweep is one step, not sixty.
+	 */
+	const updateClipAudio = useCallback(
+		async (
+			clipId: string,
+			patch: Partial<Pick<AxcutClip, "gainDb" | "muted" | "fadeInMs" | "fadeOutMs">>,
+		) => {
+			const doc = useProjectStore.getState().document;
+			if (!doc) return;
+			await saveDocument(setClipAudio(doc, clipId, patch), { history: true });
+		},
+		[saveDocument],
+	);
+
 	// Turning loop ON fills the rest of the programme with the track.
 	//
 	// Looping only means anything when the span EXCEEDS the source, so a toggle
@@ -1869,6 +1890,7 @@ export function useTimeline() {
 		addAudio,
 		removeAudioTrack,
 		updateAudioTrack,
+		updateClipAudio,
 		setAudioTrackLoop,
 		placeAudioTrack,
 		setAudioTrackGain,

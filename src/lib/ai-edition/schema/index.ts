@@ -234,6 +234,16 @@ export const clipSchema = z
 		// Optional and absent on every clip written before it, so no schema bump — same
 		// reasoning as `cameraTrack.width`.
 		detached: z.boolean().optional(),
+		// Per-clip audio, edited in the clip audio panel — CapCut's Volume panel: volume with the
+		// mute toggle beside it, then fade in and fade out. Bounds mirror `audioTrackSchema` so the
+		// panel and the export cannot disagree; unset means the default (0 dB, unmuted, no fades),
+		// which is what every clip written before this reads as. Optional like `detached` above
+		// rather than `.default(…)`: clips are built as literals all over the codebase, and a
+		// defaulted field would have to be spelled out in every one of them.
+		gainDb: z.number().min(-60).max(12).optional(),
+		muted: z.boolean().optional(),
+		fadeInMs: z.number().int().nonnegative().optional(),
+		fadeOutMs: z.number().int().nonnegative().optional(),
 	})
 	.refine((data) => data.timelineEndSec >= data.timelineStartSec, {
 		message: "timelineEndSec must be greater than or equal to timelineStartSec",

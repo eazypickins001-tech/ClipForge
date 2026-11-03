@@ -305,6 +305,10 @@ const DECLARED: WritePath[] = [
 	w("src/lib/ai-edition/store/useTimeline.ts", "setAudioTrackLoop", "save", "gesture"),
 	w("src/lib/ai-edition/store/useTimeline.ts", "setAudioTrackLoop", "save", "gesture"),
 	w("src/lib/ai-edition/store/useTimeline.ts", "updateAudioTrack", "save", "gesture"),
+	// The clip audio panel — volume, mute, fade in/out on one clip. The user's own edit, like
+	// the audio track's own updateAudioTrack above, and committed on release rather than on
+	// every frame of the drag, so a slider sweep is one undo step.
+	w("src/lib/ai-edition/store/useTimeline.ts", "updateClipAudio", "save", "gesture"),
 	w("src/lib/ai-edition/store/useTimeline.ts", "moveLayoutBoundary", "save", "gesture"),
 	// The round-2 defect: a background duration probe every freshly imported asset
 	// fires, because `addAsset` never populates `durationSec`.
