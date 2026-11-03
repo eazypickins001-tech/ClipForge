@@ -141,3 +141,27 @@ test("Extract audio moves the sound to its own track and silences the clip", asy
 		await closeApp(app);
 	}
 });
+
+test("the clip audio panel mutes the clip by hand", async () => {
+	test.setTimeout(600_000);
+	const { app, editor, userDataDir } = await bootWithRecording(TEST_VIDEO);
+	try {
+		await seekIntoClip(editor);
+		// The rail's speaker button opens the panel; its accessible name is the volume
+		// control's label, which is what distinguishes it from the audio FACET above it.
+		await editor.getByRole("button", { name: "Output level" }).click();
+
+		const mute = editor.getByTestId("clip-audio-mute");
+		await expect(mute).toBeVisible();
+		await mute.click();
+
+		await expect
+			.poll(() => savedDocument(path.join(userDataDir, "projects"))?.timeline?.clips?.[0]?.muted, {
+				message: "the panel's mute never reached the saved project",
+				timeout: 60_000,
+			})
+			.toBe(true);
+	} finally {
+		await closeApp(app);
+	}
+});
