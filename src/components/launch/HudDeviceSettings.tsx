@@ -174,6 +174,30 @@ export const HudDeviceSettings = memo(function HudDeviceSettings({
 				</Tooltip>
 			</div>
 
+			{/* FIRST, and outside the camera block: this is a property of the recording, not of the
+			    hardware, so it is offered on a machine with no camera and no microphone. It also
+			    has to be the top of the panel -- the panel is capped and scrolls, and the shape is
+			    the one setting that always applies, where the device lists come and go. Auto leads
+			    because it is the default and cannot be wrong about the user's own material. */}
+			<div className={styles.hudMenuSectionLabel}>{labels.captureAspect}</div>
+			{CAPTURE_ASPECT_IDS.map((aspect) => {
+				const isActive = aspect === captureAspect;
+				return (
+					<button
+						key={aspect}
+						type="button"
+						role="menuitemradio"
+						aria-checked={isActive}
+						data-testid={`capture-aspect-${aspect}`}
+						onClick={() => onSelectCaptureAspect(aspect)}
+						className={`${styles.languageMenuItem} ${isActive ? styles.languageMenuItemActive : ""}`}
+					>
+						<span className="truncate">{labels.captureAspectOptions[aspect]}</span>
+						{isActive ? <Check size={14} className="text-white/85" /> : null}
+					</button>
+				);
+			})}
+
 			{showMicrophone ? (
 				<>
 					<div className={styles.hudMenuSectionLabel}>{labels.microphone}</div>
@@ -265,29 +289,6 @@ export const HudDeviceSettings = memo(function HudDeviceSettings({
 					/>
 				</>
 			) : null}
-
-			{/* The shape the take's project will open in. Outside the camera block on purpose: it
-			    is a property of the recording, not of the hardware, so it is offered on a machine
-			    with no camera at all. Auto leads because it is the default and cannot be wrong
-			    about the user's own material. */}
-			<div className={styles.hudMenuSectionLabel}>{labels.captureAspect}</div>
-			{CAPTURE_ASPECT_IDS.map((aspect) => {
-				const isActive = aspect === captureAspect;
-				return (
-					<button
-						key={aspect}
-						type="button"
-						role="menuitemradio"
-						aria-checked={isActive}
-						data-testid={`capture-aspect-${aspect}`}
-						onClick={() => onSelectCaptureAspect(aspect)}
-						className={`${styles.languageMenuItem} ${isActive ? styles.languageMenuItemActive : ""}`}
-					>
-						<span className="truncate">{labels.captureAspectOptions[aspect]}</span>
-						{isActive ? <Check size={14} className="text-white/85" /> : null}
-					</button>
-				);
-			})}
 
 			{/* The HUD has no other settings surface, and an app the user cannot ask "which
 			    version am I running?" is an app whose bug reports arrive without one. The
