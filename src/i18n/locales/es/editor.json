@@ -11,6 +11,8 @@
 		"gifExportFailed": "La exportación de GIF falló",
 		"noVideoLoaded": "No hay video cargado",
 		"previewCompositorUnavailable": "Vista previa no disponible en este equipo",
+		"previewMediaMissingHint": "The recording or import this project uses is no longer at its original path. Put it back, or import it again.",
+		"previewMediaMissing": "This project's media file is missing",
 		"trimNoFilm": "No hay nada que cortar ahí: no hay metraje bajo esas palabras.",
 		"unableToDetermineSourcePath": "No se pudo determinar la ruta del video de origen",
 		"videoNotReady": "El video no está listo",

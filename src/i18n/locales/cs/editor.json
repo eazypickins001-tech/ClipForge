@@ -19,6 +19,8 @@
 		"gifExportFailed": "Export GIF selhal",
 		"noVideoLoaded": "Žádné video nenačteno",
 		"previewCompositorUnavailable": "Náhled na tomto počítači není dostupný",
+		"previewMediaMissingHint": "The recording or import this project uses is no longer at its original path. Put it back, or import it again.",
+		"previewMediaMissing": "This project's media file is missing",
 		"trimNoFilm": "Tam není co vystřihnout. Pod těmito slovy není žádný film.",
 		"unableToDetermineSourcePath": "Nelze určit cestu ke zdrojovému videu",
 		"videoNotReady": "Video není připraveno",

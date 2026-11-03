@@ -19,6 +19,8 @@
 		"gifExportFailed": "GIF 导出失败",
 		"noVideoLoaded": "未加载视频",
 		"previewCompositorUnavailable": "此设备无法使用预览",
+		"previewMediaMissingHint": "The recording or import this project uses is no longer at its original path. Put it back, or import it again.",
+		"previewMediaMissing": "This project's media file is missing",
 		"trimNoFilm": "这里没有可剪的内容——这些词下面没有画面。",
 		"unableToDetermineSourcePath": "无法确定源视频路径",
 		"videoNotReady": "视频未就绪",

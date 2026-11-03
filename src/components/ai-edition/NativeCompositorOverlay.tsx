@@ -391,6 +391,12 @@ export function NativeCompositorOverlay({
 	// is slow today" — the native message names the real cause and is worth surfacing raw,
 	// since it is what a bug report needs.
 	if (error) {
+		// `open_input: -2` is ENOENT from `avformat_open_input`: the media the project points at
+		// is GONE, not unsupported. Reporting that under "preview unavailable on this machine"
+		// sent a user to their GPU drivers when the real problem was their file system, so the
+		// missing-file case gets its own headline. The raw native text stays underneath either
+		// way — it is what a bug report needs.
+		const mediaMissing = /open_input:\s*-?2\b|No such file or directory/i.test(error);
 		return (
 			<div
 				data-testid="native-compositor-error"
@@ -408,8 +414,17 @@ export function NativeCompositorOverlay({
 					textAlign: "center",
 				}}
 			>
-				<strong>{t("errors.previewCompositorUnavailable")}</strong>
-				<span style={{ maxWidth: "48ch", fontSize: "0.8125rem", opacity: 0.75 }}>{error}</span>
+				<strong>
+					{mediaMissing
+						? t("errors.previewMediaMissing")
+						: t("errors.previewCompositorUnavailable")}
+				</strong>
+				{mediaMissing ? (
+					<span style={{ maxWidth: "48ch", fontSize: "0.8125rem", opacity: 0.75 }}>
+						{t("errors.previewMediaMissingHint")}
+					</span>
+				) : null}
+				<span style={{ maxWidth: "48ch", fontSize: "0.75rem", opacity: 0.55 }}>{error}</span>
 			</div>
 		);
 	}

@@ -19,6 +19,8 @@
 		"gifExportFailed": "Xuất GIF thất bại",
 		"noVideoLoaded": "Chưa tải video nào",
 		"previewCompositorUnavailable": "Không thể xem trước trên máy này",
+		"previewMediaMissingHint": "The recording or import this project uses is no longer at its original path. Put it back, or import it again.",
+		"previewMediaMissing": "This project's media file is missing",
 		"trimNoFilm": "Không có gì để cắt ở đó — không có hình ảnh nào bên dưới những từ này.",
 		"unableToDetermineSourcePath": "Không thể xác định đường dẫn video gốc",
 		"videoNotReady": "Video chưa sẵn sàng",

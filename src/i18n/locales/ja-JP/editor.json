@@ -19,6 +19,8 @@
 		"gifExportFailed": "GIFのエクスポートに失敗しました",
 		"noVideoLoaded": "動画が読み込まれていません",
 		"previewCompositorUnavailable": "このマシンではプレビューを表示できません",
+		"previewMediaMissingHint": "The recording or import this project uses is no longer at its original path. Put it back, or import it again.",
+		"previewMediaMissing": "This project's media file is missing",
 		"trimNoFilm": "そこには切るものがありません。その言葉の下に映像がありません。",
 		"unableToDetermineSourcePath": "元動画のパスを特定できません",
 		"videoNotReady": "動画の準備ができていません",
