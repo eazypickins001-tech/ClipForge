@@ -7,13 +7,15 @@
 // the durability step from phase1-acceptance: the write is queued, so closing the app the moment
 // the click lands races the save and the spec would read a document that never got written.
 //
-// Both edits act on the clip under the PLAYHEAD or under a selection, so each test selects the
-// clip first. Split additionally has to put the playhead INSIDE the clip: `splitClipAt` refuses
-// a head at an edge, and the import leaves the playhead at 0. The timeline seeks on a pointer
-// down on its ruler or track area (V4Timeline `startScrub`, which ignores a press that lands on
-// a clip), so the test presses the ruler at its middle. That x is only inside the clip because
-// the import fits a single 2s take to the view; if the clip ever stops filling the ruler, the
-// split refuses, no second clip appears, and the poll below says so rather than passing.
+// Both edits resolve their target the same way: the SELECTION wins, otherwise whatever sits under
+// the playhead. Both also start by CLEARING the selection, so selecting a pill does not help — what
+// they need is a playhead inside the clip, and the import leaves it at 0. `seekIntoClip` below is
+// therefore the whole setup, and it is why the split spec passed while the extract one, which
+// clicked a pill instead, got nothing back.
+//
+// This x is only inside the clip because the import fits a single 2s take to the view; if the clip
+// ever stops filling the ruler, the click lands outside it, the edit refuses, and the poll says so
+// rather than passing.
 //
 // Needs a built app: `dist-electron/main.js`, or set CLIPFORGE_APP_EXE to a packaged
 // win-unpacked/ClipForge.exe (the artifact's tree) to run the shipped build.
@@ -55,6 +57,19 @@ function savedDocument(projectsDir: string): SavedDocument | null {
 	return null;
 }
 
+/** Puts the playhead inside the clip, which is the precondition both edits share. */
+async function seekIntoClip(editor: Page) {
+	// The ruler seeks on pointer down (`startScrub`), and the press lands on the ruler rather
+	// than on a clip, which is the case that handler honours.
+	const ruler = editor.locator('[class*="tlRulerRow"]').first();
+	const box = await ruler.boundingBox();
+	expect(box, "the timeline ruler has no bounding box").not.toBeNull();
+	if (!box) throw new Error("the timeline ruler is not measurable");
+	// A collapsed ruler would silently turn the click below into a no-op.
+	expect(box.width, "the timeline ruler has no width to seek across").toBeGreaterThan(50);
+	await editor.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
+}
+
 async function bootWithRecording(videoPath: string): Promise<{
 	app: Awaited<ReturnType<typeof launchApp>>;
 	editor: Page;
@@ -81,19 +96,7 @@ test("Split turns one clip into two", async () => {
 	test.setTimeout(600_000);
 	const { app, editor, userDataDir } = await bootWithRecording(TEST_VIDEO);
 	try {
-		// The rail buttons act on the selected clip; with one clip the import does not
-		// necessarily select it, so select it the way a person would.
-		await editor.locator("[data-clip-id]").first().click();
-
-		// Put the playhead inside the clip. The ruler seeks on pointer down and the press
-		// lands on the ruler itself, not on a clip, which is the case `startScrub` honours.
-		const ruler = editor.locator('[class*="tlRulerRow"]').first();
-		const box = await ruler.boundingBox();
-		expect(box, "the timeline ruler has no bounding box").not.toBeNull();
-		if (!box) throw new Error("the timeline ruler is not measurable");
-		expect(box.width, "the timeline ruler has no width to seek across").toBeGreaterThan(50);
-		await editor.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
-
+		await seekIntoClip(editor);
 		await editor.getByRole("button", { name: "Split", exact: true }).click();
 
 		await expect
@@ -114,7 +117,7 @@ test("Extract audio moves the sound to its own track and silences the clip", asy
 	test.setTimeout(600_000);
 	const { app, editor, userDataDir } = await bootWithRecording(SPEECH_VIDEO);
 	try {
-		await editor.locator("[data-clip-id]").first().click();
+		await seekIntoClip(editor);
 		await editor.getByRole("button", { name: "Extract audio", exact: true }).click();
 
 		const projectsDir = path.join(userDataDir, "projects");
