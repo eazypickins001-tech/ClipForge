@@ -1,5 +1,10 @@
-const LATEST_RELEASE_API = "https://api.github.com/repos/getopenscreen/openscreen/releases/latest";
-const OFFICIAL_RELEASE_PREFIX = "/getopenscreen/openscreen/releases/tag/";
+// ClipForge's OWN repository. These two constants were hardcoded to
+// getopenscreen/openscreen, so every user of this fork was told they were "using an old
+// version" (0.1.0 against upstream's 2.2.0) and offered a download of a DIFFERENT product.
+// A fork must never check upstream's releases.
+const REPO = "eazypickins001-tech/ClipForge";
+const LATEST_RELEASE_API = `https://api.github.com/repos/${REPO}/releases/latest`;
+const OFFICIAL_RELEASE_PREFIX = `/${REPO}/releases/tag/`;
 
 interface ReleaseResponse {
 	ok: boolean;
@@ -130,6 +135,17 @@ export async function checkLatestRelease(options: {
 		},
 		...(options.signal ? { signal: options.signal } : {}),
 	});
+	if (response.status === 404) {
+		// No release has been published for this repository yet. That is "nothing to offer",
+		// not a failure — throwing would turn an empty release list into an error, and this
+		// repo has no releases at all while it is still pre-1.0.
+		const current = parseVersion(options.currentVersion);
+		return {
+			kind: "current",
+			currentVersion: current.normalized,
+			latestVersion: current.normalized,
+		};
+	}
 	if (!response.ok) throw new Error(`GitHub release check failed (${response.status})`);
 
 	const payload = await response.json();
