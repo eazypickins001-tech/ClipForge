@@ -18,6 +18,11 @@ import { useRememberedSourceName } from "../../hooks/useRememberedSourceName";
 import { useScreenRecorder } from "../../hooks/useScreenRecorder";
 import type { WebcamQualityId } from "../../hooks/webcamCaptureTarget";
 import { requestCameraAccess } from "../../lib/requestCameraAccess";
+import {
+	type CaptureAspectId,
+	captureAspectFrom,
+	DEFAULT_CAPTURE_ASPECT,
+} from "../../utils/aspectRatioUtils";
 import { Toaster } from "../ui/sonner";
 import {
 	HudCameraButton,
@@ -920,12 +925,40 @@ export function LaunchWindow() {
 			micDeviceName?: string;
 			systemAudioEnabled?: boolean;
 			cursorCaptureMode?: "editable-overlay" | "system";
+			captureAspect?: CaptureAspectId;
 		}) => {
 			void window.electronAPI?.setRecordingPrefs?.(patch).catch((error) => {
 				console.warn("Failed to persist the device preference:", error);
 			});
 		},
 		[],
+	);
+
+	const [captureAspect, setCaptureAspect] = useState<CaptureAspectId>(DEFAULT_CAPTURE_ASPECT);
+
+	// The stored choice is read once, on mount, and a failed or unanswered read leaves the
+	// default (Auto) rather than pinning a shape nobody chose.
+	useEffect(() => {
+		let cancelled = false;
+		void window.electronAPI
+			?.getRecordingPrefs?.()
+			.then((prefs) => {
+				if (!cancelled) setCaptureAspect(captureAspectFrom(prefs?.captureAspect));
+			})
+			.catch(() => undefined);
+		return () => {
+			cancelled = true;
+		};
+	}, []);
+
+	// No `controlsLocked` guard, unlike the camera controls: nothing in the capture path reads
+	// this. It is read once, by the editor, when the finished take becomes a project.
+	const handleSelectCaptureAspect = useCallback(
+		(aspect: CaptureAspectId) => {
+			setCaptureAspect(aspect);
+			persistRecordingPrefs({ captureAspect: aspect });
+		},
+		[persistRecordingPrefs, setCaptureAspect],
 	);
 
 	const toggleSystemAudio = useCallback(() => {
@@ -1166,6 +1199,13 @@ export function LaunchWindow() {
 				"1440p": t("webcam.quality1440p"),
 				"2160p": t("webcam.quality2160p"),
 			},
+			captureAspect: t("deviceSettings.captureAspect"),
+			captureAspectOptions: {
+				auto: t("deviceSettings.captureAspectAuto"),
+				"16:9": t("deviceSettings.captureAspect16x9"),
+				"9:16": t("deviceSettings.captureAspect9x16"),
+				"1:1": t("deviceSettings.captureAspect1x1"),
+			},
 		}),
 		[t, tCommon],
 	);
@@ -1397,6 +1437,8 @@ export function LaunchWindow() {
 								checkingForUpdates={isCheckingForUpdates}
 								cameraQuality={webcamQuality}
 								onSelectCameraQuality={handleSelectCameraQuality}
+								captureAspect={captureAspect}
+								onSelectCaptureAspect={handleSelectCaptureAspect}
 								onSelectMic={handleSelectMicDevice}
 								onSelectCamera={handleSelectCameraDevice}
 								onCheckForUpdates={handleCheckForUpdates}

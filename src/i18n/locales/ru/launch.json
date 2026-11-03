@@ -95,6 +95,11 @@
 		"noMicrophones": "Микрофон не найден",
 		"preview": "Предпросмотр",
 		"previewUnavailable": "Предпросмотр недоступен",
+		"captureAspect1x1": "1:1",
+		"captureAspect9x16": "9:16",
+		"captureAspect16x9": "16:9",
+		"captureAspectAuto": "Auto",
+		"captureAspect": "Aspect ratio",
 		"about": "О программе",
 		"version": "Версия {{version}}",
 		"checkingForUpdates": "Проверка…"

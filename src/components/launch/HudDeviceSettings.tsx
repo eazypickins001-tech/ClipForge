@@ -5,6 +5,7 @@ import type { CameraDevice } from "../../hooks/useCameraDevices";
 import { useCameraPreviewStream } from "../../hooks/useCameraPreviewStream";
 import type { MicrophoneDevice } from "../../hooks/useMicrophoneDevices";
 import { WEBCAM_QUALITY_IDS, type WebcamQualityId } from "../../hooks/webcamCaptureTarget";
+import { CAPTURE_ASPECT_IDS, type CaptureAspectId } from "../../utils/aspectRatioUtils";
 import { Tooltip } from "../ui/tooltip";
 import styles from "./LaunchWindow.module.css";
 
@@ -29,6 +30,8 @@ export interface HudDeviceSettingsLabels {
 	checkingForUpdates: string;
 	cameraQuality: string;
 	cameraQualityOptions: Record<WebcamQualityId, string>;
+	captureAspect: string;
+	captureAspectOptions: Record<CaptureAspectId, string>;
 }
 
 /** Segmented input-level bar, driven by the live analyser. */
@@ -102,6 +105,8 @@ export const HudDeviceSettings = memo(function HudDeviceSettings({
 	checkingForUpdates,
 	cameraQuality,
 	onSelectCameraQuality,
+	captureAspect,
+	onSelectCaptureAspect,
 	onSelectMic,
 	onSelectCamera,
 	onCheckForUpdates,
@@ -124,6 +129,8 @@ export const HudDeviceSettings = memo(function HudDeviceSettings({
 	checkingForUpdates: boolean;
 	cameraQuality: WebcamQualityId;
 	onSelectCameraQuality: (quality: WebcamQualityId) => void;
+	captureAspect: CaptureAspectId;
+	onSelectCaptureAspect: (aspect: CaptureAspectId) => void;
 	onSelectMic: (device: MicrophoneDevice) => void;
 	onSelectCamera: (device: CameraDevice) => void;
 	onCheckForUpdates: () => void;
@@ -258,6 +265,29 @@ export const HudDeviceSettings = memo(function HudDeviceSettings({
 					/>
 				</>
 			) : null}
+
+			{/* The shape the take's project will open in. Outside the camera block on purpose: it
+			    is a property of the recording, not of the hardware, so it is offered on a machine
+			    with no camera at all. Auto leads because it is the default and cannot be wrong
+			    about the user's own material. */}
+			<div className={styles.hudMenuSectionLabel}>{labels.captureAspect}</div>
+			{CAPTURE_ASPECT_IDS.map((aspect) => {
+				const isActive = aspect === captureAspect;
+				return (
+					<button
+						key={aspect}
+						type="button"
+						role="menuitemradio"
+						aria-checked={isActive}
+						data-testid={`capture-aspect-${aspect}`}
+						onClick={() => onSelectCaptureAspect(aspect)}
+						className={`${styles.languageMenuItem} ${isActive ? styles.languageMenuItemActive : ""}`}
+					>
+						<span className="truncate">{labels.captureAspectOptions[aspect]}</span>
+						{isActive ? <Check size={14} className="text-white/85" /> : null}
+					</button>
+				);
+			})}
 
 			{/* The HUD has no other settings surface, and an app the user cannot ask "which
 			    version am I running?" is an app whose bug reports arrive without one. The

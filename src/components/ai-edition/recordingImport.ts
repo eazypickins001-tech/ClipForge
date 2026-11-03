@@ -18,6 +18,7 @@ import type { CursorTelemetryPoint } from "@/components/video-editor/types";
 import { createId } from "@/lib/ai-edition/document/ids";
 import { clipAwaitsProbedDuration } from "@/lib/ai-edition/document/timeline";
 import type { AxcutDocument } from "@/lib/ai-edition/schema";
+import { patchEditorSettings } from "@/lib/ai-edition/store/editorSettings";
 import {
 	DOCUMENT_SAVES_WAIT_TIMEOUT_MS,
 	saveWithDeadline,
@@ -29,6 +30,7 @@ import {
 	collectAutoZoomSuggestionsForLatestDocument,
 } from "@/lib/ai-edition/timeline/apply-auto-zooms";
 import { nativeBridgeClient } from "@/native/client";
+import { captureAspectFrom } from "@/utils/aspectRatioUtils";
 
 // Fresh recordings used to get cursor-dwell zooms on load (legacy editor
 // `autoZoomEnabled`, default on). The ai-edition import only seeded a clip, so
@@ -358,6 +360,23 @@ export async function importPendingRecording(
 	// after the timeline seed below so a failure down there can't hand the same
 	// recording to the next editor window.
 	await api.setCurrentRecordingSession(null);
+
+	// The shape the HUD's picker chose for this take. Auto -- the default, and what a fresh
+	// project already stores -- writes nothing at all, so the default path stays exactly what it
+	// was; only a pinned shape is written. `history: false` for the same reason the timeline seed
+	// below uses it: the editor is building the project around the take, unattended, on mount,
+	// and a first Ctrl+Z must not undo a choice the user made before recording.
+	const pinnedAspect = captureAspectFrom((await api.getRecordingPrefs?.())?.captureAspect);
+	if (pinnedAspect !== "auto") {
+		const created = useProjectStore.getState().document;
+		if (created) {
+			await useProjectStore
+				.getState()
+				.saveDocument(patchEditorSettings(created, { aspectRatio: pinnedAspect }), {
+					history: false,
+				});
+		}
+	}
 
 	// ponytail: MediaRecorder WebMs ship with duration = NaN until
 	// fix-webm-duration patches the EBML header; until that flows through the

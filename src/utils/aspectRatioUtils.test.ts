@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
 import {
+	CAPTURE_ASPECT_IDS,
+	captureAspectFrom,
+	DEFAULT_CAPTURE_ASPECT,
 	getAspectRatioValue,
 	getNativeAspectRatioValue,
 	isAspectRatio,
@@ -97,5 +100,29 @@ describe("getNativeAspectRatioValue", () => {
 				height: 1,
 			}),
 		).toBe(FALLBACK_RATIO);
+	});
+});
+
+describe("captureAspectFrom", () => {
+	it("takes every shape the recorder offers", () => {
+		for (const id of CAPTURE_ASPECT_IDS) {
+			expect(captureAspectFrom(id)).toBe(id);
+		}
+	});
+
+	it("reads an unset or malformed value as Auto, not as one of the fixed shapes", () => {
+		// The one that matters: a settings file with no `captureAspect`, or a hand-edited one,
+		// must leave the frame following the recording rather than pinning a shape.
+		expect(captureAspectFrom(undefined)).toBe("auto");
+		expect(captureAspectFrom(null)).toBe("auto");
+		expect(captureAspectFrom("")).toBe("auto");
+		expect(captureAspectFrom("4:3")).toBe("auto");
+		expect(captureAspectFrom("native")).toBe("auto");
+		expect(captureAspectFrom(16)).toBe("auto");
+		expect(captureAspectFrom({ aspectRatio: "9:16" })).toBe("auto");
+	});
+
+	it("defaults to Auto, so a fresh installation fits its own recording", () => {
+		expect(DEFAULT_CAPTURE_ASPECT).toBe("auto");
 	});
 });

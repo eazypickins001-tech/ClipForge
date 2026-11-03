@@ -28,6 +28,28 @@ export type AspectRatioPreset = (typeof ASPECT_RATIO_PRESETS)[number];
  */
 export type AspectRatio = AspectRatioPreset | `${number}:${number}` | "auto" | "native";
 
+/**
+ * The shapes the recorder's own picker offers a fresh project, in menu order. "Auto" leads
+ * because it is the default: the frame follows the recording, so a screen capture opens at the
+ * shape it was captured in rather than fitted with bars into a shape nobody asked for. The rest
+ * are a standing override for someone whose material is always cut the same way.
+ *
+ * Nothing here is capture-side: the value is read once, when the finished recording becomes a
+ * project. It is the same vocabulary the document stores, so the choice IS the document's value.
+ */
+export const CAPTURE_ASPECT_IDS = ["auto", "16:9", "9:16", "1:1"] as const;
+
+export type CaptureAspectId = (typeof CAPTURE_ASPECT_IDS)[number];
+
+export const DEFAULT_CAPTURE_ASPECT: CaptureAspectId = "auto";
+
+/** An unset or malformed stored value reads as the default, like `webcamQualityFrom`. */
+export function captureAspectFrom(value: unknown): CaptureAspectId {
+	return CAPTURE_ASPECT_IDS.includes(value as CaptureAspectId)
+		? (value as CaptureAspectId)
+		: DEFAULT_CAPTURE_ASPECT;
+}
+
 const NATIVE_ASPECT_RATIO_FALLBACK = 16 / 9;
 
 /** Split a `"W:H"` token. Returns null for `"native"` and for anything malformed. */

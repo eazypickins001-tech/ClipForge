@@ -51,6 +51,7 @@ import {
 	type ProjectFileResult,
 	type ProjectPathResult,
 } from "../../src/native/contracts";
+import { type CaptureAspectId, DEFAULT_CAPTURE_ASPECT } from "../../src/utils/aspectRatioUtils";
 import { PRODUCT_NAME } from "../about";
 import {
 	compactSessionNow,
@@ -695,6 +696,8 @@ export interface RecordingPrefs {
 	camDeviceName: string | null;
 	/** Capture resolution for the camera. See WEBCAM_QUALITY_PRESETS. */
 	camQuality: WebcamQualityId;
+	/** The shape a finished recording's project opens in. See CAPTURE_ASPECT_IDS. */
+	captureAspect: CaptureAspectId;
 	systemAudioEnabled: boolean;
 	cursorCaptureMode: CursorCaptureMode;
 	hideDesktopIcons: boolean;
@@ -709,6 +712,7 @@ const defaultRecordingPrefs: RecordingPrefs = {
 	camDeviceId: null,
 	camDeviceName: null,
 	camQuality: DEFAULT_WEBCAM_QUALITY,
+	captureAspect: DEFAULT_CAPTURE_ASPECT,
 	systemAudioEnabled: false,
 	cursorCaptureMode: "editable-overlay",
 	hideDesktopIcons: false,

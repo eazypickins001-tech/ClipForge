@@ -7,6 +7,12 @@ import {
 	webcamQualityFrom,
 } from "../src/hooks/webcamCaptureTarget";
 import type { CursorCaptureMode } from "../src/lib/recordingSession";
+import {
+	CAPTURE_ASPECT_IDS,
+	type CaptureAspectId,
+	captureAspectFrom,
+	DEFAULT_CAPTURE_ASPECT,
+} from "../src/utils/aspectRatioUtils";
 import { renameSyncWithFallback } from "./atomic-rename";
 
 export interface RecordingPreferences {
@@ -18,6 +24,12 @@ export interface RecordingPreferences {
 	camDeviceName: string | null;
 	/** Capture resolution for the camera. See WEBCAM_QUALITY_PRESETS. */
 	camQuality: WebcamQualityId;
+	/**
+	 * The shape a finished recording's project opens in. "auto" (the default) follows the
+	 * recording's own shape, so a screen capture is not fitted with bars into a shape nobody
+	 * asked for; a preset pins it for someone whose material is always cut the same way.
+	 */
+	captureAspect: CaptureAspectId;
 	systemAudioEnabled: boolean;
 	cursorCaptureMode: CursorCaptureMode;
 	/** Display captures on macOS and Windows. Opt-in: on Windows the icons also leave the real desktop while recording. */
@@ -40,6 +52,7 @@ export const DEFAULT_RECORDING_PREFERENCES: RecordingPreferences = {
 	camDeviceId: null,
 	camDeviceName: null,
 	camQuality: DEFAULT_WEBCAM_QUALITY,
+	captureAspect: DEFAULT_CAPTURE_ASPECT,
 	systemAudioEnabled: false,
 	cursorCaptureMode: "editable-overlay",
 	hideDesktopIcons: false,
@@ -113,6 +126,9 @@ function parseRecording(raw: RawSettings): RecordingPreferences {
 		// Unset in every settings file written before the camera had a quality
 		// setting, and `webcamQualityFrom` answers those with the default.
 		camQuality: webcamQualityFrom(raw.camQuality),
+		// Unset in every settings file written before the recorder offered a shape. Those read
+		// Auto, which is what they had: the frame followed the recording.
+		captureAspect: captureAspectFrom(raw.captureAspect),
 		systemAudioEnabled: bool(
 			raw.systemAudioEnabled,
 			DEFAULT_RECORDING_PREFERENCES.systemAudioEnabled,
@@ -185,6 +201,9 @@ function validateRecordingPatch(patch: Partial<RecordingPreferences>): void {
 		// one the caller asked for.
 		if (key === "camQuality" && !WEBCAM_QUALITY_IDS.includes(value as WebcamQualityId)) {
 			throw new TypeError("camQuality is invalid");
+		}
+		if (key === "captureAspect" && !CAPTURE_ASPECT_IDS.includes(value as CaptureAspectId)) {
+			throw new TypeError("captureAspect is invalid");
 		}
 	}
 }

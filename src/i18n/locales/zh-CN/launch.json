@@ -95,6 +95,11 @@
 		"noMicrophones": "未找到麦克风",
 		"preview": "预览",
 		"previewUnavailable": "预览不可用",
+		"captureAspect1x1": "1:1",
+		"captureAspect9x16": "9:16",
+		"captureAspect16x9": "16:9",
+		"captureAspectAuto": "Auto",
+		"captureAspect": "Aspect ratio",
 		"about": "关于",
 		"version": "版本 {{version}}",
 		"checkingForUpdates": "正在检查…"

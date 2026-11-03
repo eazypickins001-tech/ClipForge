@@ -95,6 +95,11 @@
 		"noMicrophones": "Kein Mikrofon gefunden",
 		"preview": "Vorschau",
 		"previewUnavailable": "Vorschau nicht verfügbar",
+		"captureAspect1x1": "1:1",
+		"captureAspect9x16": "9:16",
+		"captureAspect16x9": "16:9",
+		"captureAspectAuto": "Auto",
+		"captureAspect": "Aspect ratio",
 		"about": "Über",
 		"version": "Version {{version}}",
 		"checkingForUpdates": "Wird geprüft…"

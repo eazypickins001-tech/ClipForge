@@ -2,6 +2,7 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { WEBCAM_QUALITY_IDS } from "../../hooks/webcamCaptureTarget";
+import { CAPTURE_ASPECT_IDS } from "../../utils/aspectRatioUtils";
 import { TooltipProvider } from "../ui/tooltip";
 import { HudDeviceSettings, type HudDeviceSettingsLabels } from "./HudDeviceSettings";
 
@@ -34,10 +35,18 @@ const labels: HudDeviceSettingsLabels = {
 		"1440p": "1440p",
 		"2160p": "4K",
 	},
+	captureAspect: "Aspect ratio",
+	captureAspectOptions: {
+		auto: "Auto",
+		"16:9": "16:9",
+		"9:16": "9:16",
+		"1:1": "1:1",
+	},
 };
 
 function renderPanel(overrides: Partial<Parameters<typeof HudDeviceSettings>[0]> = {}) {
 	const onSelectCameraQuality = vi.fn();
+	const onSelectCaptureAspect = vi.fn();
 	render(
 		// The close button's tooltip needs the provider the app mounts around every window.
 		<TooltipProvider>
@@ -55,6 +64,8 @@ function renderPanel(overrides: Partial<Parameters<typeof HudDeviceSettings>[0]>
 				checkingForUpdates={false}
 				cameraQuality="1440p"
 				onSelectCameraQuality={onSelectCameraQuality}
+				captureAspect="auto"
+				onSelectCaptureAspect={onSelectCaptureAspect}
 				onSelectMic={vi.fn()}
 				onSelectCamera={vi.fn()}
 				onCheckForUpdates={vi.fn()}
@@ -64,7 +75,7 @@ function renderPanel(overrides: Partial<Parameters<typeof HudDeviceSettings>[0]>
 			/>
 		</TooltipProvider>,
 	);
-	return { onSelectCameraQuality };
+	return { onSelectCameraQuality, onSelectCaptureAspect };
 }
 
 describe("HudDeviceSettings camera quality", () => {
@@ -96,6 +107,40 @@ describe("HudDeviceSettings camera quality", () => {
 		// anything, and it pushes the real message out of view.
 		renderPanel({ cameraDevices: [], activeCameraId: undefined });
 
+		expect(screen.queryByTestId("camera-quality-2160p")).toBeNull();
+	});
+});
+
+describe("HudDeviceSettings capture shape", () => {
+	it("offers Auto first, and every fixed shape beside it", () => {
+		renderPanel();
+
+		for (const id of CAPTURE_ASPECT_IDS) {
+			expect(screen.getByTestId(`capture-aspect-${id}`)).toBeTruthy();
+		}
+	});
+
+	it("marks Auto as the checked one, because that is what a fresh project does", () => {
+		renderPanel();
+
+		expect(screen.getByTestId("capture-aspect-auto").getAttribute("aria-checked")).toBe("true");
+		expect(screen.getByTestId("capture-aspect-9:16").getAttribute("aria-checked")).toBe("false");
+	});
+
+	it("reports the picked shape so it can be persisted", () => {
+		const { onSelectCaptureAspect } = renderPanel();
+
+		fireEvent.click(screen.getByTestId("capture-aspect-9:16"));
+
+		expect(onSelectCaptureAspect).toHaveBeenCalledWith("9:16");
+	});
+
+	it("stays offered with no camera at all, unlike the camera's own quality", () => {
+		// The project's shape is a property of the recording, not of the hardware: a screen-only
+		// take on a machine with no webcam still becomes a project, and still needs a shape.
+		renderPanel({ cameraDevices: [], activeCameraId: undefined });
+
+		expect(screen.getByTestId("capture-aspect-auto")).toBeTruthy();
 		expect(screen.queryByTestId("camera-quality-2160p")).toBeNull();
 	});
 });

@@ -95,6 +95,11 @@
 		"noMicrophones": "لم يتم العثور على ميكروفون",
 		"preview": "معاينة",
 		"previewUnavailable": "المعاينة غير متاحة",
+		"captureAspect1x1": "1:1",
+		"captureAspect9x16": "9:16",
+		"captureAspect16x9": "16:9",
+		"captureAspectAuto": "Auto",
+		"captureAspect": "Aspect ratio",
 		"about": "حول",
 		"version": "الإصدار {{version}}",
 		"checkingForUpdates": "جارٍ التحقق…"

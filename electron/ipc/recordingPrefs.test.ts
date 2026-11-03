@@ -20,6 +20,7 @@ const defaults: RecordingPrefs = {
 	camDeviceId: null,
 	camDeviceName: null,
 	camQuality: "2160p",
+	captureAspect: "auto",
 	systemAudioEnabled: false,
 	cursorCaptureMode: "editable-overlay",
 	hideDesktopIcons: false,
@@ -59,12 +60,13 @@ describe("recording preferences IPC", () => {
 		expect(first.get().micEnabled).toBe(false);
 		expect(first.get().camDeviceName).toBeNull();
 		expect(first.set({ camDeviceName: "Camera A" }).camDeviceName).toBe("Camera A");
-		first.set({ micEnabled: true, micDeviceId: "temporary-device" });
+		first.set({ micEnabled: true, micDeviceId: "temporary-device", captureAspect: "9:16" });
 		const disk = JSON.parse(readFileSync(path.join(dir, "recording-settings.json"), "utf8"));
 		expect(disk).toMatchObject({
 			camDeviceName: "Camera A",
 			micEnabled: true,
 			micDeviceId: "temporary-device",
+			captureAspect: "9:16",
 		});
 		const restarted = start();
 		expect(restarted.get()).toEqual({
@@ -72,6 +74,7 @@ describe("recording preferences IPC", () => {
 			camDeviceName: "Camera A",
 			micEnabled: true,
 			micDeviceId: "temporary-device",
+			captureAspect: "9:16",
 		});
 		restarted.set({ camDeviceName: "Camera B" });
 		expect(start().get().camDeviceName).toBe("Camera B");
