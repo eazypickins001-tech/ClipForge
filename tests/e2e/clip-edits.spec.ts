@@ -21,7 +21,12 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { expect, type Page, test } from "@playwright/test";
-import { closeApp, launchApp, openEditorWithRecording, TEST_VIDEO } from "./harness";
+import { closeApp, FIXTURES_DIR, launchApp, openEditorWithRecording, TEST_VIDEO } from "./harness";
+
+// `TEST_VIDEO` (sample.webm) carries no audio stream: extracting from it can produce nothing, and
+// the first CI run of this spec found that the hard way ("No decodable audio ... does not contain
+// any stream"). The speech fixture is the one with a real AAC track, so it is the one to extract.
+const SPEECH_VIDEO = path.join(FIXTURES_DIR, "speech-sample.mp4");
 
 type SavedDocument = {
 	timeline?: {
@@ -50,7 +55,7 @@ function savedDocument(projectsDir: string): SavedDocument | null {
 	return null;
 }
 
-async function bootWithRecording(): Promise<{
+async function bootWithRecording(videoPath: string): Promise<{
 	app: Awaited<ReturnType<typeof launchApp>>;
 	editor: Page;
 	userDataDir: string;
@@ -64,8 +69,8 @@ async function bootWithRecording(): Promise<{
 		"recordings",
 	);
 	fs.mkdirSync(recordingsDir, { recursive: true });
-	const recordingPath = path.join(recordingsDir, "clip-edits-sample.webm");
-	fs.copyFileSync(TEST_VIDEO, recordingPath);
+	const recordingPath = path.join(recordingsDir, path.basename(videoPath));
+	fs.copyFileSync(videoPath, recordingPath);
 
 	const editor = await openEditorWithRecording(app, recordingPath);
 	await expect(editor.locator("[data-clip-id]")).toHaveCount(1, { timeout: 60_000 });
@@ -74,7 +79,7 @@ async function bootWithRecording(): Promise<{
 
 test("Split turns one clip into two", async () => {
 	test.setTimeout(600_000);
-	const { app, editor, userDataDir } = await bootWithRecording();
+	const { app, editor, userDataDir } = await bootWithRecording(TEST_VIDEO);
 	try {
 		// The rail buttons act on the selected clip; with one clip the import does not
 		// necessarily select it, so select it the way a person would.
@@ -107,7 +112,7 @@ test("Split turns one clip into two", async () => {
 
 test("Extract audio moves the sound to its own track and silences the clip", async () => {
 	test.setTimeout(600_000);
-	const { app, editor, userDataDir } = await bootWithRecording();
+	const { app, editor, userDataDir } = await bootWithRecording(SPEECH_VIDEO);
 	try {
 		await editor.locator("[data-clip-id]").first().click();
 		await editor.getByRole("button", { name: "Extract audio", exact: true }).click();
