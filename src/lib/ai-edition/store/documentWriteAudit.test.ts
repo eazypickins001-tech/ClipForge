@@ -140,6 +140,11 @@ const DECLARED: WritePath[] = [
 		"save",
 		"gesture",
 	),
+	// The shape the HUD's picker pinned for this take, written once as the project is built
+	// around it. `history: false`, like the timeline seed beside it: the editor is not making an
+	// edit, and the first Ctrl+Z must not undo a choice made before recording. Auto writes
+	// nothing at all, so the default path has no write here to declare.
+	w("src/components/ai-edition/recordingImport.ts", "importPendingRecording", "save", "automatic"),
 	// Renaming the project from the title field.
 	w("src/components/ai-edition/NewEditorShell.tsx", "handleRenameProject", "save", "gesture"),
 	// Ctrl+S / File > Save.
