@@ -297,14 +297,22 @@ export function resolveTimelineAudioPlayback(
 
 /** Fraction 0..1 of a track's volume `localSec` into its span, applying the
  *  ramps. Shares `resolveFadeSecs` with the export so a fade too long for its
- *  span is reduced the same way on both sides. */
+ *  span is reduced the same way on both sides.
+ *
+ *  Structural, not `AxcutAudioTrack`: a CLIP carries the same three fields and gets the same
+ *  treatment in the tick below, and duplicating the ramp maths for it would be a second definition
+ *  that could drift from the one the export uses. */
 export function timelineAudioFadeAt(
-	track: AxcutAudioTrack,
+	track: { muted?: boolean; fadeInMs?: number; fadeOutMs?: number },
 	localSec: number,
 	spanSec: number,
 ): number {
 	if (track.muted) return 0;
-	const { fadeInSec, fadeOutSec } = resolveFadeSecs(track.fadeInMs, track.fadeOutMs, spanSec);
+	const { fadeInSec, fadeOutSec } = resolveFadeSecs(
+		track.fadeInMs ?? 0,
+		track.fadeOutMs ?? 0,
+		spanSec,
+	);
 	let v = 1;
 	if (fadeInSec > 0 && localSec < fadeInSec) v = Math.min(v, Math.max(0, localSec / fadeInSec));
 	if (fadeOutSec > 0) {
@@ -415,12 +423,12 @@ export function applyPreviewAudioSettings(
 	elements: Array<HTMLAudioElement | null>,
 	gainDb: number,
 	voiceGainDb = 0,
-	/** The recording's own mute, 0 or 1. The export silences a muted clip by declaring it has no
-	 *  audio (`hasAudio: false`); this is the preview's half of the same promise. */
+	/** A multiplier on the recording's own audio: its level, its fade at the clip's edge, and 0
+	 *  when the clip is muted. NOT clamped to 1 — a clip level above 0 dB has to boost. */
 	clipGain = 1,
 ): void {
 	const outputGain = audioGainScalar(gainDb);
-	const voiceGain = audioGainScalar(voiceGainDb) * Math.min(1, Math.max(0, clipGain));
+	const voiceGain = audioGainScalar(voiceGainDb) * clipGain;
 	if (!graph) {
 		for (const element of elements) {
 			if (element) element.volume = Math.min(1, outputGain * voiceGain);
@@ -1034,19 +1042,6 @@ export function VirtualPreview({
 			// applies the global gain on top, matching the export); the `.volume` path is
 			// the fallback for when the graph is unavailable — there a boost caps at 0 dB.
 			const globalGain = audioGainScalar(audioGainDbRef.current);
-			// The recording's own sound, silenced when the clip under the playhead is muted. This
-			// is the preview's half of what `hasAudio: false` does to the export, applied here in
-			// the tick rather than from an effect: the playhead crosses clips while the graph
-			// stays connected, so an effect keyed on the document would be a frame late at every
-			// boundary — the one moment the mute has to be right.
-			const previewClip = clipsRef.current.find((clip) => clip.id === activeClipIdRef.current);
-			applyPreviewAudioSettings(
-				audioGraphRef.current,
-				[primaryAudioRef.current, supplementalAudioRef.current],
-				audioGainDbRef.current,
-				voiceGainDbRef.current,
-				previewClip?.muted ? 0 : 1,
-			);
 			// Speed-aware: under a 2x region the raw playhead races, and a projection
 			// blind to speed raced the audio's target position with it — the track
 			// was never given a faster `playbackRate`, but seeking it twice as fast
@@ -1057,6 +1052,30 @@ export function VirtualPreview({
 				trimRangesRef.current,
 				virtualTimeSecRef.current,
 				speedRegionsRef.current,
+			);
+			// The clip's own finishing — level, fades at its own edges, and its mute — applied here
+			// in the tick rather than from an effect: the playhead crosses clips while the graph
+			// stays connected, so an effect keyed on the document would be a frame late at every
+			// boundary, which is the one moment it has to be right. `timelineAudioFadeAt` is the
+			// same maths the export ramps with, mute included (it returns 0 for a muted object).
+			const previewClip = clipsRef.current.find((clip) => clip.id === activeClipIdRef.current);
+			const previewClipSpanSec = previewClip
+				? previewClip.timelineEndSec - previewClip.timelineStartSec
+				: 1;
+			const clipFactor = previewClip
+				? audioGainScalar(previewClip.gainDb ?? 0) *
+					timelineAudioFadeAt(
+						previewClip,
+						outputTimeSec - previewClip.timelineStartSec,
+						previewClipSpanSec,
+					)
+				: 1;
+			applyPreviewAudioSettings(
+				audioGraphRef.current,
+				[primaryAudioRef.current, supplementalAudioRef.current],
+				audioGainDbRef.current,
+				voiceGainDbRef.current,
+				clipFactor,
 			);
 			// Music ducking, heard live: one reading of the voice per frame (see MUSIC_DUCK).
 			const duck = musicDuckRef.current;
