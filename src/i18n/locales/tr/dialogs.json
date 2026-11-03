@@ -77,6 +77,9 @@
 	},
 	"fileDialogs": {
 		"saveGif": "Dışa Aktarılan GIF'i Kaydet",
+		"saveAudio": "Save audio",
+		"m4aAudio": "M4A audio",
+		"wavAudio": "WAV audio",
 		"saveVideo": "Dışa Aktarılan Videoyu Kaydet",
 		"selectVideo": "Video Dosyası Seç",
 		"selectAudio": "Ses dosyası seç",

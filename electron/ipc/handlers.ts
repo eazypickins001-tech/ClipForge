@@ -4200,10 +4200,20 @@ export function registerIpcHandlers(
 		"pick-export-save-path",
 		async (event, fileName: string, exportFolder?: string) => {
 			try {
-				const isGif = fileName.toLowerCase().endsWith(".gif");
+				const lowerName = fileName.toLowerCase();
+				const isGif = lowerName.endsWith(".gif");
+				// Audio-only exports: WAV is decoded, M4A is the AAC copied as-is. Without these
+				// branches the dialog would offer MP4 filters and append ".mp4" to a name the user
+				// had already given a ".wav" ending.
+				const isWav = lowerName.endsWith(".wav");
+				const isM4a = lowerName.endsWith(".m4a");
 				const filters = isGif
 					? [{ name: mainT("dialogs", "fileDialogs.gifImage"), extensions: ["gif"] }]
-					: [{ name: mainT("dialogs", "fileDialogs.mp4Video"), extensions: ["mp4"] }];
+					: isWav
+						? [{ name: mainT("dialogs", "fileDialogs.wavAudio"), extensions: ["wav"] }]
+						: isM4a
+							? [{ name: mainT("dialogs", "fileDialogs.m4aAudio"), extensions: ["m4a"] }]
+							: [{ name: mainT("dialogs", "fileDialogs.mp4Video"), extensions: ["mp4"] }];
 
 				// Prefer the user's last export folder if it still exists, else ~/Downloads.
 				// Validate here because the renderer can't stat the filesystem.
@@ -4224,7 +4234,9 @@ export function registerIpcHandlers(
 				const dialogOptions: Electron.SaveDialogOptions = {
 					title: isGif
 						? mainT("dialogs", "fileDialogs.saveGif")
-						: mainT("dialogs", "fileDialogs.saveVideo"),
+						: isWav || isM4a
+							? mainT("dialogs", "fileDialogs.saveAudio")
+							: mainT("dialogs", "fileDialogs.saveVideo"),
 					defaultPath: path.join(defaultDir, fileName),
 					filters,
 					properties: ["createDirectory", "showOverwriteConfirmation"],

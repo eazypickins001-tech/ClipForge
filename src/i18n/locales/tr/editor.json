@@ -210,6 +210,8 @@
 		"starting": "Başlatılıyor…",
 		"exportGif": "GIF Dışa Aktar",
 		"exportMp4": "MP4 Dışa Aktar",
+		"exportAudio": "Export audio",
+		"audio": "Audio",
 		"exportedGif": "GIF dışa aktarıldı",
 		"exportedVideo": "Video dışa aktarıldı",
 		"showInFolder": "Klasörde göster",

@@ -210,6 +210,8 @@
 		"starting": "시작 중…",
 		"exportGif": "GIF 내보내기",
 		"exportMp4": "MP4 내보내기",
+		"exportAudio": "Export audio",
+		"audio": "Audio",
 		"exportedGif": "GIF 내보내기 완료",
 		"exportedVideo": "동영상 내보내기 완료",
 		"showInFolder": "폴더에서 보기",

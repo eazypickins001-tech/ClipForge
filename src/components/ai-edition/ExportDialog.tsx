@@ -6,9 +6,10 @@
 // Format/quality/GIF options live in the dialog's local state. The
 // dialog uses the new shell's modal style.
 
-import { Download, FileVideo, FolderOpen, Loader2, Star } from "lucide-react";
+import { Download, FileAudio, FileVideo, FolderOpen, Loader2, Star } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
+import { toFileUrl } from "@/components/video-editor/projectPersistence";
 import { useScopedT } from "@/contexts/I18nContext";
 import { prepareClickSound } from "@/lib/ai-edition/clickSound";
 import {
@@ -22,6 +23,7 @@ import type { AxcutDocument } from "@/lib/ai-edition/schema";
 import { getEditorSettings } from "@/lib/ai-edition/store/editorSettings";
 import { assetCameraSource } from "@/lib/ai-edition/timeline/camera";
 import { resolveClipSourceEndSec } from "@/lib/ai-edition/timeline/clipDuration";
+import { type AudioExportFormat, audioRenderPath } from "@/lib/cliContracts";
 import {
 	type ExportFormat,
 	type ExportProgress,
@@ -33,6 +35,7 @@ import {
 	MP4_FRAME_RATES,
 	type Mp4FrameRate,
 } from "@/lib/exporter";
+import { extractAudio } from "@/lib/exporter/audioExport";
 import { calculateMp4ExportSettings, wouldUpscale } from "@/lib/exporter/mp4ExportSettings";
 import { outputFrameCount } from "@/lib/exporter/outputFrameCount";
 import {
@@ -163,6 +166,10 @@ export function ExportDialog({ open, onClose, document }: ExportDialogProps) {
 	// just runs on the software encoder and takes minutes instead of seconds.
 	const cpuCompositor = useIsCpuCompositor();
 	const [format, setFormat] = useState<ExportFormat>("mp4");
+	// Audio-only export format. WAV is what you take away to clean up — lossless, opens in any
+	// editor. M4A is supported by the extractor and by the save dialog, but nothing surfaces a
+	// choice for it yet, so this stays a constant rather than state nobody can change.
+	const audioFormat = "wav" as AudioExportFormat;
 	const [quality, setQuality] = useState<ExportQuality>("good");
 	const [fps, setFps] = useState<Mp4FrameRate>(60);
 	const [gifFrameRate, setGifFrameRate] = useState<GifFrameRate>(15);
@@ -344,7 +351,10 @@ export function ExportDialog({ open, onClose, document }: ExportDialogProps) {
 			.replace(/[^a-z0-9-_]+/gi, "_")
 			.replace(/^_+|_+$/g, "")
 			.slice(0, 60);
-		const suggested = `${safeName || "export"}${format === "gif" ? ".gif" : ".mp4"}`;
+		const audioExt = audioFormat === "m4a" ? ".m4a" : ".wav";
+		const suggested = `${safeName || "export"}${
+			format === "gif" ? ".gif" : format === "audio" ? audioExt : ".mp4"
+		}`;
 
 		setPhase("configuring");
 		setError(null);
@@ -428,36 +438,63 @@ export function ExportDialog({ open, onClose, document }: ExportDialogProps) {
 				if (exportClips.length === 0) {
 					throw new Error(t("exportDialog.nothingToExport"));
 				}
-				const stats =
-					format === "gif"
-						? await exportGifNative(
-								exportClips,
-								pickedPath,
-								sceneJson,
-								{
-									...gifOutputDims(gifSize),
-									fps: gifFrameRate,
-									// 0 = infinite, the historical GIF default; 1 = play once.
-									loopCount: gifLoop ? 0 : 1,
-								},
-								job.id,
-							)
-						: await exportMultiNative(
-								exportClips,
-								pickedPath,
-								sceneJson,
-								{
-									width: outDims?.width,
-									height: outDims?.height,
-									fps,
-									// H.264 only. The native pipeline still encodes H.265, but nothing
-									// offers it: it is software-only on Linux, slower than software on the
-									// measured Macs, and the files half the players cannot open.
-									codec: "h264",
-									bitrate: outDims?.bitrate,
-								},
-								job.id,
-							);
+				// GIF and MP4 report what they produced; an audio export has no frame stats of its
+				// own — it is the audio of that same render — so the toast falls back to the path.
+				let stats: Awaited<ReturnType<typeof exportMultiNative>> | null = null;
+				if (format === "audio") {
+					// The compositor has no audio-only render (see audioExport.ts), so the project is
+					// rendered as usual at the smallest size — the picture is thrown away — and the
+					// audio stream is taken out of that file. Same mix, gains and ducking the MP4
+					// would have had, because it IS that render.
+					const renderPath = audioRenderPath(pickedPath);
+					await exportMultiNative(
+						exportClips,
+						renderPath,
+						sceneJson,
+						{ width: 640, height: 360, fps, codec: "h264", bitrate: 1_000_000 },
+						job.id,
+					);
+					if (activeExport.current !== job) return;
+					const rendered = await fetch(toFileUrl(renderPath));
+					if (!rendered.ok) {
+						throw new Error(`Failed to read the rendered video back: ${renderPath}`);
+					}
+					const audio = await extractAudio(await rendered.blob(), audioFormat);
+					const written = await window.electronAPI?.writeExportToPath(audio, pickedPath);
+					if (!written?.success) {
+						throw new Error(written?.message ?? "Failed to write the audio file");
+					}
+				} else if (format === "gif") {
+					stats = await exportGifNative(
+						exportClips,
+						pickedPath,
+						sceneJson,
+						{
+							...gifOutputDims(gifSize),
+							fps: gifFrameRate,
+							// 0 = infinite, the historical GIF default; 1 = play once.
+							loopCount: gifLoop ? 0 : 1,
+						},
+						job.id,
+					);
+				} else {
+					stats = await exportMultiNative(
+						exportClips,
+						pickedPath,
+						sceneJson,
+						{
+							width: outDims?.width,
+							height: outDims?.height,
+							fps,
+							// H.264 only. The native pipeline still encodes H.265, but nothing
+							// offers it: it is software-only on Linux, slower than software on the
+							// measured Macs, and the files half the players cannot open.
+							codec: "h264",
+							bitrate: outDims?.bitrate,
+						},
+						job.id,
+					);
+				}
 				if (activeExport.current !== job) return;
 				setSavedPath(pickedPath);
 				setPhase("done");
@@ -475,7 +512,9 @@ export function ExportDialog({ open, onClose, document }: ExportDialogProps) {
 					})
 					.catch((err) => console.warn("[export] star prompt check failed:", err));
 				toast.success(t("exportDialog.exportedVideo"), {
-					description: `${pickedPath} · ${formatHms(stats.videoDurationS)} ${t("exportDialog.exportedVideoOf")} ${formatHms(stats.wallS)}`,
+					description: stats
+						? `${pickedPath} · ${formatHms(stats.videoDurationS)} ${t("exportDialog.exportedVideoOf")} ${formatHms(stats.wallS)}`
+						: pickedPath,
 					action: {
 						label: t("exportDialog.showInFolder"),
 						// The toast is gone in five seconds; the done panel below keeps the same
@@ -523,7 +562,7 @@ export function ExportDialog({ open, onClose, document }: ExportDialogProps) {
 				<div
 					style={{
 						display: "grid",
-						gridTemplateColumns: "1fr 1fr",
+						gridTemplateColumns: "1fr 1fr 1fr",
 						gap: 8,
 					}}
 				>
@@ -541,9 +580,18 @@ export function ExportDialog({ open, onClose, document }: ExportDialogProps) {
 						onClick={() => setFormat("gif")}
 						disabled={isBusy}
 					/>
+					{/* Audio-only, for taking the sound somewhere else to clean it up: the same mix
+					    the MP4 would have had, with the picture discarded. */}
+					<FormatToggle
+						active={format === "audio"}
+						label={t("exportDialog.audio")}
+						icon={<FileAudio size={18} />}
+						onClick={() => setFormat("audio")}
+						disabled={isBusy}
+					/>
 				</div>
 
-				{format === "mp4" ? (
+				{format === "audio" ? null : format === "mp4" ? (
 					<section>
 						<div className={styles.groupLabel}>{t("exportDialog.quality")}</div>
 						<div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 8 }}>
@@ -743,7 +791,11 @@ export function ExportDialog({ open, onClose, document }: ExportDialogProps) {
 						) : (
 							<>
 								<Download size={14} />
-								{format === "gif" ? t("exportDialog.exportGif") : t("exportDialog.exportMp4")}
+								{format === "gif"
+									? t("exportDialog.exportGif")
+									: format === "audio"
+										? t("exportDialog.exportAudio")
+										: t("exportDialog.exportMp4")}
 							</>
 						)}
 					</button>

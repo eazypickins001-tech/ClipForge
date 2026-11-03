@@ -210,6 +210,8 @@
 		"starting": "Avvio…",
 		"exportGif": "Esporta GIF",
 		"exportMp4": "Esporta MP4",
+		"exportAudio": "Export audio",
+		"audio": "Audio",
 		"exportedGif": "GIF esportata",
 		"exportedVideo": "Video esportato",
 		"showInFolder": "Mostra nella cartella",

@@ -77,6 +77,9 @@
 	},
 	"fileDialogs": {
 		"saveGif": "Uložit exportovaný GIF",
+		"saveAudio": "Save audio",
+		"m4aAudio": "M4A audio",
+		"wavAudio": "WAV audio",
 		"saveVideo": "Uložit exportované video",
 		"selectVideo": "Vybrat video soubor",
 		"selectAudio": "Vybrat zvukový soubor",

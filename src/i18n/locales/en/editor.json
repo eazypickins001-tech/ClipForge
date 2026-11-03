@@ -210,6 +210,8 @@
 		"starting": "Starting…",
 		"exportGif": "Export GIF",
 		"exportMp4": "Export MP4",
+		"exportAudio": "Export audio",
+		"audio": "Audio",
 		"exportedGif": "GIF exported",
 		"exportedVideo": "Video exported",
 		"exportedVideoOf": "of video exported in",

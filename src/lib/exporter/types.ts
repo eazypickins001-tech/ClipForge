@@ -35,7 +35,7 @@ export const MP4_FRAME_RATES = [24, 30, 60] as const;
 export type Mp4FrameRate = (typeof MP4_FRAME_RATES)[number];
 
 // GIF Export Types
-export type ExportFormat = "mp4" | "gif";
+export type ExportFormat = "mp4" | "gif" | "audio";
 
 /** Video codec for the MP4 container. GIF is a single codec, so this doesn't
  *  apply to it. (`vp9` is offered by the type but the native exporter rejects

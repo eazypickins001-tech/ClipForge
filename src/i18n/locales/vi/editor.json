@@ -210,6 +210,8 @@
 		"starting": "Đang bắt đầu…",
 		"exportGif": "Xuất GIF",
 		"exportMp4": "Xuất MP4",
+		"exportAudio": "Export audio",
+		"audio": "Audio",
 		"exportedGif": "Đã xuất GIF",
 		"exportedVideo": "Đã xuất video",
 		"showInFolder": "Hiện trong thư mục",

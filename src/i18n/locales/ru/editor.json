@@ -210,6 +210,8 @@
 		"starting": "Запуск…",
 		"exportGif": "Экспортировать GIF",
 		"exportMp4": "Экспортировать MP4",
+		"exportAudio": "Export audio",
+		"audio": "Audio",
 		"exportedGif": "GIF экспортирован",
 		"exportedVideo": "Видео экспортировано",
 		"showInFolder": "Показать в папке",

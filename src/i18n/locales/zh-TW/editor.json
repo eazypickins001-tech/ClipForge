@@ -210,6 +210,8 @@
 		"starting": "啟動中…",
 		"exportGif": "匯出 GIF",
 		"exportMp4": "匯出 MP4",
+		"exportAudio": "Export audio",
+		"audio": "Audio",
 		"exportedGif": "GIF 已匯出",
 		"exportedVideo": "影片已匯出",
 		"showInFolder": "在資料夾中顯示",

@@ -77,6 +77,9 @@
 	},
 	"fileDialogs": {
 		"saveGif": "Save exported GIF",
+		"saveAudio": "Save audio",
+		"m4aAudio": "M4A audio",
+		"wavAudio": "WAV audio",
 		"saveVideo": "Save exported video",
 		"selectVideo": "Choose a video file",
 		"selectAudio": "Choose an audio file",

@@ -210,6 +210,8 @@
 		"starting": "開始中…",
 		"exportGif": "GIFをエクスポート",
 		"exportMp4": "MP4をエクスポート",
+		"exportAudio": "Export audio",
+		"audio": "Audio",
 		"exportedGif": "GIFをエクスポートしました",
 		"exportedVideo": "動画をエクスポートしました",
 		"showInFolder": "フォルダーで表示",

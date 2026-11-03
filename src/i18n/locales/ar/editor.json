@@ -210,6 +210,8 @@
 		"starting": "جارٍ البدء...",
 		"exportGif": "تصدير GIF",
 		"exportMp4": "تصدير MP4",
+		"exportAudio": "Export audio",
+		"audio": "Audio",
 		"exportedGif": "تم تصدير GIF",
 		"exportedVideo": "تم تصدير الفيديو",
 		"showInFolder": "إظهار في المجلد",

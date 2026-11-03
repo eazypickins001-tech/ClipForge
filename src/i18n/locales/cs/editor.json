@@ -210,6 +210,8 @@
 		"starting": "Spouštění…",
 		"exportGif": "Exportovat GIF",
 		"exportMp4": "Exportovat MP4",
+		"exportAudio": "Export audio",
+		"audio": "Audio",
 		"exportedGif": "GIF exportován",
 		"exportedVideo": "Video exportováno",
 		"exportedVideoOf": "z videa exportováno za",

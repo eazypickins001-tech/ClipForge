@@ -77,6 +77,9 @@
 	},
 	"fileDialogs": {
 		"saveGif": "儲存匯出的 GIF",
+		"saveAudio": "Save audio",
+		"m4aAudio": "M4A audio",
+		"wavAudio": "WAV audio",
 		"saveVideo": "儲存匯出的影片",
 		"selectVideo": "選擇影片檔案",
 		"selectAudio": "選擇音訊檔案",
