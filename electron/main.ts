@@ -112,7 +112,7 @@ if (process.platform === "linux") {
 
 disableHttpCacheForDevServer(app.commandLine, process.env);
 
-installMainProcessErrorGuards();
+installMainProcessErrorGuards({ userDataDir: app.getPath("userData") });
 
 const recordingsDirManager = new RecordingsDirManager(app.getPath("userData"), () => isRecording);
 
