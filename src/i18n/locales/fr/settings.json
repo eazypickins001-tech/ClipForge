@@ -365,6 +365,14 @@
 			"x": "X (%)"
 		},
 		"deleteZoom": "Supprimer le zoom",
+		"keyframes": {
+			"title": "Trajet de mise au point",
+			"add": "Ajouter une image clé",
+			"remove": "Supprimer l'image clé",
+			"clear": "Effacer le trajet de mise au point",
+			"needsPlayhead": "Placez la tête de lecture dans le zoom pour ajouter une image clé",
+			"captureHint": "Faites glisser le point de mise au point dans l'aperçu, puis ajoutez une image clé."
+		},
 		"focusMode": {
 			"lockedDisclaimer": "Contrôlé par le bouton global de mise au point automatique dans la timeline. Désactivez-le pour régler le mode de mise au point par zoom.",
 			"auto": "Auto",

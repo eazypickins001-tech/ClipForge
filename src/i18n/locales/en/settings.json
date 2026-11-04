@@ -365,6 +365,14 @@
 			"x": "X (%)"
 		},
 		"deleteZoom": "Delete zoom",
+		"keyframes": {
+			"title": "Focus path",
+			"add": "Add keyframe",
+			"remove": "Remove keyframe",
+			"clear": "Clear focus path",
+			"needsPlayhead": "Put the playhead inside the zoom to place a keyframe",
+			"captureHint": "Drag the focus point on the preview, then add a keyframe to capture it."
+		},
 		"focusMode": {
 			"lockedDisclaimer": "Set by the Auto-Focus button in the timeline. Turn it off to choose the focus mode of each zoom.",
 			"auto": "Auto",

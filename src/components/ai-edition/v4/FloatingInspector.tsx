@@ -1018,6 +1018,76 @@ function SelectionPane({ tl, onClose }: { tl: TimelineApi; onClose: () => void }
 							onChange={(v) => void tl.updateZoomHideCursor(region.id, v === "hide")}
 						/>,
 					)}
+					{paneStack(
+						ts("zoom.keyframes.title"),
+						<>
+							{/* The CAPTURE model: the gimbal keeps setting the region's own focus point, and
+							    "Add keyframe" freezes whatever it is showing at the playhead's place in the
+							    region. So a path is authored by dragging, keying, moving on — and nothing
+							    here has to intercept a drag that the preview overlay owns. */}
+							{(region.keyframes ?? []).length ? null : (
+								<p className={shell.hint}>{ts("zoom.keyframes.captureHint")}</p>
+							)}
+							{(region.keyframes ?? []).map((key) => (
+								<div key={key.at} style={{ display: "flex", alignItems: "center", gap: 8 }}>
+									<span style={{ flex: 1, fontVariantNumeric: "tabular-nums" }}>
+										{Math.round(key.at * 100)}%
+									</span>
+									<button
+										type="button"
+										aria-label={ts("zoom.keyframes.remove")}
+										data-testid={`zoom-keyframe-${Math.round(key.at * 100)}`}
+										onClick={() =>
+											void tl.setZoomKeyframes(
+												region.id,
+												(region.keyframes ?? []).filter((k) => k.at !== key.at),
+											)
+										}
+									>
+										<Trash2 size={14} style={{ color: "var(--danger)" }} />
+									</button>
+								</div>
+							))}
+							<button
+								type="button"
+								className={PANE_BUTTON}
+								data-testid="zoom-add-keyframe"
+								onClick={() => {
+									// Read at click time, never subscribed: the playhead is rewritten every
+									// animation frame of playback and this pane must not re-render on it.
+									const playheadSec = useProjectStore.getState().currentTimeSec;
+									const startSec = region.startMs / 1000;
+									const span = Math.max(1e-3, region.endMs / 1000 - startSec);
+									const at = (playheadSec - startSec) / span;
+									if (!(at >= 0 && at <= 1)) {
+										// The hit is reported, not disabled — the same contract as every other
+										// playhead action in this pane (see the rail's Split).
+										toast.info(ts("zoom.keyframes.needsPlayhead"));
+										return;
+									}
+									// One key per instant: keying twice in the same place replaces rather than
+									// stacks, so a double click cannot leave a duplicate to remove.
+									const next = [
+										...(region.keyframes ?? []).filter((k) => Math.abs(k.at - at) > 0.005),
+										{ at, cx: region.focus.cx, cy: region.focus.cy },
+									].sort((a, b) => a.at - b.at);
+									void tl.setZoomKeyframes(region.id, next);
+								}}
+							>
+								{ts("zoom.keyframes.add")}
+							</button>
+							{(region.keyframes ?? []).length > 1 ? (
+								<button
+									type="button"
+									className={PANE_BUTTON}
+									data-testid="zoom-clear-keyframes"
+									onClick={() => void tl.setZoomKeyframes(region.id, undefined)}
+								>
+									{ts("zoom.keyframes.clear")}
+								</button>
+							) : null}
+						</>,
+					)}
 					{autoFocusAll || region.focusMode === "auto" ? (
 						// Auto resamples the focus from cursor telemetry every frame, so there is no fixed
 						// point to reset and no gimbal on the canvas (ZoomFocusOverlay bows out) — the

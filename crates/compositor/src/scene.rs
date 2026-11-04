@@ -625,6 +625,25 @@ pub struct SceneZoomRegion {
     /// Masque le curseur pendant cette région de zoom.
     #[serde(default)]
     pub hide_cursor: bool,
+    /// Chemin de focus keyframé : quand il porte au moins un point, `resolve_focus`
+    /// (`regions.rs`) l'échantillonne AU LIEU de `focus_x`/`focus_y`. Absent de tout payload
+    /// écrit avant cette fonctionnalité — d'où le `default`, comme les autres champs ajoutés.
+    #[serde(default)]
+    pub keyframes: Vec<ZoomKeyframe>,
+}
+
+/// Un point du chemin de focus d'un zoom.
+///
+/// `at` est normalisé DANS la région (0 = son début, 1 = sa fin), jamais un temps absolu : une
+/// région est redimensionnée et ré-ancrée à chaque split, join et `rederiveRegionMs`, et une clé
+/// exprimée en ms devrait être ré-ancrée à chacun. Normalisée, elle survit à tous — même raison
+/// que les ancres de région, qui sont en secondes SOURCE.
+#[derive(Debug, Clone, Copy, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ZoomKeyframe {
+    pub at: f32,
+    pub cx: f32,
+    pub cy: f32,
 }
 
 /// Une zone de vitesse portée par le temps source d'un clip.

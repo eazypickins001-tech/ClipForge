@@ -1058,6 +1058,15 @@ export function useTimeline() {
 		[saveZoomPatch],
 	);
 
+	/** Replace a zoom's focus path. ONE write for whatever the caller did — add a key, remove one,
+	 *  clear the path — so each of those is one undo step. `undefined` (not `[]`) when the path is
+	 *  emptied, so the document keeps the shape every reader already treats as "no path". */
+	const setZoomKeyframes = useCallback(
+		(id: string, keyframes: AxcutDocument["zoomRanges"][number]["keyframes"]) =>
+			saveZoomPatch(id, { keyframes: keyframes?.length ? keyframes : undefined }),
+		[saveZoomPatch],
+	);
+
 	const updateAnnotationSpan = useCallback(
 		async (id: string, startMs: number, endMs: number, drop?: AnnotationTrackDrop) => {
 			if (!document) return;
@@ -1983,6 +1992,7 @@ export function useTimeline() {
 		updateZoomRotation,
 		updateZoomFocusMode,
 		updateZoomHideCursor,
+		setZoomKeyframes,
 		updateAnnotationSpan,
 		updateAnnotationLive,
 		commitAnnotationChange,

@@ -511,6 +511,31 @@ export const annotationRegionSchema = endGteStart(
 	{ message: "position must be at least 0", path: ["position"] },
 );
 
+/** How many points a zoom's focus path may hold.
+ *
+ *  Enough for a hand-authored move, small enough that the payload stays flat — it is sent to the
+ *  compositor for every zoom on every frame's scene build. A list longer than this is REJECTED by
+ *  the schema rather than truncated: a silent trim would move a path the user drew. */
+export const MAX_ZOOM_KEYFRAMES = 24;
+
+/**
+ * One point on a zoom's focus path.
+ *
+ * `at` is normalized INSIDE the region (0 = its start, 1 = its end), never absolute time: a region
+ * is resized and re-anchored by split, join and every `rederiveRegionMs`, and a keyframe stored in
+ * ms would have to be re-anchored on each of those. Normalized, the path survives all of them —
+ * the same reason the region's anchors are source seconds rather than ruler milliseconds.
+ *
+ * The compositor samples these instead of the region's single `focus` point; see
+ * `regions.rs::focus_path_at`. Absent (or empty) means the region keeps that point, which is what
+ * every document written so far carries.
+ */
+export const zoomKeyframeSchema = z.object({
+	at: z.number().min(0).max(1),
+	cx: z.number().min(0).max(1),
+	cy: z.number().min(0).max(1),
+});
+
 export const zoomRegionSchema = endGteStart(
 	z.object({
 		id: z.string().min(1),
@@ -543,6 +568,10 @@ export const zoomRegionSchema = endGteStart(
 		customScale: z.number().positive().optional(),
 		source: z.enum(["auto", "manual"]).optional(),
 		hideCursor: z.boolean().optional(),
+		/** A keyframed focus path. Optional and additive, like `transitions`: a document written
+		 *  before this carries no key, every reader treats an absent list as "no path", and the
+		 *  region's own `focus` stays the answer. */
+		keyframes: z.array(zoomKeyframeSchema).max(MAX_ZOOM_KEYFRAMES).optional(),
 	}),
 	"endMs",
 	"startMs",

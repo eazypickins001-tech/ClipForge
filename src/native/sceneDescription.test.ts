@@ -27,6 +27,7 @@ import { nativeBridgeClient } from "./client";
 import {
 	annotationFootageRect,
 	buildSceneDescription,
+	clampZoomKeyframes,
 	wallpaperAcceptsMotion,
 	zoomScaleLimit,
 } from "./sceneDescription";
@@ -786,6 +787,53 @@ describe("buildSceneDescription.zoomRegions", () => {
 		expect(zoomRegions[0].focusY).toBe(0.75);
 		expect(zoomRegions[0].rotation).toBe("left");
 		expect(zoomRegions[0].hideCursor).toBe(true);
+	});
+
+	it("emits no keyframes key at all for a zoom without a focus path", () => {
+		// Not `keyframes: []`: an existing document's payload stays exactly what it was, so nothing
+		// downstream has to treat an empty list and an absent one differently.
+		const z = makeZoom({ id: "z", startMs: 0, endMs: 1000, depth: 2, focus: { cx: 0.5, cy: 0.5 } });
+		const region = buildSceneDescription(makeDoc({ zoomRanges: [z] })).zoomRegions[0];
+		expect("keyframes" in region).toBe(false);
+	});
+
+	it("sorts a focus path and clamps it to the bounds the scale actually allows", () => {
+		const z = makeZoom({
+			id: "z",
+			startMs: 0,
+			endMs: 4000,
+			depth: 3,
+			focus: { cx: 0.5, cy: 0.5 },
+			keyframes: [
+				// Out of order, and both corners sit past what a 3× zoom can show.
+				{ at: 1, cx: 0.95, cy: 0.95 },
+				{ at: 0, cx: 0.05, cy: 0.05 },
+			],
+		});
+		const region = buildSceneDescription(makeDoc({ zoomRanges: [z] })).zoomRegions[0];
+		const bounds = getFocusBoundsForScale(getZoomScale({ depth: 3 }));
+		expect(region.keyframes).toEqual([
+			{ at: 0, cx: bounds.minX, cy: bounds.minY },
+			{ at: 1, cx: bounds.maxX, cy: bounds.maxY },
+		]);
+	});
+
+	it("keeps one keyframe per instant, the later edit winning", () => {
+		// Both keys are inside a 1.5× frame's bounds, so the clamp cannot hide which one survived.
+		const z = makeZoom({
+			id: "z",
+			startMs: 0,
+			endMs: 1000,
+			depth: 2,
+			focus: { cx: 0.5, cy: 0.5 },
+			keyframes: [
+				{ at: 0.5, cx: 0.6, cy: 0.6 },
+				{ at: 0.5, cx: 0.64, cy: 0.64 },
+			],
+		});
+		expect(clampZoomKeyframes(z, getZoomScale({ depth: 2 }))).toEqual([
+			{ at: 0.5, cx: 0.64, cy: 0.64 },
+		]);
 	});
 
 	it("converts ms→sec for start/end", () => {

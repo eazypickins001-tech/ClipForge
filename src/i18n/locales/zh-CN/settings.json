@@ -365,6 +365,14 @@
 			"x": "X (%)"
 		},
 		"deleteZoom": "删除缩放",
+		"keyframes": {
+			"title": "焦点路径",
+			"add": "添加关键帧",
+			"remove": "删除关键帧",
+			"clear": "清除焦点路径",
+			"needsPlayhead": "将播放头放在缩放区间内即可添加关键帧",
+			"captureHint": "在预览中拖动焦点，然后添加关键帧以记录。"
+		},
 		"focusMode": {
 			"lockedDisclaimer": "由时间线中的全局自动对焦开关控制。关闭后可为每个缩放单独设置对焦模式。",
 			"auto": "自动",

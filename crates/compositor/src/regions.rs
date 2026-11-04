@@ -757,6 +757,46 @@ pub fn arrow_local_geometry(
     )
 }
 
+/// Le focus d'une région au temps `t`, lu sur son chemin de keyframes. `None` quand elle n'en a pas.
+///
+/// La progression se mesure sur l'horloge ÉCRAN, comme l'enveloppe (`zoom_region_strength`) : sous
+/// une speed region, le chemin avance donc avec le temps que le spectateur voit, pas avec la source.
+///
+/// Linéaire entre deux points. Les courbes du module (`ease_spring`, `scale_lerp`) servent des
+/// transitions entières, pas des segments de chemin — une pente par keyframe est une décision de
+/// modèle plus large que cette tranche.
+fn focus_path_at(region: &SceneZoomRegion, t: f32, clock: &ScreenClock) -> Option<[f32; 2]> {
+    let keys = region.keyframes.as_slice();
+    let first = keys.first()?;
+    // Une seule clé, c'est une caméra posée : la même partout dans la région.
+    if keys.len() == 1 {
+        return Some([first.cx, first.cy]);
+    }
+    let start = clock.at(region.start_sec as f32);
+    let end = clock.at(region.end_sec as f32);
+    let u = clamp01((clock.at(t) - start) / (end - start).max(1e-3));
+
+    // En dehors de la première et de la dernière clé, le chemin TIENT sa position : une région dont
+    // l'ease déborde sur des frames voisines ne doit pas voir la caméra sauter d'un bout à l'autre.
+    let last = keys[keys.len() - 1];
+    if u <= keys[0].at {
+        return Some([keys[0].cx, keys[0].cy]);
+    }
+    if u >= last.at {
+        return Some([last.cx, last.cy]);
+    }
+
+    // Les clés arrivent triées par `at` (l'émetteur les trie), donc un balayage suffit.
+    for pair in keys.windows(2) {
+        let (a, b) = (pair[0], pair[1]);
+        if u >= a.at && u <= b.at {
+            let k = clamp01((u - a.at) / (b.at - a.at).max(1e-6));
+            return Some([lerp(a.cx, b.cx, k), lerp(a.cy, b.cy, k)]);
+        }
+    }
+    Some([last.cx, last.cy])
+}
+
 /// Focus effectif d'une région à `t` : sa position fixe, sauf en mode "auto" où elle suit la
 /// télémétrie curseur (port de `getResolvedFocus`, sans le clamp — le crop-window de
 /// `compositor.rs` clampe déjà après coup, cf. `su0.clamp(...)`, donc redondant ici).
@@ -766,6 +806,12 @@ fn resolve_focus(
     cursor: Option<&CursorTrack>,
     clock: &ScreenClock,
 ) -> [f32; 2] {
+    // Un chemin keyframé est une instruction explicite : il gagne sur la caméra orbit ET sur le mode
+    // "auto", que le réglage global `autoFocusAll` impose à toutes les régions. Sans ça, le même
+    // document s'animerait ou non selon un toggle d'interface.
+    if let Some(path) = focus_path_at(region, t, clock) {
+        return path;
+    }
     // Sous la caméra réelle, le cadrage vient de sa visée (`orbit_at`), en auto comme en manuel :
     // la boîte zoome sur son centre, sans glissement 2D. Chaînée à une région plate, la
     // transition glisse donc vers le focus de celle-ci sans saut.
@@ -1731,6 +1777,7 @@ mod zoom_focus_tests {
             rotation: None,
             under_trim: false,
             hide_cursor: false,
+            keyframes: Vec::new(),
         }
     }
 
@@ -2744,6 +2791,7 @@ mod tilt_tests {
             rotation: rotation.map(Into::into),
             under_trim: false,
             hide_cursor: false,
+            keyframes: Vec::new(),
         };
         // `orbit` n'incline pas l'écran (caméra réelle, `camera.rs`) : chaînée à un angle
         // fixe, la transition passe par l'écran droit, que ce balayage couvre aussi.
@@ -3166,6 +3214,7 @@ mod tilt_tests {
             rotation: rotation.map(Into::into),
             under_trim: false,
             hide_cursor: false,
+            keyframes: Vec::new(),
         };
         assert_eq!(zoom_state_at(&[region(Some("left"))], 5.0, None).tilt, 1.0);
         assert_eq!(zoom_state_at(&[region(None)], 5.0, None).tilt, 0.0);
@@ -3545,7 +3594,86 @@ mod orbit_camera_tests {
             rotation: Some(rotation.into()),
             under_trim: false,
             hide_cursor: false,
+            keyframes: Vec::new(),
         }
+    }
+
+    /// Un chemin à deux points sur l'axe X : 0.2 → 0.8, Y fixe à 0.5.
+    fn keyed(start_sec: f64, end_sec: f64) -> SceneZoomRegion {
+        SceneZoomRegion {
+            id: "zk".into(),
+            clip_index: None,
+            start_sec,
+            end_sec,
+            scale: 2.0,
+            focus_x: 0.5,
+            focus_y: 0.5,
+            focus_mode: Some("manual".into()),
+            rotation: None,
+            under_trim: false,
+            hide_cursor: false,
+            keyframes: vec![
+                crate::scene::ZoomKeyframe {
+                    at: 0.0,
+                    cx: 0.2,
+                    cy: 0.5,
+                },
+                crate::scene::ZoomKeyframe {
+                    at: 1.0,
+                    cx: 0.8,
+                    cy: 0.5,
+                },
+            ],
+        }
+    }
+
+    #[test]
+    fn a_region_without_keyframes_has_no_path() {
+        assert!(focus_path_at(&region("left", 2.0, 8.0), 5.0, &ScreenClock::default()).is_none());
+    }
+
+    #[test]
+    fn one_key_holds_one_position_for_the_whole_region() {
+        let mut r = keyed(2.0, 8.0);
+        r.keyframes = vec![crate::scene::ZoomKeyframe {
+            at: 0.5,
+            cx: 0.3,
+            cy: 0.7,
+        }];
+        for t in [0.0, 2.0, 5.0, 8.0, 20.0] {
+            assert_eq!(
+                focus_path_at(&r, t, &ScreenClock::default()),
+                Some([0.3, 0.7]),
+                "t = {t}"
+            );
+        }
+    }
+
+    #[test]
+    fn a_path_interpolates_between_its_keys_and_holds_at_the_ends() {
+        let r = keyed(2.0, 8.0);
+        let clock = ScreenClock::default();
+        // 2 s → 8 s : le milieu du trajet tombe au milieu de la région.
+        assert_eq!(focus_path_at(&r, 2.0, &clock), Some([0.2, 0.5]));
+        let mid = focus_path_at(&r, 5.0, &clock).unwrap();
+        assert!((mid[0] - 0.5).abs() < 1e-5, "{mid:?}");
+        assert_eq!(focus_path_at(&r, 8.0, &clock), Some([0.8, 0.5]));
+        // En dehors, le chemin TIENT ses extrémités plutôt que de déborder : une région dont
+        // l'ease atteint des frames voisines ne doit pas voir la caméra sauter.
+        assert_eq!(focus_path_at(&r, -4.0, &clock), Some([0.2, 0.5]));
+        assert_eq!(focus_path_at(&r, 40.0, &clock), Some([0.8, 0.5]));
+    }
+
+    #[test]
+    fn keyframes_win_over_auto_focus() {
+        // `autoFocusAll` impose "auto" à toutes les régions : un chemin dessiné à la main ne doit pas
+        // cesser de s'animer parce qu'un toggle d'interface est allumé.
+        let mut r = keyed(2.0, 8.0);
+        r.focus_mode = Some("auto".into());
+        let cursor = track(|_| (0.05, 0.05));
+        let state = zoom_state_at(&[r], 5.0, Some(&cursor));
+        assert!((state.focus[0] - 0.5).abs() < 1e-5, "{:?}", state.focus);
+        assert!((state.focus[1] - 0.5).abs() < 1e-5, "{:?}", state.focus);
     }
 
     /// Une piste de 20 s échantillonnée à 30 Hz, position donnée par `at(t)`.

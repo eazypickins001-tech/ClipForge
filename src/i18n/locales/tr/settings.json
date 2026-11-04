@@ -365,6 +365,14 @@
 			"x": "X (%)"
 		},
 		"deleteZoom": "Yakınlaştırmayı Sil",
+		"keyframes": {
+			"title": "Odak yolu",
+			"add": "Anahtar kare ekle",
+			"remove": "Anahtar kareyi kaldır",
+			"clear": "Odak yolunu temizle",
+			"needsPlayhead": "Anahtar kare koymak için oynatma imlecini yakınlaştırmanın içine getirin",
+			"captureHint": "Önizlemede odak noktasını sürükleyin, ardından kaydetmek için anahtar kare ekleyin."
+		},
 		"focusMode": {
 			"lockedDisclaimer": "Zaman çizelgesindeki genel Otomatik Odak anahtarı tarafından kontrol edilir. Odak modunu yakınlaştırma başına ayarlamak için kapatın.",
 			"auto": "Otomatik",

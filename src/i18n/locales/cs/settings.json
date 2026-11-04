@@ -365,6 +365,14 @@
 			"x": "X (%)"
 		},
 		"deleteZoom": "Smazat přiblížení",
+		"keyframes": {
+			"title": "Dráha zaostření",
+			"add": "Přidat klíčový snímek",
+			"remove": "Odebrat klíčový snímek",
+			"clear": "Vymazat dráhu zaostření",
+			"needsPlayhead": "Umístěte kurzor přehrávání do zoomu, abyste přidali klíčový snímek",
+			"captureHint": "Přetáhněte bod zaostření v náhledu a poté přidejte klíčový snímek."
+		},
 		"focusMode": {
 			"lockedDisclaimer": "Řízeno globálním přepínačem Automatického zaostření na časové ose. Vypněte ho pro nastavení režimu zaostření pro každé přiblížení.",
 			"auto": "Automatický",

@@ -365,6 +365,14 @@
 			"x": "X (%)"
 		},
 		"deleteZoom": "Elimina zoom",
+		"keyframes": {
+			"title": "Percorso di messa a fuoco",
+			"add": "Aggiungi fotogramma chiave",
+			"remove": "Rimuovi fotogramma chiave",
+			"clear": "Cancella percorso di messa a fuoco",
+			"needsPlayhead": "Posiziona il cursore di riproduzione dentro lo zoom per aggiungere un fotogramma chiave",
+			"captureHint": "Trascina il punto di messa a fuoco nell'anteprima, poi aggiungi un fotogramma chiave."
+		},
 		"focusMode": {
 			"lockedDisclaimer": "Controllato dall'interruttore globale di messa a fuoco automatica nella timeline. Disattivalo per impostare la modalità di messa a fuoco per ogni zoom.",
 			"auto": "Automatico",

@@ -365,6 +365,14 @@
 			"x": "X (%)"
 		},
 		"deleteZoom": "Zoom löschen",
+		"keyframes": {
+			"title": "Fokuspfad",
+			"add": "Keyframe hinzufügen",
+			"remove": "Keyframe entfernen",
+			"clear": "Fokuspfad löschen",
+			"needsPlayhead": "Setzen Sie die Abspielposition in den Zoom, um einen Keyframe zu setzen",
+			"captureHint": "Ziehen Sie den Fokuspunkt in der Vorschau und fügen Sie dann einen Keyframe hinzu."
+		},
 		"focusMode": {
 			"lockedDisclaimer": "Wird vom globalen Auto-Fokus-Schalter in der Timeline gesteuert. Schalte ihn aus, um den Fokusmodus pro Zoom festzulegen.",
 			"auto": "Auto",

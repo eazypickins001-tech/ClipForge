@@ -39,7 +39,7 @@ import {
 	readSpeedRegions,
 	resolvePlaybackSegments,
 } from "@/lib/ai-edition/document/timeline";
-import type { AxcutClip, AxcutDocument } from "@/lib/ai-edition/schema";
+import type { AxcutClip, AxcutDocument, AxcutZoomRegion } from "@/lib/ai-edition/schema";
 import { isVoiceKind } from "@/lib/ai-edition/schema";
 import { nativeShaderEffectValue } from "@/lib/ai-edition/shaderEffects";
 import { getEditorSettings } from "@/lib/ai-edition/store/editorSettings";
@@ -71,6 +71,7 @@ import { LAYOUT_TRANSITION_SECONDS, type LayoutPreset } from "@/lib/layoutTypes"
 import type { FrameTheme, RecordingFrame, WebcamAnchor } from "@/lib/projectDefaults";
 import { resolveTextFontFamily } from "@/lib/textFonts";
 import { classifyWallpaper } from "@/lib/wallpaper";
+import { getFocusBoundsForScale } from "@/lib/zoomMath/focusUtils";
 import { clipVideoDips } from "./clipVideoDips";
 import type { CompositorClipInput } from "./contracts";
 import { ROUNDNESS_REFERENCE_PX } from "./paramUnits";
@@ -125,6 +126,10 @@ export interface SceneZoomRegion {
 	underTrim?: boolean;
 	/** When true, cursor is hidden during this zoom region. */
 	hideCursor?: boolean;
+	/** A keyframed focus path, normalized INSIDE the region (`at` 0..1), sorted and clamped at emit.
+	 *  `regions.rs::focus_path_at` samples it in preference to `focusX`/`focusY`; absent means the
+	 *  region keeps that single point, which is every document that has no path. */
+	keyframes?: Array<{ at: number; cx: number; cy: number }>;
 }
 
 /** One fragment of a shader effect region (`(document.shaderEffectRanges ?? [])`), projected onto its
@@ -800,6 +805,40 @@ function zoomScaleLimitOf(
 			(rect.height * output.height) / source.height,
 		);
 	return maxZoomScaleFor(rest);
+}
+
+/**
+ * A zoom region's focus path, ready for the compositor: sorted, one key per `at`, and clamped to the
+ * SAME bounds the gimbal uses (`getFocusBoundsForScale`).
+ *
+ * `scale` is the scale the scene will actually RENDER — already min'd with the clip's magnification
+ * limit — not the region's nominal one, because the bounds tighten as the scale drops: a key legal
+ * at 5× can put the frame's edge into view at 3×, which is dead space past the source. The
+ * inspector refuses to draw a key out there; the export cannot refuse anything, so the scene never
+ * carries one.
+ *
+ * Empty means "no path", and the caller omits the key entirely — keeping the payload of every
+ * document without keyframes exactly what it emitted before.
+ */
+export function clampZoomKeyframes(
+	region: AxcutZoomRegion,
+	scale: number,
+): Array<{ at: number; cx: number; cy: number }> {
+	const keys = region.keyframes ?? [];
+	if (keys.length === 0) return [];
+	const bounds = getFocusBoundsForScale(scale);
+	// Last wins at one instant: two keys at the same `at` are one key, and the later one is the edit
+	// the user just made.
+	const byAt = new Map<number, { at: number; cx: number; cy: number }>();
+	for (const key of keys) {
+		const at = Math.min(1, Math.max(0, key.at));
+		byAt.set(at, {
+			at,
+			cx: Math.min(bounds.maxX, Math.max(bounds.minX, key.cx)),
+			cy: Math.min(bounds.maxY, Math.max(bounds.minY, key.cy)),
+		});
+	}
+	return [...byAt.values()].sort((a, b) => a.at - b.at);
 }
 
 /**
@@ -1571,44 +1610,50 @@ export function buildSceneDescription(
 		audioTracks,
 		...(clickSound ? { clickSound } : {}),
 		background: sceneBackground(settings.wallpaper, settings.wallpaperMotion),
-		zoomRegions: projectedZoomRegions.map((region) => ({
-			id: region.id,
-			startSec: region.startMs / 1000,
-			endSec: region.endMs / 1000,
-			// `ZOOM_DEPTH_SCALES` et rien d'autre. Cette ligne portait sa propre formule,
-			// `depth / 2 + 0.5`, qui ne coïncide avec la table qu'à la profondeur 2 — et le focus,
-			// lui, est borné avec la table (`getFocusBoundsForScale`, via `getZoomScale`). Les deux
-			// échelles se contredisaient donc : à la profondeur 3 le gimbal butait à 1/(2×1.8) =
-			// 0.2778 pendant que le compositeur découpait une demi-fenêtre de 1/(2×2.0) = 0.25, si
-			// bien que la fenêtre source s'arrêtait 2.78 % avant le bord — 53 px sur 1920
-			// définitivement hors d'atteinte, gimbal à fond dans le coin. Le symptôme rapporté :
-			// « le zoom coupe les bords extérieurs ».
-			//
-			// ponytail: et c'est `getZoomScale` en entier, pas la table seule. La ligne
-			// lisait `region.customScale ?? ZOOM_DEPTH_SCALES[depth]`, donc sans le clamp
-			// [1.0, 5.0] que l'UI applique. Or `zoomRegionSchema` n'exige de `customScale`
-			// que d'être positif : un document portant `customScale: 12` est valide, rendait
-			// 5× dans l'aperçu web et 12× ici. Même désaccord que ci-dessus, un cran plus bas.
-			//
+		zoomRegions: projectedZoomRegions.map((region) => {
 			// Bounded per clip: crop and zoom multiply, and past `MAX_SOURCE_MAGNIFICATION` the
 			// recording blurs. The inspector greys those levels out; this catches a level set
 			// before a crop or a format change made it too deep.
-			scale: Math.min(
+			const scale = Math.min(
 				getZoomScale(region),
 				zoomLimitByClip[region.clipIndex ?? 0] ?? MAX_ZOOM_SCALE,
-			),
-			focusX: region.focus.cx,
-			focusY: region.focus.cy,
-			// The global Auto-Focus toggle OVERRIDES each region's own mode rather than merely
-			// seeding it — that's what `settings.zoom.focusMode.lockedDisclaimer` promises the
-			// user ("turn it off to set focus mode per zoom"), and it's what makes the toolbar
-			// button a one-click "make every zoom follow the cursor".
-			focusMode: settings.autoFocusAll ? "auto" : (region.focusMode ?? null),
-			rotation: region.rotationPreset ?? null,
-			clipIndex: region.clipIndex,
-			...(region.underTrim ? { underTrim: true } : {}),
-			...(region.hideCursor ? { hideCursor: true } : {}),
-		})),
+			);
+			// The path is clamped against the scale that will actually RENDER, and omitted when it
+			// has nothing left: a zoom with no keyframes emits the exact keys it always has.
+			const keyframes = clampZoomKeyframes(region, scale);
+			return {
+				id: region.id,
+				startSec: region.startMs / 1000,
+				endSec: region.endMs / 1000,
+				// `ZOOM_DEPTH_SCALES` et rien d'autre. Cette ligne portait sa propre formule,
+				// `depth / 2 + 0.5`, qui ne coïncide avec la table qu'à la profondeur 2 — et le focus,
+				// lui, est borné avec la table (`getFocusBoundsForScale`, via `getZoomScale`). Les deux
+				// échelles se contredisaient donc : à la profondeur 3 le gimbal butait à 1/(2×1.8) =
+				// 0.2778 pendant que le compositeur découpait une demi-fenêtre de 1/(2×2.0) = 0.25, si
+				// bien que la fenêtre source s'arrêtait 2.78 % avant le bord — 53 px sur 1920
+				// définitivement hors d'atteinte, gimbal à fond dans le coin. Le symptôme rapporté :
+				// « le zoom coupe les bords extérieurs ».
+				//
+				// ponytail: et c'est `getZoomScale` en entier, pas la table seule. La ligne
+				// lisait `region.customScale ?? ZOOM_DEPTH_SCALES[depth]`, donc sans le clamp
+				// [1.0, 5.0] que l'UI applique. Or `zoomRegionSchema` n'exige de `customScale`
+				// que d'être positif : un document portant `customScale: 12` est valide, rendait
+				// 5× dans l'aperçu web et 12× ici. Même désaccord que ci-dessus, un cran plus bas.
+				scale,
+				focusX: region.focus.cx,
+				focusY: region.focus.cy,
+				// The global Auto-Focus toggle OVERRIDES each region's own mode rather than merely
+				// seeding it — that's what `settings.zoom.focusMode.lockedDisclaimer` promises the
+				// user ("turn it off to set focus mode per zoom"), and it's what makes the toolbar
+				// button a one-click "make every zoom follow the cursor".
+				focusMode: settings.autoFocusAll ? "auto" : (region.focusMode ?? null),
+				rotation: region.rotationPreset ?? null,
+				clipIndex: region.clipIndex,
+				...(region.underTrim ? { underTrim: true } : {}),
+				...(region.hideCursor ? { hideCursor: true } : {}),
+				...(keyframes.length ? { keyframes } : {}),
+			};
+		}),
 		annotations: projectedAnnotations
 			.map((region) => {
 				const style = region.style;

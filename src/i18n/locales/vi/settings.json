@@ -365,6 +365,14 @@
 			"x": "X (%)"
 		},
 		"deleteZoom": "Xóa thu phóng",
+		"keyframes": {
+			"title": "Đường lấy nét",
+			"add": "Thêm khung hình khóa",
+			"remove": "Xóa khung hình khóa",
+			"clear": "Xóa đường lấy nét",
+			"needsPlayhead": "Đặt con trỏ phát trong vùng phóng to để đặt khung hình khóa",
+			"captureHint": "Kéo điểm lấy nét trên bản xem trước, rồi thêm khung hình khóa để ghi lại."
+		},
 		"focusMode": {
 			"lockedDisclaimer": "Được điều khiển bởi công tắc Lấy nét tự động chung trên dòng thời gian. Tắt để đặt chế độ lấy nét riêng cho từng lần thu phóng.",
 			"auto": "Tự động",

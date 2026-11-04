@@ -365,6 +365,14 @@
 			"x": "X (%)"
 		},
 		"deleteZoom": "刪除縮放",
+		"keyframes": {
+			"title": "焦點路徑",
+			"add": "新增關鍵影格",
+			"remove": "刪除關鍵影格",
+			"clear": "清除焦點路徑",
+			"needsPlayhead": "將播放頭放在縮放區間內即可新增關鍵影格",
+			"captureHint": "在預覽中拖曳焦點，然後新增關鍵影格以記錄。"
+		},
 		"focusMode": {
 			"lockedDisclaimer": "由時間軸中的全域自動對焦開關控制。關閉後可為每個縮放個別設定對焦模式。",
 			"auto": "自動",

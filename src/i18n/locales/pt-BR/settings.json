@@ -365,6 +365,14 @@
 			"x": "X (%)"
 		},
 		"deleteZoom": "Excluir Zoom",
+		"keyframes": {
+			"title": "Caminho de foco",
+			"add": "Adicionar quadro-chave",
+			"remove": "Remover quadro-chave",
+			"clear": "Limpar caminho de foco",
+			"needsPlayhead": "Coloque o cursor de reprodução dentro do zoom para adicionar um quadro-chave",
+			"captureHint": "Arraste o ponto de foco na prévia e depois adicione um quadro-chave."
+		},
 		"focusMode": {
 			"lockedDisclaimer": "Controlado pelo interruptor global de Foco Automático na linha do tempo. Desative-o para definir o modo de foco por zoom.",
 			"auto": "Automático",

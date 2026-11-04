@@ -365,6 +365,14 @@
 			"x": "X (%)"
 		},
 		"deleteZoom": "Eliminar zoom",
+		"keyframes": {
+			"title": "Ruta de enfoque",
+			"add": "Añadir fotograma clave",
+			"remove": "Quitar fotograma clave",
+			"clear": "Borrar ruta de enfoque",
+			"needsPlayhead": "Coloca el cursor de reproducción dentro del zoom para añadir un fotograma clave",
+			"captureHint": "Arrastra el punto de enfoque en la vista previa y luego añade un fotograma clave."
+		},
 		"focusMode": {
 			"lockedDisclaimer": "Controlado por el interruptor global de enfoque automático en la línea de tiempo. Desactívalo para configurar el modo de enfoque por cada zoom.",
 			"auto": "Auto",
