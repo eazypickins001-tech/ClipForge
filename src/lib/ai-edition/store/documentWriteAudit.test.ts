@@ -309,6 +309,12 @@ const DECLARED: WritePath[] = [
 	// the audio track's own updateAudioTrack above, and committed on release rather than on
 	// every frame of the drag, so a slider sweep is one undo step.
 	w("src/lib/ai-edition/store/useTimeline.ts", "updateClipAudio", "save", "gesture"),
+	// Boundary dips: putting one on a clip's edge, changing it (kind, duration, colour) and taking
+	// it off. All three are the user's own edit from the junction button or its panel, and each is
+	// one write, so each is one undo step.
+	w("src/lib/ai-edition/store/useTimeline.ts", "addTransition", "save", "gesture"),
+	w("src/lib/ai-edition/store/useTimeline.ts", "updateTransition", "save", "gesture"),
+	w("src/lib/ai-edition/store/useTimeline.ts", "removeTransition", "save", "gesture"),
 	w("src/lib/ai-edition/store/useTimeline.ts", "moveLayoutBoundary", "save", "gesture"),
 	// The round-2 defect: a background duration probe every freshly imported asset
 	// fires, because `addAsset` never populates `durationSec`.
