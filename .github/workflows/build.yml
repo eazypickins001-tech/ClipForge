@@ -67,6 +67,20 @@ jobs:
       - name: Build native D3D11 compositor addon
         run: npm run build:native:compositor
 
+      # Until this step existed, NO workflow ran a Rust test: this job only ever BUILT the crate, so
+      # all 609 `#[test]`s in it (regions, frame_geometry, audio, the timeline walk…) were executed
+      # by nothing — they compiled, which is not the same claim. That is the Rust twin of a spec
+      # that is never listed in the smoke step.
+      #
+      # Scoped to `regions::` on purpose. Those tests are pure math over a `SceneZoomRegion` with no
+      # device, no media and no FFmpeg decode, so they survive on a GPU-less runner; they are also
+      # the ones a zoom change touches (keyframed focus, the dip envelope, the strength curves).
+      # Widening the filter is a separate decision, taken once the render tests are known to work
+      # here — `crates/compositor/tests/` needs a real device.
+      - name: Test the compositor's region math
+        working-directory: crates
+        run: cargo test -p compositor --lib regions::
+
       # OpenScreen's build-whisper-stt.yml did not survive the fork, so nothing has produced
       # this helper since — which is why every Windows install logs "whisper-stt-server
       # binary not found" and transcription is dead there. CPU-only on purpose; the reasons
