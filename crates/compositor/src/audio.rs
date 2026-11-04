@@ -2100,7 +2100,7 @@ fn overlay_track_pcm(
 /// independently: clamping each to the length first would turn an asymmetric pair
 /// into a symmetric one, losing the shape asked for. Kept identical to the app's
 /// `resolveFadeSecs` so the preview and the render agree.
-fn resolve_fade_samples(len: usize, fade_in_sec: f64, fade_out_sec: f64) -> (usize, usize) {
+pub(crate) fn resolve_fade_samples(len: usize, fade_in_sec: f64, fade_out_sec: f64) -> (usize, usize) {
     if len == 0 {
         return (0, 0);
     }
@@ -2117,7 +2117,7 @@ fn resolve_fade_samples(len: usize, fade_in_sec: f64, fade_out_sec: f64) -> (usi
 }
 
 /// Linear ramp factor at sample `k` of a `len`-sample track.
-fn fade_envelope(k: usize, len: usize, fade_in: usize, fade_out: usize) -> f32 {
+pub(crate) fn fade_envelope(k: usize, len: usize, fade_in: usize, fade_out: usize) -> f32 {
     let mut v = 1.0f32;
     if fade_in > 0 && k < fade_in {
         v = v.min(k as f32 / fade_in as f32);

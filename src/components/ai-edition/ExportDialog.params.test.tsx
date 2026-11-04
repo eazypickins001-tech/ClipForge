@@ -228,3 +228,42 @@ describe("ExportDialog format settings", () => {
 		}
 	});
 });
+
+describe("ExportDialog clip audio", () => {
+	beforeEach(() => {
+		window.electronAPI = {
+			pickExportSavePath: vi.fn(async () => ({ path: "/tmp/out.mp4" })),
+			onNativeExportProgress: vi.fn(() => noop),
+		} as unknown as ElectronAPI;
+	});
+
+	afterEach(() => {
+		cleanup();
+		vi.clearAllMocks();
+	});
+
+	it("hands the native mixer the clip's level, fades and mute", async () => {
+		// Drift guard. The dialog keeps its own copy of the clip list (its tests mock
+		// `@/native/sceneDescription`), and that copy once shipped `hasAudio: true` with no
+		// level and no fades — so the export ignored the clip audio panel entirely. The two
+		// copies must agree; this test fails the moment they drift again.
+		const clip = DOC.timeline.clips[0]!;
+		const document: AxcutDocument = {
+			...DOC,
+			timeline: {
+				...DOC.timeline,
+				clips: [{ ...clip, muted: true, gainDb: -6, fadeInMs: 250, fadeOutMs: 500 }],
+			},
+		};
+		renderDialog(document);
+		fireEvent.click(screen.getByRole("button", { name: /export mp4/i }));
+		await waitFor(() => expect(exportMultiNative).toHaveBeenCalled());
+		const clips = vi.mocked(exportMultiNative).mock.calls.at(-1)?.[0];
+		expect(clips?.[0]).toMatchObject({
+			hasAudio: false,
+			gainDb: -6,
+			fadeInSec: 0.25,
+			fadeOutSec: 0.5,
+		});
+	});
+});

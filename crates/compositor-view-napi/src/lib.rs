@@ -554,6 +554,12 @@ pub struct ClipInput {
     pub webcam_offset_sec: f64,
     /// `false` évite une ouverture ffmpeg vouée à échouer et réserve du silence à ce clip.
     pub has_audio: bool,
+    /// Le niveau propre au clip et ses fondus d'entrée/sortie, du panneau audio du clip.
+    /// Optionnels, comme dans `CompositorClipInput` (TS) : un appelant sans audio de clip
+    /// (la fixture de la modale d'export) les omet, et absent veut dire 0 dB et aucun fondu.
+    pub gain_db: Option<f64>,
+    pub fade_in_sec: Option<f64>,
+    pub fade_out_sec: Option<f64>,
 }
 
 /// The export's pixel size. The SHAPE belongs to the scene: `scene.output` is what the live
@@ -779,6 +785,9 @@ fn clip_sources(clips: Vec<ClipInput>) -> Vec<pipeline::ClipSource> {
             source_end_sec: c.source_end_sec,
             webcam_offset_sec: c.webcam_offset_sec,
             has_audio: c.has_audio,
+            gain_db: c.gain_db.unwrap_or(0.0) as f32,
+            fade_in_sec: c.fade_in_sec.unwrap_or(0.0),
+            fade_out_sec: c.fade_out_sec.unwrap_or(0.0),
         })
         .collect()
 }

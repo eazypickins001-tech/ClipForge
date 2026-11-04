@@ -57,6 +57,12 @@ pub struct ClipSource {
     pub source_end_sec: f64,
     pub webcam_offset_sec: f64,
     pub has_audio: bool,
+    /// Le niveau propre au clip (`gainDb`, en dB) et ses fondus d'entrée/sortie, du panneau
+    /// audio du clip. Lus par `decode_and_stretch_clip_audio` ; `has_audio` à `false` les rend
+    /// inopérants comme le reste de l'audio du clip.
+    pub gain_db: f32,
+    pub fade_in_sec: f64,
+    pub fade_out_sec: f64,
 }
 
 /// Codec cible. Memes variantes que `pipeline_macos::ExportCodec`.
@@ -1177,6 +1183,9 @@ fn run_multi_inner(
                     // résultats sont récupérés après le parcours, rangés par index de clip.
                     let path = clip.screen.clone();
                     let source_start_sec = clip.source_start_sec;
+                    let gain_db = clip.gain_db;
+                    let fade_in_sec = clip.fade_in_sec;
+                    let fade_out_sec = clip.fade_out_sec;
                     let segments = speed_segments.to_vec();
                     audio_jobs.spawn(clip_index, move || {
                         decode_and_stretch_clip_audio(
@@ -1186,6 +1195,9 @@ fn run_multi_inner(
                             source_end_sec,
                             &segments,
                             out_fps as f64,
+                            gain_db,
+                            fade_in_sec,
+                            fade_out_sec,
                         )
                     });
                 }

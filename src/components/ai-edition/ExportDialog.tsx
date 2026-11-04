@@ -128,9 +128,9 @@ function buildNativeClipList(document: AxcutDocument): CompositorClipInput[] {
 		// the single canonical precedence used by every consumer (clip.probe → asset.duration
 		// → timeline-length guess). See `resolveClipSourceEndSec` for the full order.
 		const sourceEndSec = resolveClipSourceEndSec(clip, asset);
-		// ponytail: `hasAudio` stays optimistic for the same reason as in
-		// `buildSceneDescription` — nothing populates `asset.audio` yet, and the
-		// native side degrades cleanly on a stream-less file.
+		// ponytail: `hasAudio` stays optimistic about the FILE, for the same reason as in
+		// `buildSceneDescription` — nothing populates `asset.audio` yet, and the native side
+		// degrades cleanly on a stream-less file. Mute is the one thing that overrides it.
 		return [
 			{
 				screenPath: asset.originalPath,
@@ -138,7 +138,16 @@ function buildNativeClipList(document: AxcutDocument): CompositorClipInput[] {
 				sourceStartSec: clip.sourceStartSec,
 				sourceEndSec,
 				webcamOffsetSec: camera.offsetSec,
-				hasAudio: true,
+				// A muted clip declares no audio: the pipeline skips its audio job and marks its
+				// segment silent, which is the whole mechanism behind the clip's mute.
+				hasAudio: !clip.muted,
+				// The clip's own finishing, from the clip audio panel — the same three fields the
+				// canonical `buildNativeClipList` carries. This copy exists because the tests mock
+				// `@/native/sceneDescription`, so the two are kept in step by hand; the clip-audio
+				// test in `ExportDialog.params.test.tsx` guards them against drifting apart again.
+				gainDb: clip.gainDb ?? 0,
+				fadeInSec: (clip.fadeInMs ?? 0) / 1000,
+				fadeOutSec: (clip.fadeOutMs ?? 0) / 1000,
 			},
 		];
 	});

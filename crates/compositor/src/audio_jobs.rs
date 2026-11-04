@@ -22,7 +22,8 @@
 //! sur le même chemin, en lecture seule lui aussi.
 
 use crate::audio::{
-    apply_gain_db, decode_clip_audio, loudness_gain_db, stretch_clip_pcm_by_speed, PlanarPcm,
+    apply_gain_db, decode_clip_audio, fade_envelope, loudness_gain_db, resolve_fade_samples,
+    stretch_clip_pcm_by_speed, PlanarPcm,
 };
 use crate::regions::SpeedSegment;
 use std::collections::VecDeque;
@@ -36,9 +37,11 @@ use std::thread::JoinHandle;
 /// est tout ce qu'on cherche ici.
 const MAX_INFLIGHT_AUDIO_JOBS: usize = 4;
 
-/// Le corps d'un job : décode la fenêtre gardée du clip, l'étire sur ses spans de vitesse et
+/// Le corps d'un job : décode la fenêtre gardée du clip, l'étire sur ses spans de vitesse,
 /// l'amène au niveau de loudness cible avec le gain mesuré sur le fichier entier
-/// (`loudness_gain_db`, celui que la preview applique aussi).
+/// (`loudness_gain_db`, celui que la preview applique aussi), puis applique le niveau propre
+/// au clip et ses fondus d'entrée/sortie. C'est l'ordre de la preview : normalisation par
+/// FICHIER, puis `gainDb` et rampes du clip.
 ///
 /// Rend `None` quand le clip se déclare audio mais n'a pas de flux décodable, ou quand le
 /// décodage échoue — dans les deux cas l'export continue et le clip sort muet, comme avant
@@ -51,11 +54,16 @@ pub fn decode_and_stretch_clip_audio(
     source_end_sec: f64,
     speed_segments: &[SpeedSegment],
     out_fps: f64,
+    gain_db: f32,
+    fade_in_sec: f64,
+    fade_out_sec: f64,
 ) -> Option<PlanarPcm> {
     match decode_clip_audio(screen_path, source_start_sec, source_end_sec) {
         Ok(Some(pcm)) => {
             let mut pcm = stretch_clip_pcm_by_speed(&pcm, speed_segments, out_fps);
             apply_gain_db(&mut pcm, loudness_gain_db(screen_path));
+            apply_gain_db(&mut pcm, gain_db);
+            apply_clip_fades(&mut pcm, fade_in_sec, fade_out_sec);
             Some(pcm)
         }
         Ok(None) => {
@@ -69,6 +77,27 @@ pub fn decode_and_stretch_clip_audio(
                 "[pipeline] warning: décodage audio du clip #{clip_index} échoué ({error:#}); silence conservé"
             );
             None
+        }
+    }
+}
+
+/// Les fondus d'entrée/sortie propres au clip, posés sur sa longueur **étirée** — c'est la
+/// durée de sortie du clip, donc l'échelle sur laquelle la preview pose les mêmes rampes.
+///
+/// Les longueurs passent par `resolve_fade_samples`, le même resolveur que le mixeur des
+/// pistes importées : une paire plus longue que le clip est resserrée en proportion, pas
+/// rognée bord par bord. Rien ici ne touche le crossfade de frontière de 240 échantillons
+/// (`AUDIO_BOUNDARY_FADE_SAMPLES`) : celui-ci fond la queue de ce clip avec la tête du
+/// suivant à l'assemblage, sur le PCM que cette fonction a déjà rendu.
+fn apply_clip_fades(pcm: &mut PlanarPcm, fade_in_sec: f64, fade_out_sec: f64) {
+    let len = pcm.first().map(|channel| channel.len()).unwrap_or(0);
+    let (fade_in, fade_out) = resolve_fade_samples(len, fade_in_sec, fade_out_sec);
+    if fade_in == 0 && fade_out == 0 {
+        return;
+    }
+    for channel in pcm.iter_mut() {
+        for (k, sample) in channel.iter_mut().enumerate() {
+            *sample *= fade_envelope(k, len, fade_in, fade_out);
         }
     }
 }
