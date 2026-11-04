@@ -79,7 +79,9 @@ jobs:
       # here — `crates/compositor/tests/` needs a real device.
       - name: Test the compositor's region math
         working-directory: crates
-        run: cargo test -p compositor --lib regions::
+        # Quoted because a trailing `::` (the cargo test filter) closes a plain scalar and YAML reads
+        # the rest as a nested mapping — which is how this step first took the whole workflow down.
+        run: "cargo test -p compositor --lib regions::"
 
       # OpenScreen's build-whisper-stt.yml did not survive the fork, so nothing has produced
       # this helper since — which is why every Windows install logs "whisper-stt-server
