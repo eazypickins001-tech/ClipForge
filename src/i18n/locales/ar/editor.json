@@ -105,6 +105,7 @@
 		"noProject": "لا يوجد مشروع",
 		"changeLanguage": "تغيير اللغة",
 		"editorMode": "وضع المحرر",
+		"clipMenu": "مقطع",
 		"modes": {
 			"media": "الوسائط",
 			"edit": "تحرير",

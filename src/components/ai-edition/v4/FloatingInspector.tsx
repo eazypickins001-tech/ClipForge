@@ -70,6 +70,7 @@ import { useProjectStore } from "@/lib/ai-edition/store/projectStore";
 import { rafCoalesce } from "@/lib/ai-edition/store/rafCoalesce";
 import { useEditorSettings } from "@/lib/ai-edition/store/useEditorSettings";
 import type { ShaderEffectPatch, useTimeline } from "@/lib/ai-edition/store/useTimeline";
+import { clipAtPlayhead } from "@/lib/ai-edition/timeline/clipTargets";
 import { formatSeconds } from "@/lib/ai-edition/timeline/format";
 import { coalescedTrimGroups } from "@/lib/ai-edition/timeline/trim-mapping";
 import { zoomLevelFor } from "@/lib/ai-edition/timeline/zoom-scale";
@@ -231,9 +232,7 @@ export function FloatingInspector({
 						onClick={() => {
 							if (selection) tl.clearSelection();
 							const playhead = useProjectStore.getState().currentTimeSec;
-							const target = clips.find(
-								(clip) => playhead > clip.timelineStartSec && playhead < clip.timelineEndSec,
-							);
+							const target = clipAtPlayhead(clips, playhead);
 							if (!target) {
 								toast.info(te("inspector.splitClipHint"));
 								return;
@@ -257,9 +256,7 @@ export function FloatingInspector({
 							if (selection) tl.clearSelection();
 							const state = useProjectStore.getState();
 							const playhead = state.currentTimeSec;
-							const target = clips.find(
-								(clip) => playhead > clip.timelineStartSec && playhead < clip.timelineEndSec,
-							);
+							const target = clipAtPlayhead(clips, playhead);
 							if (!target) {
 								toast.info(te("inspector.splitClipHint"));
 								return;
@@ -284,9 +281,7 @@ export function FloatingInspector({
 						onClick={() => {
 							if (selection) tl.clearSelection();
 							const playhead = useProjectStore.getState().currentTimeSec;
-							const target = clips.find(
-								(clip) => playhead > clip.timelineStartSec && playhead < clip.timelineEndSec,
-							);
+							const target = clipAtPlayhead(clips, playhead);
 							if (!target) {
 								toast.info(te("inspector.splitClipHint"));
 								return;

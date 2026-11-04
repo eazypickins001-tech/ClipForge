@@ -105,6 +105,7 @@
 		"noProject": "無專案",
 		"changeLanguage": "切換語言",
 		"editorMode": "編輯器模式",
+		"clipMenu": "片段",
 		"modes": {
 			"media": "媒體",
 			"edit": "編輯",

@@ -127,6 +127,13 @@ jobs:
       #
       #  - GIF export, and import → trim → save → reopen. Both pass on a GPU-less runner.
       #
+      #  - Clip edits (split, extract audio, the audio panel's mute) and boundary dips, via
+      #    tests/e2e/clip-edits.spec.ts and tests/e2e/transitions.spec.ts. These prove the
+      #    rendered UI writes the SAVED project — the junction button, the transition sheet and
+      #    the undo-worthy write nothing else exercises. They need no GPU: the dip is on the
+      #    document here, not on a composed frame (watching a dip means watching an export; see
+      #    the handover's control matrix).
+      #
       #  - MP4 export used to be excluded from this step. It failed at
       #    "enc hwdevice init: -1313558101 (Unknown error occurred)" because run_multi_inner
       #    tried to build a D3D11VA pool on a runner that has no video device, and only
@@ -145,7 +152,7 @@ jobs:
       #    proves audio → whisper → document, which packaging alone never could.
       #
       # Keeping the excluded ones out means a red job here is always news.
-      - name: Smoke-test the packaged app (export, trim/save/reopen, clip edits, transcription)
+      - name: Smoke-test the packaged app (export, trim/save/reopen, clip edits, transitions, transcription)
         shell: pwsh
         run: |
           $exe = (Get-ChildItem -Path release -Recurse -Filter ClipForge.exe | Select-Object -First 1).FullName
@@ -159,7 +166,7 @@ jobs:
           if (-not (Test-Path $whisper)) { throw "whisper-stt-server.exe is missing from the packaged app" }
           Write-Host "Whisper helper packaged: $whisper"
           Write-Host "Testing $exe"
-          npx playwright test tests/e2e/gif-export.spec.ts tests/e2e/phase1-acceptance.spec.ts tests/e2e/clip-edits.spec.ts tests/e2e/transcription.spec.ts --grep-invert "cancels a running native GIF" --timeout 600000 --reporter list
+          npx playwright test tests/e2e/gif-export.spec.ts tests/e2e/phase1-acceptance.spec.ts tests/e2e/clip-edits.spec.ts tests/e2e/transitions.spec.ts tests/e2e/transcription.spec.ts --grep-invert "cancels a running native GIF" --timeout 600000 --reporter list
 
       # Without this, a failure on the runner is a message with no state attached: the
       # first run's trim failure could not be explained from its log alone.

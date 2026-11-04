@@ -41,6 +41,7 @@ import { useChatPromptBus } from "@/lib/ai-edition/store/useChatPromptBus";
 import { useSequentialTimelineOps } from "@/lib/ai-edition/store/useSequentialTimelineOps";
 import { useTimeline } from "@/lib/ai-edition/store/useTimeline";
 import { isGeneratedAssetId } from "@/lib/ai-edition/timeline/clip-parts";
+import { clipAtPlayhead, transitionTargetClip } from "@/lib/ai-edition/timeline/clipTargets";
 import { mergeCloseCuts } from "@/lib/ai-edition/timeline/cut-breath";
 import { newRegionDurationSec } from "@/lib/ai-edition/timeline/newRegionDuration";
 import { REGION_ROW_STEP_PX } from "@/lib/ai-edition/timeline/regionTracks";
@@ -1689,6 +1690,58 @@ export function NewEditorShell() {
 					checkForUpdates: handleCheckForUpdates,
 					undo: runUndo,
 					redo: runRedo,
+				}}
+				// The Clip menu's rows resolve their target from the playhead at click time, exactly
+				// as the inspector rail's buttons do — so, like theirs, a miss is reported on click
+				// rather than by subscribing this bar to the playhead (which would re-render it
+				// every frame of playback to disable a row a moment early).
+				clipActions={{
+					hasClips: clips.length > 0,
+					hasBoundary: clips.length > 1,
+					split: () => {
+						const playhead = useProjectStore.getState().currentTimeSec;
+						const target = clipAtPlayhead(clips, playhead);
+						if (!target) {
+							toast.info(te("inspector.splitClipHint"));
+							return;
+						}
+						void tl.splitClipAt(target.id, playhead);
+					},
+					extractAudio: () => {
+						const state = useProjectStore.getState();
+						const target = clipAtPlayhead(clips, state.currentTimeSec);
+						if (!target) {
+							toast.info(te("inspector.splitClipHint"));
+							return;
+						}
+						const label =
+							state.document?.assets.find((asset) => asset.id === target.assetId)?.label ??
+							target.assetId;
+						void tl.detachAudioAt(target.id, label);
+					},
+					openClipAudio: () => {
+						const target = clipAtPlayhead(clips, useProjectStore.getState().currentTimeSec);
+						if (!target) {
+							toast.info(te("inspector.splitClipHint"));
+							return;
+						}
+						setClipAudioTarget(target);
+					},
+					openTransition: () => {
+						// Enabled only with two or more clips, so this always resolves; the guard is
+						// for the type, not for a reachable state.
+						const target = transitionTargetClip(clips, useProjectStore.getState().currentTimeSec);
+						if (!target) return;
+						setTransitionTarget(target.id);
+					},
+					openEditClip: () => {
+						const target = clipAtPlayhead(clips, useProjectStore.getState().currentTimeSec);
+						if (!target) {
+							toast.info(te("inspector.splitClipHint"));
+							return;
+						}
+						setEditClipTarget(target);
+					},
 				}}
 			/>
 

@@ -26,6 +26,7 @@ import { getAvailableLocales, getLocaleName } from "@/i18n/loader";
 import { moveMenuFocus } from "@/lib/menuKeyboard";
 import { formatFirstFixedBinding } from "@/lib/shortcuts";
 import { StylePresetsMenu } from "../StylePresetsMenu";
+import { ClipMenu, type ClipMenuActions } from "./ClipMenu";
 import styles from "./EditorShellV4.module.css";
 
 export type EditorMode = "media" | "edit" | "rec";
@@ -55,6 +56,11 @@ interface EditorTopBarProps {
 	canRedo: boolean;
 	chatOpen: boolean;
 	actions: TopBarActions;
+	/** The clip-level actions the bar's Clip menu offers. Optional so the bar still stands in a
+	 *  context with no timeline to act on (and in tests that only care about the file menu): when
+	 *  it is absent the menu is simply not rendered, the same way a missing `onEditTransition`
+	 *  removes V4Timeline's junction button. */
+	clipActions?: ClipMenuActions;
 }
 
 const MODES: Array<{ id: EditorMode; labelKey: string }> = [
@@ -73,6 +79,7 @@ export function EditorTopBar({
 	canRedo,
 	chatOpen,
 	actions,
+	clipActions,
 }: EditorTopBarProps) {
 	const t = useScopedT("editor");
 	const tShortcuts = useScopedT("shortcuts");
@@ -175,6 +182,7 @@ export function EditorTopBar({
 				</button>
 			</Tooltip>
 			<StylePresetsMenu />
+			{clipActions ? <ClipMenu actions={clipActions} /> : null}
 			<button
 				type="button"
 				className={styles.exportBtn}

@@ -105,6 +105,7 @@
 		"noProject": "Kein Projekt",
 		"changeLanguage": "Sprache ändern",
 		"editorMode": "Editor-Modus",
+		"clipMenu": "Clip",
 		"modes": {
 			"media": "Medien",
 			"edit": "Schnitt",

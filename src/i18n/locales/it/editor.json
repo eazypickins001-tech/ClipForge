@@ -105,6 +105,7 @@
 		"noProject": "Nessun progetto",
 		"changeLanguage": "Cambia lingua",
 		"editorMode": "Modalità editor",
+		"clipMenu": "Clip",
 		"modes": {
 			"media": "Media",
 			"edit": "Modifica",

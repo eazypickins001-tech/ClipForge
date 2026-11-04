@@ -105,6 +105,7 @@
 		"noProject": "Нет проекта",
 		"changeLanguage": "Сменить язык",
 		"editorMode": "Режим редактора",
+		"clipMenu": "Клип",
 		"modes": {
 			"media": "Медиа",
 			"edit": "Редактирование",
