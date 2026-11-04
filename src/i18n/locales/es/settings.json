@@ -453,5 +453,14 @@
 		"dark": "Oscura",
 		"light": "Clara",
 		"custom": "Personalizada"
+	},
+	"transition": {
+		"title": "Transición",
+		"dipBlack": "Fundido a negro",
+		"dipWhite": "Fundido a blanco",
+		"dipColor": "Fundido a un color",
+		"duration": "Duración",
+		"color": "Color",
+		"remove": "Eliminar transición"
 	}
 }

@@ -453,5 +453,14 @@
 		"dark": "Dunkel",
 		"light": "Hell",
 		"custom": "Eigene"
+	},
+	"transition": {
+		"title": "Übergang",
+		"dipBlack": "Ausblenden nach Schwarz",
+		"dipWhite": "Ausblenden nach Weiß",
+		"dipColor": "Ausblenden in eine Farbe",
+		"duration": "Dauer",
+		"color": "Farbe",
+		"remove": "Übergang entfernen"
 	}
 }

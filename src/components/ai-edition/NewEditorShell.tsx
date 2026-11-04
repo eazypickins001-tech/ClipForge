@@ -74,6 +74,7 @@ import {
 } from "./Modals";
 import { Preview } from "./Preview";
 import { importPendingRecording, maybeSaveFreshRecordingAutoZooms } from "./recordingImport";
+import { TransitionModal } from "./TransitionModal";
 import { AddAudioLayerDialog } from "./v4/AddAudioLayerDialog";
 import v4 from "./v4/EditorShellV4.module.css";
 import { type EditorMode, EditorTopBar } from "./v4/EditorTopBar";
@@ -289,6 +290,10 @@ export function NewEditorShell() {
 	// The clip's own audio panel (volume, mute, fades) — CapCut's Volume sheet. Same shape as
 	// `editClipTarget` above: one shell-level instance, opened from the inspector's rail.
 	const [clipAudioTarget, setClipAudioTarget] = useState<AxcutClip | null>(null);
+	// The boundary dip sheet — CapCut's transition panel. It names the clip whose LEFT edge the dip
+	// sits on (a boundary belongs to the clip that follows it), so the state is an id rather than a
+	// clip object: the row itself lives in the document and arrives back through the store.
+	const [transitionTarget, setTransitionTarget] = useState<string | null>(null);
 	const [exportOpen, setExportOpen] = useState(false);
 	const [unsavedPrompt, setUnsavedPrompt] = useState<{
 		action: "close" | "new" | "open" | "record";
@@ -1838,6 +1843,7 @@ export function NewEditorShell() {
 						onTogglePlay={togglePlay}
 						onAddVoiceover={openVoiceoverFlow}
 						onEditClip={setEditClipTarget}
+						onEditTransition={setTransitionTarget}
 					/>
 				</div>
 			) : null}
@@ -1867,6 +1873,32 @@ export function NewEditorShell() {
 					if (!clipAudioTarget) return;
 					const clipId = clipAudioTarget.id;
 					void enqueueTimelineWrite(() => tl.updateClipAudio(clipId, patch));
+				}}
+			/>
+			<TransitionModal
+				open={transitionTarget !== null}
+				onClose={() => setTransitionTarget(null)}
+				transition={
+					transitionTarget
+						? (tl.transitions.find(
+								(transition) => transition.clipId === transitionTarget && transition.side === "in",
+							) ?? null)
+						: null
+				}
+				// One gesture, one write, one undo step: the panel commits on release.
+				onChange={(spec) => {
+					if (!transitionTarget) return;
+					const clipId = transitionTarget;
+					void enqueueTimelineWrite(() => tl.setTransition(clipId, spec));
+				}}
+				onRemove={() => {
+					if (!transitionTarget) return;
+					const existing = tl.transitions.find(
+						(transition) => transition.clipId === transitionTarget && transition.side === "in",
+					);
+					if (!existing) return;
+					const id = existing.id;
+					void enqueueTimelineWrite(() => tl.removeTransition(id));
 				}}
 			/>
 			<EditClipModal

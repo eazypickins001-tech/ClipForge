@@ -453,5 +453,14 @@
 		"dark": "Tối",
 		"light": "Sáng",
 		"custom": "Tùy chỉnh"
+	},
+	"transition": {
+		"title": "Chuyển cảnh",
+		"dipBlack": "Mờ dần sang đen",
+		"dipWhite": "Mờ dần sang trắng",
+		"dipColor": "Mờ dần sang màu",
+		"duration": "Thời lượng",
+		"color": "Màu",
+		"remove": "Xóa chuyển cảnh"
 	}
 }

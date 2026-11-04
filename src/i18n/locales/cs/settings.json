@@ -453,5 +453,14 @@
 		"dark": "Tmavý",
 		"light": "Světlý",
 		"custom": "Vlastní"
+	},
+	"transition": {
+		"title": "Přechod",
+		"dipBlack": "Prolnutí do černa",
+		"dipWhite": "Prolnutí do bílé",
+		"dipColor": "Prolnutí do barvy",
+		"duration": "Délka",
+		"color": "Barva",
+		"remove": "Odebrat přechod"
 	}
 }

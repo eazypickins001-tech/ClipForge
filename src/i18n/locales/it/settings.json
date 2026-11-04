@@ -453,5 +453,14 @@
 		"dark": "Scura",
 		"light": "Chiara",
 		"custom": "Personalizzata"
+	},
+	"transition": {
+		"title": "Transizione",
+		"dipBlack": "Dissolvenza al nero",
+		"dipWhite": "Dissolvenza al bianco",
+		"dipColor": "Dissolvenza verso un colore",
+		"duration": "Durata",
+		"color": "Colore",
+		"remove": "Rimuovi transizione"
 	}
 }

@@ -651,6 +651,7 @@ export function V4Timeline({
 	onTogglePlay,
 	onEditClip,
 	onAddVoiceover,
+	onEditTransition,
 	onAnnotationRowCountChange,
 }: {
 	tl: TimelineApi;
@@ -666,6 +667,10 @@ export function V4Timeline({
 	/** Opens the voiceover recorder. Shell-level like the clip editor: the
 	 *  dialog owns the microphone and the shell owns the transport. */
 	onAddVoiceover: () => void;
+	/** Opens the transition sheet for the junction at this clip's START — the boundary
+	 *  between it and whatever precedes it. Shell-level like the clip editor, so neither
+	 *  the dialog nor the timeline has to know about the other. */
+	onEditTransition?: (clipId: string) => void;
 	/** Exact rendered annotation row count, including the current drag preview. */
 	onAnnotationRowCountChange?: (rowCount: number) => void;
 }) {
@@ -2735,6 +2740,58 @@ export function V4Timeline({
 									</ContextMenu.Root>
 								);
 							})}
+							{/* The junction: one small button per boundary, sitting on the line between two
+							    cards. It targets the clip that FOLLOWS the cut, because a dip is stored on
+							    that clip's left edge (see `transitionSchema`). CapCut puts its transition
+							    affordance exactly here, and it is also the only place a boundary can be
+							    picked that is not the end of a clip. */}
+							{onEditTransition
+								? clips.slice(0, -1).map((_, i) => {
+										const incoming = clips[i + 1];
+										const dip = tl.transitions.find(
+											(transition) => transition.clipId === incoming.id && transition.side === "in",
+										);
+										return (
+											<button
+												key={`transition-${incoming.id}`}
+												type="button"
+												data-transition-at={incoming.id}
+												aria-label={ts("transition.title")}
+												aria-pressed={Boolean(dip)}
+												title={ts("transition.title")}
+												onPointerDown={(e) => e.stopPropagation()}
+												onClick={(e) => {
+													e.stopPropagation();
+													onEditTransition(incoming.id);
+												}}
+												style={{
+													position: "absolute",
+													// On the TRUE boundary (`timelineStartSec` of the incoming clip),
+													// not the drawn edge: the gutter is taken out of the preceding
+													// card's width, so its right edge stops short of it.
+													left: `calc(${pctOf(incoming.timelineStartSec)}% - 9px)`,
+													top: 0,
+													width: 18,
+													height: 18,
+													padding: 0,
+													borderRadius: 9,
+													border: "1px solid var(--border)",
+													background: dip ? "var(--accent, #4f7cff)" : "var(--surface-1)",
+													color: dip ? "#fff" : "var(--fg)",
+													display: "flex",
+													alignItems: "center",
+													justifyContent: "center",
+													fontSize: 12,
+													lineHeight: 1,
+													cursor: "pointer",
+													zIndex: 6,
+												}}
+											>
+												{dip ? "◑" : "+"}
+											</button>
+										);
+									})
+								: null}
 							{dragOver ? (
 								<div aria-hidden className={styles.tlDropHint}>
 									{t("toolbar.dropToAdd")}

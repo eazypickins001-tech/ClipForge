@@ -453,5 +453,14 @@
 		"dark": "Koyu",
 		"light": "Açık",
 		"custom": "Özel"
+	},
+	"transition": {
+		"title": "Geçiş",
+		"dipBlack": "Siyaha kararma",
+		"dipWhite": "Beyaza kararma",
+		"dipColor": "Renge kararma",
+		"duration": "Süre",
+		"color": "Renk",
+		"remove": "Geçişi kaldır"
 	}
 }

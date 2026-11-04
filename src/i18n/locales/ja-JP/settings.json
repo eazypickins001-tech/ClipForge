@@ -453,5 +453,14 @@
 		"dark": "ダーク",
 		"light": "ライト",
 		"custom": "カスタム"
+	},
+	"transition": {
+		"title": "トランジション",
+		"dipBlack": "黒へのフェード",
+		"dipWhite": "白へのフェード",
+		"dipColor": "色へのフェード",
+		"duration": "長さ",
+		"color": "色",
+		"remove": "トランジションを削除"
 	}
 }

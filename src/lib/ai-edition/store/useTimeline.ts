@@ -435,42 +435,32 @@ export function useTimeline() {
 		[document, saveDocument],
 	);
 
-	/** Put a dip on a clip's left edge, or replace the one already there. One write, one undo step. */
-	const addTransition = useCallback(
-		async (clipId: string, kind: AxcutTransition["kind"] = "dip-black", durationMs = 500) => {
+	/** Put a dip on a clip's left edge, or replace the one already there with this spec.
+	 *
+	 * One action rather than an add plus an update: the panel always knows the whole dip it wants
+	 * (kind, duration, colour), and "the dip on this clip" is one row either way — so a change is
+	 * the same write as a first placement, and each is one undo step.
+	 */
+	const setTransition = useCallback(
+		async (
+			clipId: string,
+			spec: { kind: AxcutTransition["kind"]; durationMs: number; color?: string },
+		) => {
 			if (!document) return;
 			const existing = (document.transitions ?? []).find(
 				(transition) => transition.clipId === clipId && transition.side === "in",
 			);
-			const next: AxcutDocument = {
-				...document,
-				transitions: [
-					...(document.transitions ?? []).filter(
-						(transition) => !(transition.clipId === clipId && transition.side === "in"),
-					),
-					{
-						id: existing?.id ?? createId("trans"),
-						clipId,
-						side: "in" as const,
-						kind,
-						durationMs,
-					},
-				],
+			const entry: AxcutTransition = {
+				id: existing?.id ?? createId("trans"),
+				clipId,
+				side: "in",
+				kind: spec.kind,
+				durationMs: spec.durationMs,
+				...(spec.color ? { color: spec.color } : {}),
 			};
-			await saveDocument(next, { history: true });
-		},
-		[document, saveDocument],
-	);
-
-	/** Change one transition in place — kind, duration or colour. One write, one undo step. */
-	const updateTransition = useCallback(
-		async (id: string, patch: Partial<Omit<AxcutTransition, "id" | "clipId" | "side">>) => {
-			if (!document) return;
 			const next: AxcutDocument = {
 				...document,
-				transitions: (document.transitions ?? []).map((transition) =>
-					transition.id === id ? { ...transition, ...patch } : transition,
-				),
+				transitions: [...(document.transitions ?? []).filter((t) => t.id !== entry.id), entry],
 			};
 			await saveDocument(next, { history: true });
 		},
@@ -1905,6 +1895,9 @@ export function useTimeline() {
 
 	return {
 		zoomRegions: document?.zoomRanges ?? [],
+		// Boundary dips, one row per junction. The timeline reads them to mark a boundary that
+		// already carries one; nothing else in the store derives from them.
+		transitions: document?.transitions ?? [],
 		trimRanges: document?.timeline.trimRanges ?? [],
 		audioTracks: document?.audioTracks ?? [],
 		// The pauses added words created. The ruler counts them; nothing else in the
@@ -1936,8 +1929,7 @@ export function useTimeline() {
 		addCameraFullscreen,
 		removeRegion,
 		removeRegions,
-		addTransition,
-		updateTransition,
+		setTransition,
 		removeTransition,
 		hasEditRegions,
 		clearTimeline,

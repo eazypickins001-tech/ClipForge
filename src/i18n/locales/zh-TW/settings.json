@@ -453,5 +453,14 @@
 		"dark": "深色",
 		"light": "淺色",
 		"custom": "自訂"
+	},
+	"transition": {
+		"title": "轉場",
+		"dipBlack": "淡出至黑色",
+		"dipWhite": "淡出至白色",
+		"dipColor": "淡出至顏色",
+		"duration": "時長",
+		"color": "顏色",
+		"remove": "移除轉場"
 	}
 }
