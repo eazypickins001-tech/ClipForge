@@ -2956,6 +2956,40 @@ impl Compositor {
         for e in with_target(ShaderEffectTarget::Both) {
             self.apply_shader_effect(e, (&self.rt, &self.rtv), &fx_context(e), footage.as_ref());
         }
+
+        // --- fondu de frontière (transition) ---
+        // Posé EN DERNIER, sur l'image finie : un fondu enveloppe tout ce que le clip montre,
+        // curseur compris, comme le fondu au noir d'un export. Le temps est celui du clip SOURCE
+        // (`source_t`), la même horloge que les annotations, donc le fondu reste sur l'image sous
+        // une région de vitesse au lieu de dériver sur une durée de sortie.
+        //
+        // Rien n'est dessiné quand l'enveloppe est pleine — aucun dip, ou le milieu du clip. C'est
+        // le cas de tout projet écrit avant les transitions, et leur sortie reste identique.
+        if let Some(scene) = scene_ref.as_ref() {
+            if let Some(clip) = scene.clips.get(scene.active_clip_index) {
+                if let Some(dip) = clip.video_dip.as_ref() {
+                    let span = (clip.source_end_sec - clip.source_start_sec).max(0.0) as f32;
+                    let visible = crate::frame_geometry::dip_visible_at(
+                        source_t - clip.source_start_sec as f32,
+                        span,
+                        dip.fade_in_sec as f32,
+                        dip.fade_out_sec as f32,
+                    );
+                    let alpha = 1.0 - visible;
+                    if alpha > 0.0 {
+                        let mut color = parse_hex(&dip.color).unwrap_or([0.0, 0.0, 0.0, 1.0]);
+                        color[3] = alpha;
+                        self.bind_compose_state();
+                        self.draw_solid(&LayerCB {
+                            dst: [0.0, 0.0, 1.0, 1.0],
+                            mode: 1.0,
+                            color,
+                            ..Default::default()
+                        });
+                    }
+                }
+            }
+        }
         Ok(())
     }
 

@@ -117,6 +117,33 @@ pub(crate) fn decode_data_uri(uri: &str) -> Option<Vec<u8>> {
     }
     Some(out)
 }
+/// Facteur de visibilité d'un « dip » de frontière, sur l'étendue d'un clip.
+///
+/// La MÊME forme de rampe que `crate::audio::fade_envelope` (et, côté app, `resolveFadeSecs`),
+/// exprimée en secondes plutôt qu'en échantillons : un fondu d'entrée monte depuis 0 au début du
+/// clip, un fondu de sortie retombe à 0 à sa fin, et 1.0 partout au milieu. Les deux longueurs
+/// nulles rendent 1.0 sur toute l'étendue — c'est le cas de tout clip sans dip, donc rien de ce
+/// qu'un projet existant dessine ne change.
+///
+/// Vit ici, avec le reste des maths partagées par les trois backends, pour que les ports
+/// macOS/Linux posent la même enveloppe le jour où leur passe de fondu arrive.
+pub(crate) fn dip_visible_at(t: f32, span: f32, fade_in: f32, fade_out: f32) -> f32 {
+    if span <= 0.0 {
+        return 1.0;
+    }
+    let mut v = 1.0f32;
+    if fade_in > 0.0 && t < fade_in {
+        v = v.min(t.max(0.0) / fade_in);
+    }
+    if fade_out > 0.0 {
+        let remaining = span - t;
+        if remaining < fade_out {
+            v = v.min(remaining.max(0.0) / fade_out);
+        }
+    }
+    v.clamp(0.0, 1.0)
+}
+
 pub(crate) fn parse_hex(s: &str) -> Option<[f32; 4]> {
     // Le contrat accepte du CSS, pas seulement de l'hex : la bridge des captions produit du
     // `rgba(r, g, b, a)` (l'inspector stocke couleur + opacité séparément, et `captionBackgroundCss`
@@ -8133,6 +8160,29 @@ mod tests {
     fn decodes_a_base64_data_uri() {
         // "Hi!" -> SGkh
         assert_eq!(decode_data_uri("data:image/png;base64,SGkh").unwrap(), b"Hi!".to_vec());
+    }
+
+    #[test]
+    fn dip_visible_at_ramps_the_edges_and_leaves_the_middle_alone() {
+        // Aucun fondu : 1.0 partout, y compris hors bornes — la propriété qui garde un projet
+        // sans transition identique à lui-même.
+        for t in [-1.0f32, 0.0, 0.5, 1.0, 2.0] {
+            assert_eq!(dip_visible_at(t, 1.0, 0.0, 0.0), 1.0);
+        }
+        // Une étendue nulle (clip dégénéré) ne divise pas par zéro.
+        assert_eq!(dip_visible_at(0.0, 0.0, 0.5, 0.5), 1.0);
+        // Un fondu d'entrée de 0,5 s monte depuis 0 au début du clip, puis ne fait plus rien.
+        assert_eq!(dip_visible_at(0.0, 2.0, 0.5, 0.0), 0.0);
+        assert_eq!(dip_visible_at(0.25, 2.0, 0.5, 0.0), 0.5);
+        assert_eq!(dip_visible_at(0.5, 2.0, 0.5, 0.0), 1.0);
+        assert_eq!(dip_visible_at(1.0, 2.0, 0.5, 0.0), 1.0);
+        // Un fondu de sortie de 0,5 s retombe à 0 à la fin.
+        assert_eq!(dip_visible_at(1.5, 2.0, 0.0, 0.5), 1.0);
+        assert_eq!(dip_visible_at(1.75, 2.0, 0.0, 0.5), 0.5);
+        assert_eq!(dip_visible_at(2.0, 2.0, 0.0, 0.5), 0.0);
+        // Les deux sur un clip plus court que leur somme : le minimum des rampes, borné à 1.
+        assert_eq!(dip_visible_at(0.0, 1.0, 0.5, 0.5), 0.0);
+        assert_eq!(dip_visible_at(0.5, 1.0, 0.5, 0.5), 1.0);
     }
 
     /// L'inspector stocke les couleurs de caption comme `couleur_hex` + `opacité` puis la

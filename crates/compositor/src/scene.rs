@@ -6,6 +6,26 @@
 
 use serde::Deserialize;
 
+/// Le « dip » de frontière d'un clip : l'image passe par une couleur à ses bords. Vient de
+/// `document.transitions` (TS), une entrée par frontière ; la moitié de la durée tombe de chaque
+/// côté de la coupe, donc `fade_in_sec` et `fade_out_sec` sont portés par des clips DIFFÉRENTS —
+/// celui qui entre et celui qui sort.
+///
+/// Les longueurs sont en secondes SOURCE, l'horloge que `compose_frame` lit déjà pour les
+/// annotations et les régions de zoom : le fondu reste donc collé à l'image sous une région de
+/// vitesse, au lieu de dériver sur une durée de sortie.
+#[derive(Debug, Clone, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SceneClipDip {
+    #[serde(default)]
+    pub fade_in_sec: f64,
+    #[serde(default)]
+    pub fade_out_sec: f64,
+    /// "#rrggbb" — la couleur par laquelle passe le fondu.
+    #[serde(default)]
+    pub color: String,
+}
+
 /// Un clip de la timeline (fichiers screen+webcam + fenêtre source). = `CompositorClipInput` (TS).
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -19,6 +39,10 @@ pub struct SceneClip {
     /// Une source sans piste audio décodable garde sa durée via du silence natif.
     #[serde(default)]
     pub has_audio: bool,
+    /// Le fondu de frontière du clip. `#[serde(default)]` comme `has_audio` : une charge utile
+    /// d'une build antérieure se lit « pas de fondu », elle ne fait pas échouer la scène.
+    #[serde(default)]
+    pub video_dip: Option<SceneClipDip>,
 }
 
 #[derive(Debug, Clone, Copy, Deserialize)]
