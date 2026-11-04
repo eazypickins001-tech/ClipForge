@@ -139,6 +139,9 @@ interface FloatingInspectorProps {
 	 *  Same clip resolution as Split and Extract audio: the selection wins, otherwise the clip
 	 *  under the playhead. */
 	onEditClipAudio: (clip: AxcutClip) => void;
+	/** The razor. Lane-aware — an audio take selected means the take is cut, otherwise the picture
+	 *  — so it lives with the shell that knows both, rather than being re-derived here. */
+	onSplit: () => void;
 	transcriptProps: TranscriptProps;
 	/** Drives the selected-element settings pane (zoom/speed/annotation/trim) —
 	 * takes over the inspector, forcing it open, whenever a timeline region is
@@ -155,6 +158,7 @@ export function FloatingInspector({
 	clips,
 	onEditClip,
 	onEditClipAudio,
+	onSplit,
 	transcriptProps,
 	tl,
 }: FloatingInspectorProps) {
@@ -231,13 +235,7 @@ export function FloatingInspector({
 						disabled={clips.length === 0}
 						onClick={() => {
 							if (selection) tl.clearSelection();
-							const playhead = useProjectStore.getState().currentTimeSec;
-							const target = clipAtPlayhead(clips, playhead);
-							if (!target) {
-								toast.info(te("inspector.splitClipHint"));
-								return;
-							}
-							void tl.splitClipAt(target.id, playhead);
+							onSplit();
 						}}
 					>
 						<Slice size={17} />

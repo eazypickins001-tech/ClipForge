@@ -384,6 +384,28 @@ export function NewEditorShell() {
 	void primaryAssetPath;
 	const clips: AxcutClip[] = document?.timeline.clips ?? [];
 	const visibleClips = useMemo(() => (document ? resolveVisibleClips(document) : []), [document]);
+
+	// Split is LANE-AWARE: an audio take is one pill on its own lane, so with one selected the
+	// razor cuts that take and leaves the picture alone. Otherwise it cuts the picture — and
+	// `splitClip` deliberately hands the sound over the cut to the new clip rather than cutting it,
+	// so one obvious gesture stops doing two edits at once.
+	const splitAtPlayhead = useCallback(() => {
+		const state = useProjectStore.getState();
+		const playhead = state.currentTimeSec;
+		if (state.selectedAudioTrackId) {
+			void tl.splitAudioTrackAt(state.selectedAudioTrackId, playhead).then((cut) => {
+				// The playhead was outside the take: say so rather than let the click do nothing.
+				if (!cut) toast.info(te("inspector.splitAudioHint"));
+			});
+			return;
+		}
+		const target = clipAtPlayhead(clips, playhead);
+		if (!target) {
+			toast.info(te("inspector.splitClipHint"));
+			return;
+		}
+		void tl.splitClipAt(target.id, playhead);
+	}, [clips, tl, te]);
 	const hasProject = Boolean(document);
 	const hasAsset = projectId !== null && (document?.assets.length ?? 0) > 0;
 	const project = document?.project
@@ -1698,15 +1720,9 @@ export function NewEditorShell() {
 				clipActions={{
 					hasClips: clips.length > 0,
 					hasBoundary: clips.length > 1,
-					split: () => {
-						const playhead = useProjectStore.getState().currentTimeSec;
-						const target = clipAtPlayhead(clips, playhead);
-						if (!target) {
-							toast.info(te("inspector.splitClipHint"));
-							return;
-						}
-						void tl.splitClipAt(target.id, playhead);
-					},
+					// Lane-aware, exactly as the rail's own Split button is: one implementation, so the
+					// menu and the rail cannot disagree about what Split means.
+					split: splitAtPlayhead,
 					extractAudio: () => {
 						const state = useProjectStore.getState();
 						const target = clipAtPlayhead(clips, state.currentTimeSec);
@@ -1851,6 +1867,7 @@ export function NewEditorShell() {
 								clips={tl.clips}
 								onEditClip={setEditClipTarget}
 								onEditClipAudio={setClipAudioTarget}
+								onSplit={splitAtPlayhead}
 								transcriptProps={transcriptProps}
 							/>
 						</>

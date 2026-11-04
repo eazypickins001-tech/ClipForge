@@ -20,6 +20,7 @@ import {
 	patchAudioTrack,
 	placeAudioTrackInDocument,
 	removeAudioTrack as removeAudioTrackInDocument,
+	splitAudioTake as splitAudioTakeInDocument,
 	trackGroupId,
 } from "../document/audioTracks";
 import { createId } from "../document/ids";
@@ -1646,6 +1647,24 @@ export function useTimeline() {
 		[document, saveDocument],
 	);
 
+	// Cut ONE audio take in two at the playhead — the audio lane's own razor. Split is lane-aware:
+	// a selected audio take means this, anything else means the picture (see the shell's
+	// `splitAtPlayhead`). `false` means the cut missed the take, so the caller can say so rather
+	// than leaving a click that appears to do nothing.
+	const splitAudioTrackAt = useCallback(
+		async (trackId: string, timelineSec: number): Promise<boolean> => {
+			const doc = document;
+			if (!doc) return false;
+			const next = splitAudioTakeInDocument(doc, trackId, timelineSec, () => createId("audio"));
+			// The op returns the SAME document when the cut lands on the pill's edge or outside it.
+			// Saving that would push an undo step the user cannot see.
+			if (next === doc) return false;
+			await saveDocument(next, { history: true });
+			return true;
+		},
+		[document, saveDocument],
+	);
+
 	// CapCut's "Extract audio": the clip's own sound becomes a track under the video and the clip
 	// is silenced, in ONE write — so undo can never leave the track without the mute that stops it
 	// doubling the original.
@@ -1951,6 +1970,7 @@ export function useTimeline() {
 		duplicateClip,
 		removeClip,
 		splitClipAt,
+		splitAudioTrackAt,
 		detachAudioAt,
 		selectClip,
 		updateTrim,

@@ -66,6 +66,10 @@ export function anchorAudioTrackFragments(
 			offsetMs: track.loop ? track.offsetMs : track.offsetMs + elapsedMs,
 			fadeInMs: index === 0 ? track.fadeInMs : 0,
 			fadeOutMs: index === last ? track.fadeOutMs : 0,
+			// The "do not fold me into my neighbour" flag belongs to the take's HEAD, like the fades:
+			// smeared across every fragment it would break the take in two at the next video split,
+			// because every seam would then read as one the user cut.
+			detached: index === 0 ? track.detached : false,
 		};
 		elapsedMs += spanMs;
 		return next;
@@ -89,6 +93,61 @@ export function reanchorAudioTracks(
 	return joinContiguousTakes(collapseTracksToPills(splitDetachedTakes(tracks, clips))).flatMap(
 		(track) => anchorAudioTrackFragments(track, clips, makeId),
 	);
+}
+
+/**
+ * Cut every take anchored to `clipId` at `atSec` and hand the tail to the clip that now owns the
+ * rest of the media (`rightClipId`).
+ *
+ * Splitting the PICTURE must not take the sound with it. The fragment is anchored to the clip, and
+ * the region pass that follows a clip edit clamps every fragment to its clip's current window — so
+ * a take left on the left half would be truncated at the cut, and since a split clip is muted the
+ * whole second half of the take would play silent (measured: extract audio, split, second half
+ * gone). Anchoring the tail to the right-hand clip instead keeps the take whole: both fragments
+ * still share a `trackId`, so the lane draws ONE unbroken pill, and `anchorAudioTrackFragments`
+ * advances the offsets across the cut so the file runs on.
+ *
+ * Returns the input array unchanged when no take straddles the cut, so a split with no audio over
+ * it allocates nothing.
+ */
+export function splitAnchoredAudioAtCut(
+	tracks: AxcutAudioTrack[],
+	clipId: string,
+	rightClipId: string,
+	atSec: number,
+	makeId: () => string,
+): AxcutAudioTrack[] {
+	let changed = false;
+	const out = tracks.flatMap((track) => {
+		if (track.clipId !== clipId || !hasCompleteClipAnchor(track)) return [track];
+		// Wholly on the left of the cut: this clip still owns every second of it.
+		if (atSec >= track.sourceEndSec) return [track];
+		// Wholly on the right: the footage moved to the new clip, so the anchor has to move with it
+		// or the next clamp reads the fragment as content the left half has lost and drops it.
+		if (atSec <= track.sourceStartSec) {
+			changed = true;
+			return [{ ...track, clipId: rightClipId }];
+		}
+		// Across the cut: one fragment per side, the tail playing on from where the head stopped.
+		changed = true;
+		const consumedSec = atSec - track.sourceStartSec;
+		return [
+			{ ...track, sourceEndSec: atSec },
+			{
+				...track,
+				id: makeId(),
+				clipId: rightClipId,
+				sourceStartSec: atSec,
+				// The file runs on across the cut, so the tail keeps playing from where the head
+				// stopped — except for a loop, which restarts within its own window (see
+				// `cutTakeHead`, which applies the same rule).
+				offsetMs: track.loop ? track.offsetMs : track.offsetMs + Math.round(consumedSec * 1000),
+				// The fade belongs to the take's real edge, which the tail no longer is.
+				fadeInMs: 0,
+			},
+		];
+	});
+	return changed ? out : tracks;
 }
 
 /**
@@ -137,7 +196,12 @@ function hangsTogether(
 	const runsOn =
 		Math.abs(left.offsetMs - right.offsetMs) <= 1 ||
 		(!right.loop && Math.abs(left.offsetMs + (left.endMs - left.startMs) - right.offsetMs) <= 1);
-	return runsOn && (Math.abs(left.endMs - right.startMs) <= 1 || mediaRunsOn(left, right, assetOf));
+	return (
+		runsOn &&
+		!left.detached &&
+		!right.detached &&
+		(Math.abs(left.endMs - right.startMs) <= 1 || mediaRunsOn(left, right, assetOf))
+	);
 }
 
 /** One stretch of one media, cut in two: what an inserted word leaves either side of it. */
@@ -184,6 +248,10 @@ function joinContiguousTakes(pills: AxcutAudioTrack[]): AxcutAudioTrack[] {
 function takesJoin(left: AxcutAudioTrack, right: AxcutAudioTrack): boolean {
 	const spanMs = left.endMs - left.startMs;
 	return (
+		// A cut the user made stays a cut: the junction `splitAudioTake` leaves behind must not be
+		// folded away by the next clip edit.
+		!left.detached &&
+		!right.detached &&
 		left.assetId === right.assetId &&
 		left.kind === right.kind &&
 		left.loop === right.loop &&
@@ -237,6 +305,82 @@ export function collapseTracksToPills(tracks: AxcutAudioTrack[]): AxcutAudioTrac
 			fadeOutMs: tail.fadeOutMs,
 		};
 	});
+}
+
+/** A piece of a take shorter than this is not a piece, it is rounding. */
+const MIN_AUDIO_SPLIT_MS = 50;
+
+/**
+ * Cut ONE take in two at a ruler position — the audio lane's own razor, so the sound can be split
+ * without touching the picture (`splitClip` is the other half of the pair: it cuts the picture and
+ * deliberately leaves the take whole).
+ *
+ * The position is TIMELINE ms, because that is the ruler the audio lane is laid out on; the file
+ * timecode the cut lands on follows from the fragment it lands inside.
+ *
+ * The tail becomes a take of its own — a `trackId` of its own, plus `detached` on its head so the
+ * next clip edit cannot fold the two straight back together — which is what makes the pieces
+ * separately movable and deletable. A cut on the pill's own edge, or outside it, is a no-op
+ * returning the SAME document so the store can skip the save and leave no empty undo step. Pure.
+ */
+export function splitAudioTake(
+	document: AxcutDocument,
+	trackId: string,
+	atTimelineSec: number,
+	makeId: () => string,
+): AxcutDocument {
+	const fragments = document.audioTracks.filter((track) => trackGroupId(track) === trackId);
+	if (fragments.length === 0) return document;
+	const pill = collapseTracksToPills(fragments)[0];
+	const cutMs = Math.round(atTimelineSec * 1000);
+	// Both sides have to be a real piece of sound; a cut that clips an edge is not a split.
+	if (cutMs - pill.startMs < MIN_AUDIO_SPLIT_MS || pill.endMs - cutMs < MIN_AUDIO_SPLIT_MS) {
+		return document;
+	}
+
+	const ordered = [...fragments].sort((a, b) => a.startMs - b.startMs);
+	const left: AxcutAudioTrack[] = [];
+	const right: AxcutAudioTrack[] = [];
+	const tailId = makeId();
+	for (const fragment of ordered) {
+		if (fragment.endMs <= cutMs) {
+			left.push(fragment);
+			continue;
+		}
+		if (fragment.startMs >= cutMs) {
+			right.push({ ...fragment, trackId: tailId });
+			continue;
+		}
+		// The cut lands inside this fragment. Its file is not anchored, so there is nothing to map
+		// the ruler position onto: leave the take alone rather than cut it at a guessed timecode.
+		if (!hasCompleteClipAnchor(fragment)) return document;
+		const cutSec = fragment.sourceStartSec + (cutMs - fragment.startMs) / 1000;
+		left.push({ ...fragment, sourceEndSec: cutSec, endMs: cutMs, fadeOutMs: 0 });
+		right.push({
+			...fragment,
+			id: makeId(),
+			trackId: tailId,
+			sourceStartSec: cutSec,
+			startMs: cutMs,
+			// The file runs on across the seam, so the tail starts where the head stopped — except
+			// for a loop, which restarts inside its own window (`cutTakeHead` applies the same rule).
+			offsetMs: fragment.loop
+				? fragment.offsetMs
+				: fragment.offsetMs + Math.round(cutMs - fragment.startMs),
+			fadeInMs: 0,
+		});
+	}
+	if (left.length === 0 || right.length === 0) return document;
+
+	const others = document.audioTracks.filter((track) => trackGroupId(track) !== trackId);
+	return {
+		...document,
+		audioTracks: [
+			...others,
+			...left,
+			...right.map((track, index) => (index === 0 ? { ...track, detached: true } : track)),
+		],
+	};
 }
 
 /**

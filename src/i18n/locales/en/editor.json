@@ -238,6 +238,7 @@
 		"collapseInspector": "Collapse inspector",
 		"editClipTip": "Edit clip: crop, start and end",
 		"splitClipHint": "Put the playhead inside a clip to split it.",
+		"splitAudioHint": "Put the playhead inside the audio take to split it.",
 		"splitClip": "Split",
 		"extractAudio": "Extract audio",
 		"captionsDescription": "Generate word-timed captions from the transcript and drop them onto the timeline.",

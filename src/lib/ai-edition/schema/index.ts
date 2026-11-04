@@ -716,6 +716,12 @@ export const audioTrackSchema = endGteStart(
 		fadeInMs: z.number().int().nonnegative().default(0),
 		fadeOutMs: z.number().int().nonnegative().default(0),
 		muted: z.boolean().default(false),
+		// The user cut this take here, so the two pieces either side of the cut stay two takes
+		// (`takesJoin`/`hangsTogether` honour it). Without it the model would fold them straight
+		// back together, because two halves of one cut take meet on the ruler and the file runs on —
+		// which is exactly what rejoining wants for the OTHER case, a take split by an inserted
+		// word. The clip list carries the same flag for the picture, for the same reason.
+		detached: z.boolean().default(false),
 		label: z.string().default(""),
 		origin: z.enum(["system", "agent", "user"]).default("user"),
 	}),

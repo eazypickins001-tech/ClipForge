@@ -238,6 +238,7 @@
 		"collapseInspector": "インスペクターを折りたたむ",
 		"editClipTip": "クリップを編集：切り抜き、開始位置、終了位置",
 		"splitClipHint": "Put the playhead inside a clip to split it.",
+		"splitAudioHint": "分割するには再生ヘッドを音声クリップの内側に置いてください。",
 		"splitClip": "Split",
 		"extractAudio": "Extract audio",
 		"captionsDescription": "文字起こしから単語ごとにタイミングを合わせたキャプションを生成し、タイムラインに配置します。",

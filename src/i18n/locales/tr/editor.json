@@ -238,6 +238,7 @@
 		"collapseInspector": "Denetleyiciyi daralt",
 		"editClipTip": "Klibi düzenle: kırpma, başlangıç ve bitiş",
 		"splitClipHint": "Put the playhead inside a clip to split it.",
+		"splitAudioHint": "Sesi bölmek için oynatma imlecini ses parçasının içine getirin.",
 		"splitClip": "Split",
 		"extractAudio": "Extract audio",
 		"captionsDescription": "Transkriptten kelime zamanlamalı altyazılar oluşturun ve zaman çizelgesine bırakın.",

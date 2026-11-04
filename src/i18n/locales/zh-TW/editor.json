@@ -238,6 +238,7 @@
 		"collapseInspector": "摺疊檢查器",
 		"editClipTip": "編輯片段：裁切、起點和終點",
 		"splitClipHint": "Put the playhead inside a clip to split it.",
+		"splitAudioHint": "將播放頭放在音訊片段內即可分割。",
 		"splitClip": "Split",
 		"extractAudio": "Extract audio",
 		"captionsDescription": "根據逐字稿產生逐字計時的字幕，並放置到時間軸上。",

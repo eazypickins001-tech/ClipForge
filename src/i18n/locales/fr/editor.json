@@ -238,6 +238,7 @@
 		"collapseInspector": "Réduire l'inspecteur",
 		"editClipTip": "Modifier le clip : recadrage, début et fin",
 		"splitClipHint": "Put the playhead inside a clip to split it.",
+		"splitAudioHint": "Placez la tête de lecture dans la piste audio pour la diviser.",
 		"splitClip": "Split",
 		"extractAudio": "Extract audio",
 		"captionsDescription": "Générer des sous-titres synchronisés aux mots à partir de la transcription et les déposer sur la timeline.",

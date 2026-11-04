@@ -238,6 +238,7 @@
 		"collapseInspector": "طي لوحة الفحص",
 		"editClipTip": "تعديل المقطع: الاقتصاص والبداية والنهاية",
 		"splitClipHint": "Put the playhead inside a clip to split it.",
+		"splitAudioHint": "ضع مؤشر التشغيل داخل المقطع الصوتي لتقسيمه.",
 		"splitClip": "Split",
 		"extractAudio": "Extract audio",
 		"captionsDescription": "إنشاء ترجمات مؤقتة بالكلمات من النص وإسقاطها على الجدول الزمني.",

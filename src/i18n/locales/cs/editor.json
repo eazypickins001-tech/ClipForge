@@ -238,6 +238,7 @@
 		"collapseInspector": "Sbalit inspektor",
 		"editClipTip": "Upravit klip: oříznutí, začátek a konec",
 		"splitClipHint": "Put the playhead inside a clip to split it.",
+		"splitAudioHint": "Chcete-li zvukovou stopu rozdělit, umístěte kurzor přehrávání do ní.",
 		"splitClip": "Split",
 		"extractAudio": "Extract audio",
 		"captionsDescription": "Generujte titulky synchronizované se slovy z přepisu a přetáhněte je na časovou osu.",

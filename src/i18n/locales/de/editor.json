@@ -238,6 +238,7 @@
 		"collapseInspector": "Inspektor einklappen",
 		"editClipTip": "Clip bearbeiten: Zuschnitt, Anfang und Ende",
 		"splitClipHint": "Put the playhead inside a clip to split it.",
+		"splitAudioHint": "Setzen Sie die Abspielposition in die Audiospur, um sie zu teilen.",
 		"splitClip": "Split",
 		"extractAudio": "Extract audio",
 		"captionsDescription": "Erzeuge wortgenaue Untertitel aus dem Transkript und leg sie auf die Timeline.",

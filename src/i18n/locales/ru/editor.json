@@ -238,6 +238,7 @@
 		"collapseInspector": "Свернуть инспектор",
 		"editClipTip": "Изменить клип: обрезка, начало и конец",
 		"splitClipHint": "Put the playhead inside a clip to split it.",
+		"splitAudioHint": "Чтобы разделить звуковую дорожку, поместите курсор воспроизведения внутрь неё.",
 		"splitClip": "Split",
 		"extractAudio": "Extract audio",
 		"captionsDescription": "Создайте субтитры с привязкой по словам на основе транскрипции и добавьте их на таймлинию.",

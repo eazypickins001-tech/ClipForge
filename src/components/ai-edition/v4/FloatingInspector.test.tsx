@@ -88,6 +88,7 @@ describe("FloatingInspector", () => {
 		onToggleOpen: vi.fn(),
 		clips: [],
 		onEditClip: vi.fn(),
+		onSplit: vi.fn(),
 		transcriptProps: {} as unknown as React.ComponentProps<
 			typeof FloatingInspector
 		>["transcriptProps"],
@@ -237,6 +238,17 @@ describe("FloatingInspector", () => {
 			fireEvent.click(rows[2]);
 			expect(onEditClip).toHaveBeenCalledWith(threeClips[2]);
 			expect(screen.queryByRole("menu")).toBeNull();
+		});
+
+		// Split is lane-aware, and the rail is the half that canNOT know which lane was picked: it
+		// gets `clips`, not the selected audio take, and the shell is where both live. So the button
+		// must hand the gesture over rather than resolve a target of its own — if it ever starts
+		// cutting clips here, an audio take selected and Split pressed would edit the picture.
+		it("hands Split to the shell instead of cutting a clip itself", () => {
+			const onSplit = vi.fn();
+			render(<FloatingInspector {...defaultProps} clips={threeClips} onSplit={onSplit} />);
+			fireEvent.click(screen.getByRole("button", { name: "editor.inspector.splitClip" }));
+			expect(onSplit).toHaveBeenCalledTimes(1);
 		});
 
 		it("closes on Escape without opening a clip", async () => {

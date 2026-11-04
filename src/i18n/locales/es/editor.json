@@ -238,6 +238,7 @@
 		"collapseInspector": "Contraer inspector",
 		"editClipTip": "Editar clip: recorte, inicio y final",
 		"splitClipHint": "Put the playhead inside a clip to split it.",
+		"splitAudioHint": "Coloca el cursor de reproducción dentro del audio para dividirlo.",
 		"splitClip": "Split",
 		"extractAudio": "Extract audio",
 		"captionsDescription": "Genera subtítulos sincronizados con las palabras a partir de la transcripción y colócalos en la línea de tiempo.",

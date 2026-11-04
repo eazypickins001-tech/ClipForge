@@ -39,6 +39,7 @@ import {
 	reanchorAudioTracks,
 	removeAudioTrack,
 	separateAudioLanes,
+	splitAnchoredAudioAtCut,
 } from "./audioTracks";
 import { createId } from "./ids";
 import { layoutAt, layoutRuns, materializeLayouts, removeLayoutChange } from "./layout";
@@ -1139,12 +1140,16 @@ export function splitClip(
 		origin,
 		reason: reason || clip.reason,
 	};
-	return withClipsChanged(document, [
-		...clips.slice(0, index),
-		left,
-		right,
-		...clips.slice(index + 1),
-	]);
+	// The sound over this cut comes along WITHOUT being cut: the take's tail is handed to the
+	// right-hand clip, so the region pass below cannot clamp it away and the lane still draws one
+	// unbroken pill. Splitting the picture is the user's instruction; splitting their audio is not.
+	const audioTracks = splitAnchoredAudioAtCut(document.audioTracks, clipId, right.id, atSec, () =>
+		createId("audio"),
+	);
+	return withClipsChanged(
+		audioTracks === document.audioTracks ? document : { ...document, audioTracks },
+		[...clips.slice(0, index), left, right, ...clips.slice(index + 1)],
+	);
 }
 
 /**

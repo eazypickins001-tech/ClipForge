@@ -238,6 +238,7 @@
 		"collapseInspector": "Thu gọn bảng kiểm tra",
 		"editClipTip": "Chỉnh sửa clip: cắt xén, điểm bắt đầu và kết thúc",
 		"splitClipHint": "Put the playhead inside a clip to split it.",
+		"splitAudioHint": "Đặt con trỏ phát vào trong đoạn âm thanh để cắt.",
 		"splitClip": "Split",
 		"extractAudio": "Extract audio",
 		"captionsDescription": "Tạo phụ đề đồng bộ theo từng từ từ bản ghi lời thoại và thả vào dòng thời gian.",
