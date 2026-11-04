@@ -45,6 +45,7 @@ import {
 	useIsCpuCompositor,
 } from "@/native";
 import { NativeBridgeRequestError } from "@/native/client";
+import { clipVideoDips } from "@/native/clipVideoDips";
 import type { CompositorClipInput } from "@/native/contracts";
 import { buildSceneDescription, resolveVisibleClips } from "@/native/sceneDescription";
 import { exportErrorMessage } from "./exportError";
@@ -118,7 +119,9 @@ function revealExportedFile(filePath: string): void {
  *  no camera — the no-webcam layout is a later step) and its source trim. */
 function buildNativeClipList(document: AxcutDocument): CompositorClipInput[] {
 	const assetById = new Map(document.assets.map((a) => [a.id, a]));
-	return resolveVisibleClips(document).flatMap((clip) => {
+	const visible = resolveVisibleClips(document);
+	const dips = clipVideoDips(document, visible);
+	return visible.flatMap((clip) => {
 		const asset = assetById.get(clip.assetId);
 		if (!asset?.originalPath) {
 			return [];
@@ -128,6 +131,7 @@ function buildNativeClipList(document: AxcutDocument): CompositorClipInput[] {
 		// the single canonical precedence used by every consumer (clip.probe → asset.duration
 		// → timeline-length guess). See `resolveClipSourceEndSec` for the full order.
 		const sourceEndSec = resolveClipSourceEndSec(clip, asset);
+		const dip = dips.get(clip.id);
 		// ponytail: `hasAudio` stays optimistic about the FILE, for the same reason as in
 		// `buildSceneDescription` — nothing populates `asset.audio` yet, and the native side
 		// degrades cleanly on a stream-less file. Mute is the one thing that overrides it.
@@ -148,6 +152,9 @@ function buildNativeClipList(document: AxcutDocument): CompositorClipInput[] {
 				gainDb: clip.gainDb ?? 0,
 				fadeInSec: (clip.fadeInMs ?? 0) / 1000,
 				fadeOutSec: (clip.fadeOutMs ?? 0) / 1000,
+				// The boundary dip, computed by the SAME helper the canonical list uses (see
+				// `@/native/clipVideoDips`) rather than a second copy of the rule.
+				...(dip ? { videoDip: dip } : {}),
 			},
 		];
 	});

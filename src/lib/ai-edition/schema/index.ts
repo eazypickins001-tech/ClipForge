@@ -760,6 +760,35 @@ export const layoutRegionSchema = endGteStart(
 	"startMs",
 );
 
+/**
+ * A dip at a clip boundary, or at a programme edge: the picture fades through a colour.
+ *
+ * It sits on the clip's LEFT edge (`side: "in"`) and names the clip that FOLLOWS the boundary,
+ * so a boundary is described exactly once. `side: "out"` is the programme's own tail and is
+ * only meaningful on the final clip — the emitter ignores it anywhere else, which is what keeps
+ * one junction from being written twice.
+ *
+ * This first phase ships the DIP family only. A dip needs no overlap between the two clips:
+ * half the duration ramps the outgoing clip down, half ramps the incoming one up. Blends that
+ * need both clips moving at once — dissolve, wipes, slides — are a later phase and are
+ * deliberately absent from `kind` rather than accepted and silently ignored.
+ *
+ * Optional rather than `.default([])`, for the reason `shaderEffectRanges` above gives: a
+ * document written before this carries no key, every reader treats an absent list as empty, and
+ * no existing fixture or upgrader had to change to introduce it.
+ */
+export const transitionSchema = z.object({
+	id: z.string().min(1),
+	/** The clip whose edge this dip sits on. */
+	clipId: z.string().min(1),
+	side: z.enum(["in", "out"]).default("in"),
+	kind: z.enum(["dip-black", "dip-white", "dip-color"]).default("dip-black"),
+	durationMs: z.number().int().positive().default(500),
+	/** What a `dip-color` passes through. Ignored by the other kinds. */
+	color: z.string().optional(),
+});
+export type AxcutTransition = z.infer<typeof transitionSchema>;
+
 const documentSchemaShape = z.object({
 	schemaVersion: z.literal(axcutSchemaVersion),
 	project: z.object({
@@ -785,6 +814,10 @@ const documentSchemaShape = z.object({
 	}),
 	annotations: z.array(annotationRegionSchema).default([]),
 	zoomRanges: z.array(zoomRegionSchema).default([]),
+	// Boundary dips between adjacent clips (see `transitionSchema` above). Optional, like the
+	// shader-effect lists below: a document without transitions carries no key, and every reader
+	// treats an absent list as empty.
+	transitions: z.array(transitionSchema).optional(),
 	// Agent-written shader effects (docs/shader-effects.md). Optional rather than defaulted, like
 	// `vocabulary`: a document without effects carries no trace of them, and every reader treats
 	// an absent list as empty. An older build drops both keys when it saves.

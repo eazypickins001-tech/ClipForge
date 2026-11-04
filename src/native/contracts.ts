@@ -216,6 +216,16 @@ export interface CompositorClipInput {
 	gainDb?: number;
 	fadeInSec?: number;
 	fadeOutSec?: number;
+	/** The VIDEO dip between this clip and its neighbour, from a boundary transition. Distinct
+	 *  from `fadeInSec`/`fadeOutSec` above, which are the clip's own AUDIO fades. Absent means a
+	 *  hard cut. `fadeInSec` ramps this clip up from `color`; `fadeOutSec` ramps it down into it
+	 *  (a transition writes one of the two on each side of the cut). */
+	videoDip?: {
+		fadeInSec: number;
+		fadeOutSec: number;
+		/** "#rrggbb" the dip passes through. */
+		color: string;
+	};
 }
 
 /** Bilan d'un export natif (mesure enveloppante §10 : frames, durée, fps). */

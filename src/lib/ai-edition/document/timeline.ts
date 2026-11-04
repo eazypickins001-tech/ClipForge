@@ -55,7 +55,8 @@ export type RegionKind =
 	| "layout"
 	| "cameraFullscreen"
 	| "audio"
-	| "shaderEffect";
+	| "shaderEffect"
+	| "transition";
 
 /** Length a clip is given before its media has been probed. Lives here, in the pure
  *  document layer, because that layer decides which clips are still waiting for a real
@@ -1382,6 +1383,12 @@ export function removeRegion(document: AxcutDocument, kind: RegionKind, id: stri
 				...document,
 				shaderEffectRanges: dropPillById(document.shaderEffectRanges ?? [], id),
 			});
+		case "transition":
+			// Keyed by clip id, with no span of its own, so it cannot go through `dropPillById`.
+			return {
+				...document,
+				transitions: (document.transitions ?? []).filter((transition) => transition.id !== id),
+			};
 		default: {
 			// ponytail: exhaustive — TS errors here if a new RegionKind is added.
 			const exhaustive: never = kind;
@@ -1434,6 +1441,10 @@ const EDIT_REGIONS: Record<
 		count: (d) => (d.shaderEffectRanges ?? []).length,
 		clear: (d) => ({ ...d, shaderEffectRanges: [], shaderEffects: [] }),
 	},
+	transition: {
+		count: (d) => (d.transitions ?? []).length,
+		clear: (d) => ({ ...d, transitions: [] }),
+	},
 };
 
 /** How many edit regions the document holds, stored rows and not pills. Pure. */
@@ -1480,9 +1491,23 @@ export function withClipsChanged(document: AxcutDocument, clips: AxcutClip[]): A
 		...reanchored,
 		timeline: { ...reanchored.timeline, clips: laid },
 	};
+	// A transition is keyed by a clip id and has no span of its own, so it cannot ride
+	// `rederiveRegionMs`. It goes the other way: a boundary that no longer exists takes its dip
+	// with it. An absorbed clip's junction is gone, and dropping is the only honest answer; a
+	// reorder keeps the dip with the clip whose edge it was written on.
+	const pruned = pruneDanglingTransitions(next);
 	// `rederiveRegionMs` bails on an empty clip list — a guard against a transient wipe
 	// dropping every region — so there is nothing to refresh against.
-	return laid.length === 0 ? next : rederiveRegionMs(next, laid);
+	return laid.length === 0 ? pruned : rederiveRegionMs(pruned, laid);
+}
+
+/** Drop transitions whose clip no longer exists. Pure, and a no-op on a document with none. */
+function pruneDanglingTransitions(document: AxcutDocument): AxcutDocument {
+	const transitions = document.transitions;
+	if (!transitions?.length) return document;
+	const live = new Set(document.timeline.clips.map((clip) => clip.id));
+	const kept = transitions.filter((transition) => live.has(transition.clipId));
+	return kept.length === transitions.length ? document : { ...document, transitions: kept };
 }
 
 /** Fold every run of same-media, same-crop, media-contiguous clips into one, reporting the

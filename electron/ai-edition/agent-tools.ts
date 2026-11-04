@@ -161,6 +161,9 @@ function modifierIds(document: AxcutDocument, kind: ModifierKind): string[] {
 			return [...new Set(document.audioTracks.map(trackGroupId))];
 		case "shaderEffect":
 			return (document.shaderEffectRanges ?? []).map((region) => region.id);
+		case "transition":
+			// A dip has no span of its own; its id is what an agent removes it by.
+			return (document.transitions ?? []).map((transition) => transition.id);
 	}
 }
 

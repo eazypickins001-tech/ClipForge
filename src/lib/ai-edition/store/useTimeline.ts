@@ -56,6 +56,7 @@ import type {
 	AxcutClipCropRegion,
 	AxcutDocument,
 	AxcutShaderEffectRange,
+	AxcutTransition,
 } from "../schema";
 import {
 	findShaderEffect,
@@ -430,6 +431,57 @@ export function useTimeline() {
 				zoomRanges: [...document.zoomRanges, ...anchored] as AxcutDocument["zoomRanges"],
 			};
 			await saveDocument(next, { history: true });
+		},
+		[document, saveDocument],
+	);
+
+	/** Put a dip on a clip's left edge, or replace the one already there. One write, one undo step. */
+	const addTransition = useCallback(
+		async (clipId: string, kind: AxcutTransition["kind"] = "dip-black", durationMs = 500) => {
+			if (!document) return;
+			const existing = (document.transitions ?? []).find(
+				(transition) => transition.clipId === clipId && transition.side === "in",
+			);
+			const next: AxcutDocument = {
+				...document,
+				transitions: [
+					...(document.transitions ?? []).filter(
+						(transition) => !(transition.clipId === clipId && transition.side === "in"),
+					),
+					{
+						id: existing?.id ?? createId("trans"),
+						clipId,
+						side: "in" as const,
+						kind,
+						durationMs,
+					},
+				],
+			};
+			await saveDocument(next, { history: true });
+		},
+		[document, saveDocument],
+	);
+
+	/** Change one transition in place — kind, duration or colour. One write, one undo step. */
+	const updateTransition = useCallback(
+		async (id: string, patch: Partial<Omit<AxcutTransition, "id" | "clipId" | "side">>) => {
+			if (!document) return;
+			const next: AxcutDocument = {
+				...document,
+				transitions: (document.transitions ?? []).map((transition) =>
+					transition.id === id ? { ...transition, ...patch } : transition,
+				),
+			};
+			await saveDocument(next, { history: true });
+		},
+		[document, saveDocument],
+	);
+
+	/** Remove a dip. Goes through the document's own `removeRegion`, so there is one delete path. */
+	const removeTransition = useCallback(
+		async (id: string) => {
+			if (!document) return;
+			await saveDocument(removeRegionInDocument(document, "transition", id), { history: true });
 		},
 		[document, saveDocument],
 	);
@@ -1884,6 +1936,9 @@ export function useTimeline() {
 		addCameraFullscreen,
 		removeRegion,
 		removeRegions,
+		addTransition,
+		updateTransition,
+		removeTransition,
 		hasEditRegions,
 		clearTimeline,
 		addAudioTrack,

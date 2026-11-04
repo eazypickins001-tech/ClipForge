@@ -1299,6 +1299,10 @@ export function NewEditorShell() {
 			toast.success("Region copied");
 			return;
 		}
+		// A dip is not a pill: it has no span to copy, so the shortcut does nothing rather than
+		// copying whichever region the fall-through below happens to pick.
+		if (sel.kind === "transition") return;
+
 		const source =
 			sel.kind === "zoom"
 				? tl.zoomRegions

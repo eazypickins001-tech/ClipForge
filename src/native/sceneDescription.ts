@@ -71,6 +71,7 @@ import { LAYOUT_TRANSITION_SECONDS, type LayoutPreset } from "@/lib/layoutTypes"
 import type { FrameTheme, RecordingFrame, WebcamAnchor } from "@/lib/projectDefaults";
 import { resolveTextFontFamily } from "@/lib/textFonts";
 import { classifyWallpaper } from "@/lib/wallpaper";
+import { clipVideoDips } from "./clipVideoDips";
 import type { CompositorClipInput } from "./contracts";
 import { ROUNDNESS_REFERENCE_PX } from "./paramUnits";
 
@@ -720,7 +721,9 @@ export function resolveVisibleClips(document: AxcutDocument): PlaybackSegment[] 
  */
 export function buildNativeClipList(document: AxcutDocument): CompositorClipInput[] {
 	const assetById = new Map(document.assets.map((a) => [a.id, a]));
-	return resolveVisibleClips(document).flatMap((clip) => {
+	const visible = resolveVisibleClips(document);
+	const dips = clipVideoDips(document, visible);
+	return visible.flatMap((clip) => {
 		const asset = assetById.get(clip.assetId);
 		if (!asset?.originalPath) {
 			return [];
@@ -730,6 +733,7 @@ export function buildNativeClipList(document: AxcutDocument): CompositorClipInpu
 		// the single canonical precedence used by every consumer (clip.probe → asset.duration
 		// → timeline-length guess). See `resolveClipSourceEndSec` for the full order.
 		const sourceEndSec = resolveClipSourceEndSec(clip, asset);
+		const dip = dips.get(clip.id);
 		// ponytail: `hasAudio` stays optimistic about the FILE, for the same reason as in
 		// `buildSceneDescription` — nothing populates `asset.audio` yet, and the native side
 		// degrades cleanly on a stream-less file. Mute is the one thing that overrides it.
@@ -750,6 +754,10 @@ export function buildNativeClipList(document: AxcutDocument): CompositorClipInpu
 				gainDb: clip.gainDb ?? 0,
 				fadeInSec: (clip.fadeInMs ?? 0) / 1000,
 				fadeOutSec: (clip.fadeOutMs ?? 0) / 1000,
+				// The boundary dip. `napi` ignores fields `ClipInput` does not declare, so on the
+				// export ARGUMENT this rides along unused; the scene's clip list is the copy the
+				// compositor actually reads.
+				...(dip ? { videoDip: dip } : {}),
 			},
 		];
 	});
@@ -1065,10 +1073,15 @@ export function buildSceneDescription(
 		return entries;
 	});
 	const visibleClips = resolveVisibleClips(document);
+	// The boundary dip is a SCENE property: the compositor reads it as it composes a clip, and the
+	// live preview composes from this very scene. The export's clip ARGUMENT never reaches the
+	// draw path, so this list is the one that has to carry it.
+	const dips = clipVideoDips(document, visibleClips);
 	const clips: CompositorClipInput[] = visibleClips.flatMap((clip) => {
 		const asset = assetById.get(clip.assetId);
 		if (!asset?.originalPath) return [];
 		const camera = assetCameraSource(asset);
+		const dip = dips.get(clip.id);
 		// ponytail: `asset.audio` exists in the schema but the probe pipeline never
 		// populates it, so there is no per-asset "is there a track?" signal to read
 		// yet. Every consumer downstream degrades on a stream-less file (audio.rs
@@ -1091,6 +1104,10 @@ export function buildSceneDescription(
 				gainDb: clip.gainDb ?? 0,
 				fadeInSec: (clip.fadeInMs ?? 0) / 1000,
 				fadeOutSec: (clip.fadeOutMs ?? 0) / 1000,
+				// The boundary dip — what the compositor ramps this clip's composed frame through
+				// at its edges. Absent on a clip with no transition on either side, which is what
+				// keeps a project that never used one rendering exactly as it did before.
+				...(dip ? { videoDip: dip } : {}),
 				// A held segment has an empty source window and exists only for the frames it
 				// holds; every other clip holds nothing.
 			},
