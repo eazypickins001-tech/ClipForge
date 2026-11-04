@@ -181,6 +181,8 @@
 		"insertAria": "Nové slovo",
 		"editorAria": "Přepis pro {{filename}}",
 		"transcribeNow": "Přepsat nyní",
+		"removeFillers": "Odstranit slovní vatu ({{count}})",
+		"fillersRemoved": "Slovní vata odstraněna",
 		"transcribing": "Přepisování…",
 		"trimSilence": "Oříznutí ticha ({{duration}}s)",
 		"removeInserted": "Smazat „{{word}}”",

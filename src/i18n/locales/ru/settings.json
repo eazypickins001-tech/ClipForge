@@ -181,6 +181,8 @@
 		"insertAria": "Новое слово",
 		"editorAria": "Расшифровка «{{filename}}»",
 		"transcribeNow": "Расшифровать сейчас",
+		"removeFillers": "Удалить слова-заполнители ({{count}})",
+		"fillersRemoved": "Слова-заполнители удалены",
 		"transcribing": "Расшифровка…",
 		"trimSilence": "Вырезать тишину ({{duration}} с)",
 		"removeInserted": "Удалить «{{word}}»",

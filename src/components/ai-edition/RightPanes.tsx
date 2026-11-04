@@ -835,6 +835,8 @@ export function TranscriptPane({
 	onSetWordText,
 	onInsertWord,
 	onRemoveWords,
+	onRemoveFillerWords,
+	fillerWordCount,
 	onTranscribe,
 	canTranscribe,
 	isTranscribing,
@@ -871,6 +873,11 @@ export function TranscriptPane({
 	/** Delete inserted words. Only ever called with `source: "synth"` ids — a transcribed
 	 *  word is cut with a trim, never deleted. */
 	onRemoveWords: (assetId: string, wordIds: string[]) => void;
+	/** Cut every hesitation the shared plan accepts, in one write. A bulk action over the whole
+	 *  transcript, so it is offered once at the top of the pane rather than per clip block. */
+	onRemoveFillerWords: () => void;
+	/** How many words that click would cut. Zero hides the button: it never promises a no-op. */
+	fillerWordCount: number;
 	onTranscribe: () => void;
 	canTranscribe: boolean;
 	isTranscribing: boolean;
@@ -1014,7 +1021,23 @@ export function TranscriptPane({
 			title={ts("transcript.title")}
 			icon={<FileText size={16} />}
 			helpText={helpText}
-			actions={<CaptionSettingsButton onOpen={() => setCaptionsOpen(true)} />}
+			actions={
+				<>
+					{/* One click, every hesitation the shared plan accepts, one undo step. Hidden when
+					    there is nothing to cut, so it never promises a no-op. */}
+					{fillerWordCount > 0 ? (
+						<button
+							type="button"
+							className={styles.btn}
+							data-testid="remove-filler-words"
+							onClick={onRemoveFillerWords}
+						>
+							{ts("transcript.removeFillers", { count: fillerWordCount })}
+						</button>
+					) : null}
+					<CaptionSettingsButton onOpen={() => setCaptionsOpen(true)} />
+				</>
+			}
 		>
 			{laneSwitch}
 			{/* The gestures are invisible until tried: nothing on a plain word stream says

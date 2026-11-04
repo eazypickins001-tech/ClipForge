@@ -181,6 +181,8 @@
 		"insertAria": "新しい単語",
 		"editorAria": "{{filename}} の文字起こし",
 		"transcribeNow": "今すぐ文字起こし",
+		"removeFillers": "つなぎ言葉を削除 ({{count}})",
+		"fillersRemoved": "つなぎ言葉を削除しました",
 		"transcribing": "文字起こし中…",
 		"trimSilence": "無音をトリム（{{duration}} 秒）",
 		"removeInserted": "「{{word}}」を削除",

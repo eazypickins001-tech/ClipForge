@@ -181,6 +181,8 @@
 		"insertAria": "새 단어",
 		"editorAria": "{{filename}}의 전사",
 		"transcribeNow": "지금 전사하기",
+		"removeFillers": "추임새 삭제 ({{count}})",
+		"fillersRemoved": "추임새를 삭제했습니다",
 		"transcribing": "전사 중…",
 		"trimSilence": "무음 자르기 ({{duration}}초)",
 		"removeInserted": "\"{{word}}\" 삭제",

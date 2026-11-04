@@ -181,6 +181,8 @@
 		"insertAria": "Nova palavra",
 		"editorAria": "Transcrição de {{filename}}",
 		"transcribeNow": "Transcrever agora",
+		"removeFillers": "Remover muletas ({{count}})",
+		"fillersRemoved": "Muletas removidas",
 		"transcribing": "Transcrevendo…",
 		"trimSilence": "Cortar silêncio ({{duration}} s)",
 		"removeInserted": "Excluir \"{{word}}\"",

@@ -181,6 +181,8 @@
 		"insertAria": "Từ mới",
 		"editorAria": "Bản chép lời của {{filename}}",
 		"transcribeNow": "Chép lời ngay",
+		"removeFillers": "Xóa từ đệm ({{count}})",
+		"fillersRemoved": "Đã xóa từ đệm",
 		"transcribing": "Đang chép lời…",
 		"trimSilence": "Cắt khoảng lặng ({{duration}} giây)",
 		"removeInserted": "Xoá \"{{word}}\"",

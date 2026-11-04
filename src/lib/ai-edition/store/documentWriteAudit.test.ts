@@ -153,6 +153,9 @@ const DECLARED: WritePath[] = [
 	// own edits to the transcript; neither touches the timeline.
 	w("src/components/ai-edition/NewEditorShell.tsx", "handleInsertWord", "save", "gesture"),
 	w("src/components/ai-edition/NewEditorShell.tsx", "handleRemoveWords", "save", "gesture"),
+	// "Remove filler words": one click, every hesitation the shared plan accepts, in ONE save — so
+	// the whole sweep is a single undo step. Nothing cuttable means no save and no empty step.
+	w("src/components/ai-edition/NewEditorShell.tsx", "handleRemoveFillerWords", "save", "gesture"),
 	// The transcript lane, chosen in the pane and stored on the document because it decides
 	// the captions burnt into the export (#560). Written through `useCaptions.set`, which
 	// is already in the table under its own name.

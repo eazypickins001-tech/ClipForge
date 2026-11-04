@@ -53,6 +53,11 @@ import {
 } from "../../src/lib/ai-edition/document/timeline";
 import { setDocumentWordText } from "../../src/lib/ai-edition/document/transcript";
 import {
+	groupWordCutRuns,
+	planWordCuts,
+	type WordCutRejection,
+} from "../../src/lib/ai-edition/document/wordCuts";
+import {
 	type AxcutAnnotationRegion,
 	type AxcutDocument,
 	type AxcutShaderEffect,
@@ -691,6 +696,28 @@ export const addTrimArgs = z.object({
 export const addTrimsArgs = z.object({
 	ranges: z.array(z.union([addTrimArgs, z.unknown()])).min(1),
 });
+
+/** The agent's wording for a word `planWordCuts` refused.
+ *
+ *  The RULE is shared with the editor's own remove-filler-words action, so the two can never
+ *  disagree about what is cuttable; the sentences are this tool's, because they have to tell the
+ *  model what to do next — read the IDs, or pass the assetId it read them from. */
+function wordCutRejectionMessage(rejection: WordCutRejection): string {
+	switch (rejection.reason) {
+		case "unknown":
+			return `Unknown transcript word ID: ${rejection.wordId}. Call getTranscriptWords to read the IDs. Nothing was modified.`;
+		case "ambiguous":
+			return `Word ID ${rejection.wordId} appears more than once in the transcripts. Pass the assetId used for getTranscriptWords. Nothing was modified.`;
+		case "no-source":
+			return `Word ${rejection.wordId} has no recorded source asset. Nothing was modified.`;
+		case "bad-timestamps":
+			return `Word ${rejection.wordId} has invalid source timestamps. Nothing was modified.`;
+		case "not-in-one-clip":
+			return `Word ${rejection.wordId} must be fully contained in exactly one clip; found ${rejection.clipCount}. Nothing was modified.`;
+		case "already-cut":
+			return `Word ${rejection.wordId} is already cut by a trim. Nothing was modified.`;
+	}
+}
 
 export const removeWordsArgs = z.object({
 	assetId: z.string().min(1).optional(),
@@ -2277,113 +2304,29 @@ export function executeAgentTool(
 				return failure("Duplicate word IDs in one request. Nothing was modified.");
 			}
 
-			// Resolve every ID before writing anything. Word IDs, rather than guessed
-			// timestamps, designate which occurrence of a repeated word is speech to cut.
-			const transcripts = [...document.transcripts];
-			if (
-				document.transcript &&
-				!transcripts.some((transcript) => transcript.assetId === document.transcript?.assetId)
-			) {
-				transcripts.push(document.transcript);
+			// Which words may be cut is `planWordCuts`' rule, shared with the editor's own
+			// remove-filler-words action so the two can never disagree about what is cuttable.
+			// Resolve every ID before writing anything: word IDs, rather than guessed timestamps,
+			// designate which occurrence of a repeated word is speech to cut.
+			const { targets, rejected } = planWordCuts(document, wordIds, selectedAssetId);
+			if (rejected.length > 0) {
+				return failure(wordCutRejectionMessage(rejected[0]));
 			}
-			const selected: Array<{
-				wordId: string;
-				text: string;
-				assetId: string;
-				clipId: string;
-				index: number;
-				startSec: number;
-				endSec: number;
-			}> = [];
-			for (const wordId of wordIds) {
-				const matches = transcripts
-					.filter(
-						(transcript) => selectedAssetId === undefined || transcript.assetId === selectedAssetId,
-					)
-					.flatMap((transcript) =>
-						transcript.words.flatMap((word, index) =>
-							word.id === wordId ? [{ assetId: transcript.assetId, word, index }] : [],
-						),
-					);
-				if (matches.length !== 1) {
-					return failure(
-						matches.length === 0
-							? `Unknown transcript word ID: ${wordId}. Call getTranscriptWords to read the IDs. Nothing was modified.`
-							: `Word ID ${wordId} appears more than once in the transcripts. Pass the assetId used for getTranscriptWords. Nothing was modified.`,
-					);
-				}
-				const { assetId, word, index } = matches[0];
-				const asset = document.assets.find((candidate) => candidate.id === assetId);
-				if (!asset || isGeneratedAssetId(assetId) || word.source === "synth") {
-					return failure(`Word ${wordId} has no recorded source asset. Nothing was modified.`);
-				}
-				const { startSec, endSec } = word;
-				if (
-					!Number.isFinite(startSec) ||
-					!Number.isFinite(endSec) ||
-					startSec < 0 ||
-					endSec <= startSec ||
-					(asset.durationSec !== undefined &&
-						(!Number.isFinite(asset.durationSec) || endSec > asset.durationSec))
-				) {
-					return failure(`Word ${wordId} has invalid source timestamps. Nothing was modified.`);
-				}
-				const clips = document.timeline.clips.filter((clip) => {
-					const clipEnd = clip.sourceEndSec ?? asset.durationSec;
-					return (
-						clip.assetId === assetId &&
-						clipEnd !== undefined &&
-						Number.isFinite(clipEnd) &&
-						startSec >= clip.sourceStartSec &&
-						endSec <= clipEnd
-					);
-				});
-				if (clips.length !== 1) {
-					return failure(
-						`Word ${wordId} must be fully contained in exactly one clip; found ${clips.length}. Nothing was modified.`,
-					);
-				}
-				const clip = clips[0];
-				if (
-					document.timeline.trimRanges.some(
-						(trim) =>
-							trimAppliesToClip(trim, clip) && startSec < trim.endSec && endSec > trim.startSec,
-					)
-				) {
-					return failure(`Word ${wordId} is already cut by a trim. Nothing was modified.`);
-				}
-				selected.push({
-					wordId,
-					text: word.text,
-					assetId,
-					clipId: clip.id,
-					index,
-					startSec,
-					endSec,
-				});
-			}
+			const targetById = new Map(targets.map((target) => [target.wordId, target]));
 
 			// Words that follow one another in the transcript go out as ONE cut: a phrase or a
 			// flubbed take cut word by word would leave the gaps between its words playing.
-			selected.sort((a, b) => a.assetId.localeCompare(b.assetId) || a.index - b.index);
-			const runs: Array<typeof selected> = [];
-			for (const word of selected) {
-				const last = runs.at(-1)?.at(-1);
-				if (
-					last?.assetId === word.assetId &&
-					last.clipId === word.clipId &&
-					last.index + 1 === word.index
-				) {
-					runs.at(-1)?.push(word);
-				} else {
-					runs.push([word]);
-				}
-			}
+			const runs = groupWordCutRuns(targets);
 
 			let current = document;
 			const removed: Array<Record<string, unknown>> = [];
-			for (const run of runs) {
+			for (const cutRun of runs) {
+				const run = cutRun.wordIds.flatMap((wordId) => {
+					const target = targetById.get(wordId);
+					return target ? [target] : [];
+				});
 				const first = run[0];
+				if (!first) continue;
 				const ids = run.map((word) => word.wordId).join(", ");
 				const execution = executeAgentTool(
 					current,

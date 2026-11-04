@@ -181,6 +181,8 @@
 		"insertAria": "Yeni kelime",
 		"editorAria": "{{filename}} dökümü",
 		"transcribeNow": "Şimdi dökümünü çıkar",
+		"removeFillers": "Dolgu sözcüklerini kaldır ({{count}})",
+		"fillersRemoved": "Dolgu sözcükleri kaldırıldı",
 		"transcribing": "Döküm çıkarılıyor…",
 		"trimSilence": "Sessizliği kırp ({{duration}} sn)",
 		"removeInserted": "\"{{word}}\" kelimesini sil",

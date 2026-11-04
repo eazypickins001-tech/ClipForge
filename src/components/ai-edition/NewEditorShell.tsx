@@ -19,6 +19,11 @@ import {
 	removeDocumentWords,
 	setDocumentWordText,
 } from "@/lib/ai-edition/document/transcript";
+import {
+	applyWordCutRuns,
+	groupWordCutRuns,
+	planWordCuts,
+} from "@/lib/ai-edition/document/wordCuts";
 import { isModalOpen } from "@/lib/ai-edition/modalGuard";
 import type {
 	AxcutAudioTrack,
@@ -43,6 +48,7 @@ import { useTimeline } from "@/lib/ai-edition/store/useTimeline";
 import { isGeneratedAssetId } from "@/lib/ai-edition/timeline/clip-parts";
 import { clipAtPlayhead, transitionTargetClip } from "@/lib/ai-edition/timeline/clipTargets";
 import { mergeCloseCuts } from "@/lib/ai-edition/timeline/cut-breath";
+import { fillerWordIdsByAsset } from "@/lib/ai-edition/timeline/fillerWords";
 import { newRegionDurationSec } from "@/lib/ai-edition/timeline/newRegionDuration";
 import { REGION_ROW_STEP_PX } from "@/lib/ai-edition/timeline/regionTracks";
 import {
@@ -208,6 +214,7 @@ export async function runLoadedMetadataWrite(
 
 export function NewEditorShell() {
 	const te = useScopedT("editor");
+	const ts = useScopedT("settings");
 	useMcpDocumentHost();
 	const document = useProjectStore((s) => s.document);
 	const projectId = useProjectStore((s) => s.projectId);
@@ -384,6 +391,37 @@ export function NewEditorShell() {
 	void primaryAssetPath;
 	const clips: AxcutClip[] = document?.timeline.clips ?? [];
 	const visibleClips = useMemo(() => (document ? resolveVisibleClips(document) : []), [document]);
+
+	// What one click of "Remove filler words" would actually cut. Read through the SAME plan the cut
+	// uses, so the number on the button is the number of words that would go — not the number that
+	// merely look like hesitations, since a word already inside a trim, or one no single clip fully
+	// contains, cannot be cut at all.
+	const fillerWordCount = useMemo(() => {
+		if (!document) return 0;
+		return fillerWordIdsByAsset(document).reduce(
+			(total, group) => total + planWordCuts(document, group.wordIds, group.assetId).targets.length,
+			0,
+		);
+	}, [document]);
+
+	// CapCut's one-click rough cut, and it is ONE write: every hesitation goes in a single save, so
+	// the whole sweep is one Ctrl+Z rather than one per word.
+	const handleRemoveFillerWords = useCallback(() => {
+		void enqueueTimelineWrite(async () => {
+			const doc = useProjectStore.getState().document;
+			if (!doc) return;
+			const targets = fillerWordIdsByAsset(doc).flatMap(
+				(group) => planWordCuts(doc, group.wordIds, group.assetId).targets,
+			);
+			const next = applyWordCutRuns(doc, groupWordCutRuns(targets), "Filler word", () =>
+				createId("trim"),
+			);
+			// Nothing cuttable: no save, and so no undo step the user cannot see.
+			if (next === doc) return;
+			await saveDocument(next, { history: true });
+			toast.success(ts("transcript.fillersRemoved"));
+		});
+	}, [enqueueTimelineWrite, saveDocument, ts]);
 
 	// Split is LANE-AWARE: an audio take is one pill on its own lane, so with one selected the
 	// razor cuts that take and leaves the picture alone. Otherwise it cuts the picture — and
@@ -1669,6 +1707,8 @@ export function NewEditorShell() {
 		onSetWordText: handleSetWordText,
 		onInsertWord: handleInsertWord,
 		onRemoveWords: handleRemoveWords,
+		onRemoveFillerWords: handleRemoveFillerWords,
+		fillerWordCount,
 		onTranscribe: handleTranscribe,
 		canTranscribe: hasAsset,
 		isTranscribing: transcriptGate.state === "pending",

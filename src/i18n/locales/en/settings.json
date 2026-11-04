@@ -181,6 +181,8 @@
 		"insertAria": "New word",
 		"editorAria": "Transcript for {{filename}}",
 		"transcribeNow": "Transcribe now",
+		"removeFillers": "Remove filler words ({{count}})",
+		"fillersRemoved": "Filler words removed",
 		"transcribing": "Transcribing…",
 		"trimSilence": "Trim silence ({{duration}}s)",
 		"removeInserted": "Delete \"{{word}}\"",

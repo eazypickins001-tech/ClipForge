@@ -181,6 +181,8 @@
 		"insertAria": "كلمة جديدة",
 		"editorAria": "نص {{filename}}",
 		"transcribeNow": "فرّغ النص الآن",
+		"removeFillers": "إزالة كلمات الحشو ({{count}})",
+		"fillersRemoved": "تمت إزالة كلمات الحشو",
 		"transcribing": "جارٍ التفريغ…",
 		"trimSilence": "قص الصمت ({{duration}} ث)",
 		"removeInserted": "حذف \"{{word}}\"",

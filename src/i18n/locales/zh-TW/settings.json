@@ -181,6 +181,8 @@
 		"insertAria": "新字詞",
 		"editorAria": "{{filename}} 的逐字稿",
 		"transcribeNow": "立即產生逐字稿",
+		"removeFillers": "刪除口頭禪 ({{count}})",
+		"fillersRemoved": "已刪除口頭禪",
 		"transcribing": "轉錄中…",
 		"trimSilence": "修剪靜音（{{duration}} 秒）",
 		"removeInserted": "刪除「{{word}}」",
