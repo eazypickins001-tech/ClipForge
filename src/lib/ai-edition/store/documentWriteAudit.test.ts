@@ -156,6 +156,8 @@ const DECLARED: WritePath[] = [
 	// "Remove filler words": one click, every hesitation the shared plan accepts, in ONE save — so
 	// the whole sweep is a single undo step. Nothing cuttable means no save and no empty step.
 	w("src/components/ai-edition/NewEditorShell.tsx", "handleRemoveFillerWords", "save", "gesture"),
+	// "Remove silences": the same contract one row up, over the pauses rather than the hesitations.
+	w("src/components/ai-edition/NewEditorShell.tsx", "handleRemoveSilences", "save", "gesture"),
 	// The transcript lane, chosen in the pane and stored on the document because it decides
 	// the captions burnt into the export (#560). Written through `useCaptions.set`, which
 	// is already in the table under its own name.

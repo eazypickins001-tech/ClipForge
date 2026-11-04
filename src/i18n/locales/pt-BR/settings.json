@@ -183,6 +183,8 @@
 		"transcribeNow": "Transcrever agora",
 		"removeFillers": "Remover muletas ({{count}})",
 		"fillersRemoved": "Muletas removidas",
+		"removeSilences": "Remover silêncios ({{count}})",
+		"silencesRemoved": "Silêncios removidos",
 		"transcribing": "Transcrevendo…",
 		"trimSilence": "Cortar silêncio ({{duration}} s)",
 		"removeInserted": "Excluir \"{{word}}\"",

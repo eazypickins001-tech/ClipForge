@@ -183,6 +183,8 @@
 		"transcribeNow": "فرّغ النص الآن",
 		"removeFillers": "إزالة كلمات الحشو ({{count}})",
 		"fillersRemoved": "تمت إزالة كلمات الحشو",
+		"removeSilences": "إزالة فترات الصمت ({{count}})",
+		"silencesRemoved": "تمت إزالة فترات الصمت",
 		"transcribing": "جارٍ التفريغ…",
 		"trimSilence": "قص الصمت ({{duration}} ث)",
 		"removeInserted": "حذف \"{{word}}\"",

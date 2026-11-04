@@ -183,6 +183,8 @@
 		"transcribeNow": "Jetzt transkribieren",
 		"removeFillers": "Füllwörter entfernen ({{count}})",
 		"fillersRemoved": "Füllwörter entfernt",
+		"removeSilences": "Stille entfernen ({{count}})",
+		"silencesRemoved": "Stille entfernt",
 		"transcribing": "Transkription läuft…",
 		"trimSilence": "Stille trimmen ({{duration}} s)",
 		"removeInserted": "„{{word}}“ löschen",

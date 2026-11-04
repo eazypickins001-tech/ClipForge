@@ -68,7 +68,7 @@ const TRANSCRIPTS = [
 	},
 ] as unknown as AxcutTranscript[];
 
-function mount(fillerWordCount: number) {
+function mount(fillerWordCount = 0, silenceCutCount = 0) {
 	useProjectStore.setState({
 		projectId: "proj_1",
 		document: {
@@ -103,6 +103,7 @@ function mount(fillerWordCount: number) {
 	});
 
 	const onRemoveFillerWords = vi.fn();
+	const onRemoveSilences = vi.fn();
 	render(
 		<I18nProvider>
 			<TranscriptPane
@@ -120,13 +121,15 @@ function mount(fillerWordCount: number) {
 				onRemoveWords={vi.fn()}
 				onRemoveFillerWords={onRemoveFillerWords}
 				fillerWordCount={fillerWordCount}
+				onRemoveSilences={onRemoveSilences}
+				silenceCutCount={silenceCutCount}
 				onTranscribe={vi.fn()}
 				canTranscribe
 				isTranscribing={false}
 			/>
 		</I18nProvider>,
 	);
-	return { onRemoveFillerWords };
+	return { onRemoveFillerWords, onRemoveSilences };
 }
 
 afterEach(() => {
@@ -148,5 +151,23 @@ describe("remove filler words", () => {
 	it("offers nothing when there is not a word to cut", () => {
 		mount(0);
 		expect(screen.queryByTestId("remove-filler-words")).not.toBeInTheDocument();
+	});
+
+	it("offers the pause sweep separately, counted on its own", () => {
+		// The two actions are independent: hesitations are words, pauses are the gaps between them,
+		// and one can be worth doing while the other is not.
+		const { onRemoveSilences } = mount(0, 4);
+		const button = screen.getByTestId("remove-silences");
+		expect(button).toHaveTextContent("Remove silences (4)");
+		expect(screen.queryByTestId("remove-filler-words")).not.toBeInTheDocument();
+
+		fireEvent.click(button);
+		expect(onRemoveSilences).toHaveBeenCalledTimes(1);
+	});
+
+	it("offers no pause sweep when no pause is long enough", () => {
+		mount(2, 0);
+		expect(screen.queryByTestId("remove-silences")).not.toBeInTheDocument();
+		expect(screen.getByTestId("remove-filler-words")).toBeInTheDocument();
 	});
 });

@@ -51,6 +51,7 @@ import { mergeCloseCuts } from "@/lib/ai-edition/timeline/cut-breath";
 import { fillerWordIdsByAsset } from "@/lib/ai-edition/timeline/fillerWords";
 import { newRegionDurationSec } from "@/lib/ai-edition/timeline/newRegionDuration";
 import { REGION_ROW_STEP_PX } from "@/lib/ai-edition/timeline/regionTracks";
+import { findSilenceCuts } from "@/lib/ai-edition/timeline/silenceCuts";
 import {
 	dropTrimPillsByIds,
 	trimAppliesToClip,
@@ -404,6 +405,13 @@ export function NewEditorShell() {
 		);
 	}, [document]);
 
+	// How many long pauses "Remove silences" would cut. Derived, not read: the transcript holds
+	// speech only, so a pause IS the gap between two words — see `silenceCuts`.
+	const silenceCutCount = useMemo(
+		() => (document ? findSilenceCuts(document).length : 0),
+		[document],
+	);
+
 	// CapCut's one-click rough cut, and it is ONE write: every hesitation goes in a single save, so
 	// the whole sweep is one Ctrl+Z rather than one per word.
 	const handleRemoveFillerWords = useCallback(() => {
@@ -420,6 +428,19 @@ export function NewEditorShell() {
 			if (next === doc) return;
 			await saveDocument(next, { history: true });
 			toast.success(ts("transcript.fillersRemoved"));
+		});
+	}, [enqueueTimelineWrite, saveDocument, ts]);
+
+	// "Remove silences": every pause past the threshold, in ONE write — so it is one Ctrl+Z, the
+	// same contract as the filler sweep above.
+	const handleRemoveSilences = useCallback(() => {
+		void enqueueTimelineWrite(async () => {
+			const doc = useProjectStore.getState().document;
+			if (!doc) return;
+			const next = applyWordCutRuns(doc, findSilenceCuts(doc), "Silence", () => createId("trim"));
+			if (next === doc) return;
+			await saveDocument(next, { history: true });
+			toast.success(ts("transcript.silencesRemoved"));
 		});
 	}, [enqueueTimelineWrite, saveDocument, ts]);
 
@@ -1709,6 +1730,8 @@ export function NewEditorShell() {
 		onRemoveWords: handleRemoveWords,
 		onRemoveFillerWords: handleRemoveFillerWords,
 		fillerWordCount,
+		onRemoveSilences: handleRemoveSilences,
+		silenceCutCount,
 		onTranscribe: handleTranscribe,
 		canTranscribe: hasAsset,
 		isTranscribing: transcriptGate.state === "pending",

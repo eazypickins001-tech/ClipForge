@@ -183,6 +183,8 @@
 		"transcribeNow": "Şimdi dökümünü çıkar",
 		"removeFillers": "Dolgu sözcüklerini kaldır ({{count}})",
 		"fillersRemoved": "Dolgu sözcükleri kaldırıldı",
+		"removeSilences": "Sessizlikleri kaldır ({{count}})",
+		"silencesRemoved": "Sessizlikler kaldırıldı",
 		"transcribing": "Döküm çıkarılıyor…",
 		"trimSilence": "Sessizliği kırp ({{duration}} sn)",
 		"removeInserted": "\"{{word}}\" kelimesini sil",

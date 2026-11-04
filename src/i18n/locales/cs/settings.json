@@ -183,6 +183,8 @@
 		"transcribeNow": "Přepsat nyní",
 		"removeFillers": "Odstranit slovní vatu ({{count}})",
 		"fillersRemoved": "Slovní vata odstraněna",
+		"removeSilences": "Odstranit ticho ({{count}})",
+		"silencesRemoved": "Ticho odstraněno",
 		"transcribing": "Přepisování…",
 		"trimSilence": "Oříznutí ticha ({{duration}}s)",
 		"removeInserted": "Smazat „{{word}}”",

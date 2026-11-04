@@ -183,6 +183,8 @@
 		"transcribeNow": "立即產生逐字稿",
 		"removeFillers": "刪除口頭禪 ({{count}})",
 		"fillersRemoved": "已刪除口頭禪",
+		"removeSilences": "刪除靜音段 ({{count}})",
+		"silencesRemoved": "已刪除靜音段",
 		"transcribing": "轉錄中…",
 		"trimSilence": "修剪靜音（{{duration}} 秒）",
 		"removeInserted": "刪除「{{word}}」",

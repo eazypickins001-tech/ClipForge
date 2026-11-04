@@ -183,6 +183,8 @@
 		"transcribeNow": "Transcribe now",
 		"removeFillers": "Remove filler words ({{count}})",
 		"fillersRemoved": "Filler words removed",
+		"removeSilences": "Remove silences ({{count}})",
+		"silencesRemoved": "Silences removed",
 		"transcribing": "Transcribing…",
 		"trimSilence": "Trim silence ({{duration}}s)",
 		"removeInserted": "Delete \"{{word}}\"",

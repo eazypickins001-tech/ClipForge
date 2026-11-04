@@ -837,6 +837,8 @@ export function TranscriptPane({
 	onRemoveWords,
 	onRemoveFillerWords,
 	fillerWordCount,
+	onRemoveSilences,
+	silenceCutCount,
 	onTranscribe,
 	canTranscribe,
 	isTranscribing,
@@ -878,6 +880,10 @@ export function TranscriptPane({
 	onRemoveFillerWords: () => void;
 	/** How many words that click would cut. Zero hides the button: it never promises a no-op. */
 	fillerWordCount: number;
+	/** Cut every long pause, in one write. Same contract: one click, one undo step. */
+	onRemoveSilences: () => void;
+	/** How many pauses that click would cut. Zero hides the button, as above. */
+	silenceCutCount: number;
 	onTranscribe: () => void;
 	canTranscribe: boolean;
 	isTranscribing: boolean;
@@ -1033,6 +1039,16 @@ export function TranscriptPane({
 							onClick={onRemoveFillerWords}
 						>
 							{ts("transcript.removeFillers", { count: fillerWordCount })}
+						</button>
+					) : null}
+					{silenceCutCount > 0 ? (
+						<button
+							type="button"
+							className={styles.btn}
+							data-testid="remove-silences"
+							onClick={onRemoveSilences}
+						>
+							{ts("transcript.removeSilences", { count: silenceCutCount })}
 						</button>
 					) : null}
 					<CaptionSettingsButton onOpen={() => setCaptionsOpen(true)} />

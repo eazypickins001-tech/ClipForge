@@ -13,7 +13,7 @@
 // `mergeCloseCuts` to avoid a one-frame flash beside an existing cut), so the two paths cut the
 // media the same way even though they report differently.
 
-import type { AxcutDocument, AxcutTranscript } from "../schema";
+import type { AxcutClip, AxcutDocument, AxcutTranscript } from "../schema";
 import { isGeneratedAssetId } from "../timeline/clip-parts";
 import { type BreathWord, breatheCut, mergeCloseCuts } from "../timeline/cut-breath";
 import { trimAppliesToClip } from "../timeline/trim-mapping";
@@ -52,13 +52,17 @@ export interface WordCutTarget {
 	endSec: number;
 }
 
-/** One cut, covering one or more consecutive words of one clip. */
-export interface WordCutRun {
+/** A cut, as the write path needs it: a span on one clip. */
+export interface CutRun {
 	assetId: string;
 	clipId: string;
-	wordIds: string[];
 	startSec: number;
 	endSec: number;
+}
+
+/** One cut covering one or more consecutive words of one clip. */
+export interface WordCutRun extends CutRun {
+	wordIds: string[];
 }
 
 /** Every transcript the document holds, primary first, without duplicating the legacy single one. */
@@ -71,6 +75,33 @@ export function documentTranscripts(document: AxcutDocument): AxcutTranscript[] 
 		transcripts.push(document.transcript);
 	}
 	return transcripts;
+}
+
+/**
+ * The placed clips that fully own a source span — one of them means the span has a single owner and
+ * a cut has somewhere to sit; none, or several, means it does not.
+ *
+ * An unprobed clip carries no `sourceEndSec`; it falls back to the asset's duration, which is the
+ * window it will have once the real duration is known. Shared so a word cut and a silence cut
+ * cannot answer "which clip is this in" differently.
+ */
+export function clipsOwningSpan(
+	clips: readonly AxcutClip[],
+	assetId: string,
+	durationSec: number | undefined,
+	startSec: number,
+	endSec: number,
+): AxcutClip[] {
+	return clips.filter((clip) => {
+		const clipEnd = clip.sourceEndSec ?? durationSec;
+		return (
+			clip.assetId === assetId &&
+			clipEnd !== undefined &&
+			Number.isFinite(clipEnd) &&
+			startSec >= clip.sourceStartSec &&
+			endSec <= clipEnd
+		);
+	});
 }
 
 /**
@@ -119,19 +150,14 @@ export function planWordCuts(
 			rejected.push({ wordId, reason: "bad-timestamps" });
 			continue;
 		}
-		// Exactly one clip has to own the whole word, or the cut has no single owner. An unprobed
-		// clip carries no `sourceEndSec`; it falls back to the asset's duration, which is the window
-		// the clip will have once the real duration is known.
-		const clips = document.timeline.clips.filter((clip) => {
-			const clipEnd = clip.sourceEndSec ?? asset.durationSec;
-			return (
-				clip.assetId === wordAssetId &&
-				clipEnd !== undefined &&
-				Number.isFinite(clipEnd) &&
-				startSec >= clip.sourceStartSec &&
-				endSec <= clipEnd
-			);
-		});
+		// Exactly one clip has to own the whole word, or the cut has no single owner.
+		const clips = clipsOwningSpan(
+			document.timeline.clips,
+			wordAssetId,
+			asset.durationSec,
+			startSec,
+			endSec,
+		);
 		if (clips.length !== 1) {
 			rejected.push({ wordId, reason: "not-in-one-clip", clipCount: clips.length });
 			continue;
@@ -205,7 +231,7 @@ export function groupWordCutRuns(targets: readonly WordCutTarget[]): WordCutRun[
  */
 export function wordCutRunsToTrims(
 	document: AxcutDocument,
-	runs: readonly WordCutRun[],
+	runs: readonly CutRun[],
 	reason: string,
 	makeId: () => string,
 ): AxcutDocument["timeline"]["trimRanges"] {
@@ -254,7 +280,7 @@ export function wordCutRunsToTrims(
  */
 export function applyWordCutRuns(
 	document: AxcutDocument,
-	runs: readonly WordCutRun[],
+	runs: readonly CutRun[],
 	reason: string,
 	makeId: () => string,
 ): AxcutDocument {

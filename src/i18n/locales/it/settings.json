@@ -183,6 +183,8 @@
 		"transcribeNow": "Trascrivi ora",
 		"removeFillers": "Rimuovi le interiezioni ({{count}})",
 		"fillersRemoved": "Interiezioni rimosse",
+		"removeSilences": "Rimuovi i silenzi ({{count}})",
+		"silencesRemoved": "Silenzi rimossi",
 		"transcribing": "Trascrizione…",
 		"trimSilence": "Taglia silenzio ({{duration}} s)",
 		"removeInserted": "Elimina «{{word}}»",

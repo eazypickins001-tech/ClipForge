@@ -183,6 +183,8 @@
 		"transcribeNow": "Chép lời ngay",
 		"removeFillers": "Xóa từ đệm ({{count}})",
 		"fillersRemoved": "Đã xóa từ đệm",
+		"removeSilences": "Xóa khoảng lặng ({{count}})",
+		"silencesRemoved": "Đã xóa khoảng lặng",
 		"transcribing": "Đang chép lời…",
 		"trimSilence": "Cắt khoảng lặng ({{duration}} giây)",
 		"removeInserted": "Xoá \"{{word}}\"",
