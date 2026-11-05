@@ -1650,6 +1650,39 @@
 	overflow: hidden;
 	text-overflow: ellipsis;
 }
+/* A captured focus key, drawn where it falls inside the region. Above the pill's own fill and
+   below the add button; the pill clips its overflow, so a key at 100% cannot paint past the edge. */
+.lanePillKeyTick {
+	position: absolute;
+	top: 0;
+	bottom: 0;
+	width: 1px;
+	margin-left: -0.5px;
+	background: color-mix(in oklab, var(--fg) 55%, transparent);
+	pointer-events: none;
+}
+/* The focus path's door on a zoom pill. Inset past the right resize grip, which owns the outermost
+   pixels of the edge: a button sitting on the handle would make the pill un-resizable. */
+.lanePillKeyAdd {
+	position: absolute;
+	top: 50%;
+	right: 10px;
+	z-index: 3;
+	width: 16px;
+	height: 16px;
+	margin-top: -8px;
+	padding: 0;
+	border: 1px solid var(--border);
+	border-radius: 8px;
+	background: var(--surface-1);
+	color: var(--fg);
+	font-size: 11px;
+	line-height: 1;
+	cursor: pointer;
+}
+.lanePillKeyAdd:hover {
+	background: var(--accent-soft);
+}
 .laneAnnotation {
 	--_c: var(--annotation);
 }

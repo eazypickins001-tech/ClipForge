@@ -74,6 +74,7 @@ import { clipAtPlayhead } from "@/lib/ai-edition/timeline/clipTargets";
 import { formatSeconds } from "@/lib/ai-edition/timeline/format";
 import { coalescedTrimGroups } from "@/lib/ai-edition/timeline/trim-mapping";
 import { zoomLevelFor } from "@/lib/ai-edition/timeline/zoom-scale";
+import { addFocusKeyframe } from "@/lib/ai-edition/timeline/zoomKeyframes";
 import { clampToBound } from "@/lib/projectDefaults";
 import { checkShaderEffectCode } from "@/native/compositorViewClient";
 import { annotationFootageRect, zoomScaleLimit } from "@/native/sceneDescription";
@@ -1055,22 +1056,14 @@ function SelectionPane({ tl, onClose }: { tl: TimelineApi; onClose: () => void }
 								onClick={() => {
 									// Read at click time, never subscribed: the playhead is rewritten every
 									// animation frame of playback and this pane must not re-render on it.
-									const playheadSec = useProjectStore.getState().currentTimeSec;
-									const startSec = region.startMs / 1000;
-									const span = Math.max(1e-3, region.endMs / 1000 - startSec);
-									const at = (playheadSec - startSec) / span;
-									if (!(at >= 0 && at <= 1)) {
+									// The capture rule is shared with the zoom pill's own button.
+									const next = addFocusKeyframe(region, useProjectStore.getState().currentTimeSec);
+									if (!next) {
 										// The hit is reported, not disabled — the same contract as every other
 										// playhead action in this pane (see the rail's Split).
 										toast.info(ts("zoom.keyframes.needsPlayhead"));
 										return;
 									}
-									// One key per instant: keying twice in the same place replaces rather than
-									// stacks, so a double click cannot leave a duplicate to remove.
-									const next = [
-										...(region.keyframes ?? []).filter((k) => Math.abs(k.at - at) > 0.005),
-										{ at, cx: region.focus.cx, cy: region.focus.cy },
-									].sort((a, b) => a.at - b.at);
 									void tl.setZoomKeyframes(region.id, next);
 								}}
 							>

@@ -83,6 +83,7 @@ import {
 	transitionCutsMs,
 	zoomTransitions,
 } from "@/lib/ai-edition/timeline/zoom-transitions";
+import { addFocusKeyframe } from "@/lib/ai-edition/timeline/zoomKeyframes";
 import { formatBinding } from "@/lib/shortcuts";
 import { nativeBridgeClient } from "@/native/client";
 import { TransportBar } from "../TransportBar";
@@ -1787,6 +1788,18 @@ export function V4Timeline({
 		// The box is exactly as long as the effect is; only what fits INSIDE it
 		// varies with the zoom.
 		const { compact, roomForLabel } = pillAffordance(durSec, pxPerSec);
+		// A zoom can carry a focus path, and until now the only way to find that out was to select
+		// the pill and read the inspector. So the pill says it itself: a tick where each key sits,
+		// and a button that captures one at the playhead. `sourceIds` covers a pill coalesced from
+		// several fragments, so the union of their keys is what is drawn.
+		const zoomRegions =
+			p.kind === "zoom"
+				? p.sourceIds.flatMap((id) => {
+						const region = tl.zoomRegions.find((z) => z.id === id);
+						return region ? [region] : [];
+					})
+				: [];
+		const zoomKeyframes = zoomRegions.flatMap((region) => region.keyframes ?? []);
 		return (
 			<div
 				key={seg.key}
@@ -1856,6 +1869,48 @@ export function V4Timeline({
 						style={{ left: compact ? -PILL_HANDLE_OUT_PX : 0 }}
 						onPointerDown={(e) => startPillDrag(e, p, "l")}
 					/>
+				) : null}
+				{/* One tick per captured key, at its place in the region. Decorative: the button
+				    below and the inspector's list are the accessible surface. */}
+				{zoomKeyframes.map((key, index) => (
+					<span
+						key={`${key.at}-${index}`}
+						aria-hidden
+						className={styles.lanePillKeyTick}
+						style={{ left: `${key.at * 100}%` }}
+					/>
+				))}
+				{/* The focus path's door, on the pill itself: until now it was only reachable by
+				    selecting the zoom and finding the inspector section. Captures the key HERE,
+				    at the playhead, so the timeline is enough to author a first one. */}
+				{p.kind === "zoom" ? (
+					<button
+						type="button"
+						className={styles.lanePillKeyAdd}
+						data-testid={`zoom-keyframe-${p.id}`}
+						aria-label={ts("zoom.keyframes.add")}
+						title={ts("zoom.keyframes.add")}
+						// The pill's pointer-down begins a drag; this is a button, not a grip.
+						onPointerDown={(e) => e.stopPropagation()}
+						onClick={(e) => {
+							e.stopPropagation();
+							const playhead = useProjectStore.getState().currentTimeSec;
+							const region =
+								zoomRegions.find(
+									(z) => playhead >= z.startMs / 1000 && playhead <= z.endMs / 1000,
+								) ?? zoomRegions[0];
+							if (!region) return;
+							const next = addFocusKeyframe(region, playhead);
+							if (!next) {
+								// Outside every region this pill covers: say so rather than no-op.
+								toast.info(ts("zoom.keyframes.needsPlayhead"));
+								return;
+							}
+							void tl.setZoomKeyframes(region.id, next);
+						}}
+					>
+						◇
+					</button>
 				) : null}
 				{seg.showContent && roomForLabel ? (
 					<>
