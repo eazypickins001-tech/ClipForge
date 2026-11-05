@@ -7,7 +7,7 @@
 
 import { describe, expect, it } from "vitest";
 import type { AxcutClip, AxcutTransition } from "../schema";
-import { resolvePlaybackSegments } from "./timeline";
+import { playbackOverlaps, resolvePlaybackSegments } from "./timeline";
 
 function clip(id: string, startSec: number, endSec: number): AxcutClip {
 	return {
@@ -114,4 +114,42 @@ describe("resolvePlaybackSegments without transitions", () => {
 			[10, 20],
 		]);
 	});
+});
+
+// `playbackOverlaps` is the per-CLIP view of the same arithmetic: the scene emit reads it, while the
+// programme is what actually lays the clips out. Two walks over one rule, so they are pinned against
+// each other here on the same cases the rest of the suite uses — if one drifts, the blend would run
+// for a different number of seconds than the overlap it sits in.
+describe("playbackOverlaps agrees with the segments it describes", () => {
+	/** Read the overlap off the LAYOUT rather than off the rule: a segment whose programme start
+	 *  precedes the previous segment's end is the one overlapping it. */
+	const deriveFromSegments = (clips: AxcutClip[], transitions: AxcutTransition[]) => {
+		const segments = resolvePlaybackSegments(clips, [], transitions);
+		const overlaps = new Map<string, number>();
+		for (let i = 1; i < segments.length; i += 1) {
+			const overlap = segments[i - 1].timelineEndSec - segments[i].timelineStartSec;
+			if (overlap > 1e-6) overlaps.set(segments[i].id, overlap);
+		}
+		return overlaps;
+	};
+
+	const cases: Array<[string, AxcutClip[], AxcutTransition[]]> = [
+		["a simple dissolve", TWO, [blend("b", 1000)]],
+		["a dip, which overlaps nothing", TWO, [dip("b", 1000)]],
+		["a clamped dissolve", [clip("a", 0, 2), clip("b", 2, 4)], [blend("b", 3000)]],
+		[
+			"two dissolves around one short clip",
+			[clip("a", 0, 10), clip("b", 10, 11), clip("c", 11, 21)],
+			[blend("b", 1000), blend("c", 1000)],
+		],
+		["no transitions", TWO, []],
+	];
+
+	for (const [name, clips, transitions] of cases) {
+		it(name, () => {
+			expect(playbackOverlaps(clips, [], transitions)).toEqual(
+				deriveFromSegments(clips, transitions),
+			);
+		});
+	}
 });

@@ -72,7 +72,7 @@ import type { FrameTheme, RecordingFrame, WebcamAnchor } from "@/lib/projectDefa
 import { resolveTextFontFamily } from "@/lib/textFonts";
 import { classifyWallpaper } from "@/lib/wallpaper";
 import { getFocusBoundsForScale } from "@/lib/zoomMath/focusUtils";
-import { clipVideoDips } from "./clipVideoDips";
+import { clipIncomingBlends, clipVideoDips } from "./clipVideoDips";
 import type { CompositorClipInput } from "./contracts";
 import { ROUNDNESS_REFERENCE_PX } from "./paramUnits";
 
@@ -728,6 +728,7 @@ export function buildNativeClipList(document: AxcutDocument): CompositorClipInpu
 	const assetById = new Map(document.assets.map((a) => [a.id, a]));
 	const visible = resolveVisibleClips(document);
 	const dips = clipVideoDips(document, visible);
+	const blends = clipIncomingBlends(document, visible);
 	return visible.flatMap((clip) => {
 		const asset = assetById.get(clip.assetId);
 		if (!asset?.originalPath) {
@@ -739,6 +740,7 @@ export function buildNativeClipList(document: AxcutDocument): CompositorClipInpu
 		// → timeline-length guess). See `resolveClipSourceEndSec` for the full order.
 		const sourceEndSec = resolveClipSourceEndSec(clip, asset);
 		const dip = dips.get(clip.id);
+		const blend = blends.get(clip.id);
 		// ponytail: `hasAudio` stays optimistic about the FILE, for the same reason as in
 		// `buildSceneDescription` — nothing populates `asset.audio` yet, and the native side
 		// degrades cleanly on a stream-less file. Mute is the one thing that overrides it.
@@ -763,6 +765,10 @@ export function buildNativeClipList(document: AxcutDocument): CompositorClipInpu
 				// export ARGUMENT this rides along unused; the scene's clip list is the copy the
 				// compositor actually reads.
 				...(dip ? { videoDip: dip } : {}),
+				// The dissolve this clip comes IN from. `videoDip` above lives inside the clip; a
+				// blend spans the two, which is why the programme is shorter by this much and why
+				// the value comes from the programme rather than from `transition.durationMs`.
+				...(blend ? { incomingBlend: blend } : {}),
 			},
 		];
 	});
@@ -1116,11 +1122,15 @@ export function buildSceneDescription(
 	// live preview composes from this very scene. The export's clip ARGUMENT never reaches the
 	// draw path, so this list is the one that has to carry it.
 	const dips = clipVideoDips(document, visibleClips);
+	// Same reasoning as the dip above, and the same helper: a blend is a SCENE property too, and it
+	// has to be the scene's copy of the clip list that carries it.
+	const blends = clipIncomingBlends(document, visibleClips);
 	const clips: CompositorClipInput[] = visibleClips.flatMap((clip) => {
 		const asset = assetById.get(clip.assetId);
 		if (!asset?.originalPath) return [];
 		const camera = assetCameraSource(asset);
 		const dip = dips.get(clip.id);
+		const blend = blends.get(clip.id);
 		// ponytail: `asset.audio` exists in the schema but the probe pipeline never
 		// populates it, so there is no per-asset "is there a track?" signal to read
 		// yet. Every consumer downstream degrades on a stream-less file (audio.rs
@@ -1147,6 +1157,9 @@ export function buildSceneDescription(
 				// at its edges. Absent on a clip with no transition on either side, which is what
 				// keeps a project that never used one rendering exactly as it did before.
 				...(dip ? { videoDip: dip } : {}),
+				// The dissolve this clip comes IN from: both pictures at once, over the window the
+				// programme opened. Absent on a clip with no blend on its left edge.
+				...(blend ? { incomingBlend: blend } : {}),
 				// A held segment has an empty source window and exists only for the frames it
 				// holds; every other clip holds nothing.
 			},

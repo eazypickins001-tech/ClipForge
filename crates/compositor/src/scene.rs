@@ -43,6 +43,25 @@ pub struct SceneClip {
     /// d'une build antérieure se lit « pas de fondu », elle ne fait pas échouer la scène.
     #[serde(default)]
     pub video_dip: Option<SceneClipDip>,
+    /// Le MÉLANGE dont ce clip sort — les deux images en même temps, donc les deux clips se
+    /// chevauchent et le programme est plus court de `duration_sec` (voir
+    /// `timeline/transitionOverlap.ts`). Distinct de `video_dip`, qui vit à l'intérieur d'un clip.
+    /// `duration_sec` est le chevauchement DÉJÀ BORNÉ par le programme, jamais la durée demandée :
+    /// une build native plus ancienne ignore ce champ et coupe net, ce qui reste regardable — c'est
+    /// la même moitié de portage assumée que pour `video_dip`.
+    #[serde(default)]
+    pub incoming_blend: Option<SceneBlend>,
+}
+
+/// Un mélange entre deux clips (`incoming_blend` ci-dessus). `kind` n'est lu que pour un futur
+/// balayage : toutes les variantes actuelles sont le même fondu croisé.
+#[derive(Debug, Clone, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SceneBlend {
+    #[serde(default)]
+    pub kind: String,
+    #[serde(default)]
+    pub duration_sec: f64,
 }
 
 #[derive(Debug, Clone, Copy, Deserialize)]

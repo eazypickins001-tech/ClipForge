@@ -262,6 +262,61 @@ export function resolvePlaybackSegments(
 }
 
 /**
+ * Programme seconds each clip's LEFT edge overlaps the clip before it — BLEND boundaries only, and
+ * the CLAMPED value rather than the authored duration.
+ *
+ * A second walk over the same inputs, deliberately beside the first. The scene needs this per CLIP,
+ * and `PlaybackSegment` is a plain `AxcutClip` whose id gains a `_segN` suffix once a trim splits it,
+ * so a segment list cannot say which clip a piece came from. `transitionOverlap.test.ts` and
+ * `timeline.programmeOverlap.test.ts` pin the two walks against each other on the same cases: the
+ * segment list and this map must always describe one programme, never two.
+ */
+export function playbackOverlaps(
+	clips: AxcutClip[],
+	trimRanges: AxcutTrimRange[],
+	transitions?: readonly AxcutTransition[],
+): Map<string, number> {
+	const ordered = [...clips].sort((a, b) => a.timelineStartSec - b.timelineStartSec);
+	const blends = (transitions ?? []).filter((transition) => transition.side !== "out");
+	const overlaps = new Map<string, number>();
+	let consumedFromPrevious = 0;
+	let previousKeptSec = 0;
+	for (const [index, clip] of ordered.entries()) {
+		const keptSec = keptLengthSec(clip, trimRanges);
+		if (index > 0) {
+			const transition = blends.find((candidate) => candidate.clipId === clip.id);
+			const overlap = blendOverlapSec({
+				kind: transition?.kind,
+				durationMs: transition?.durationMs,
+				outgoingKeptSec: previousKeptSec,
+				incomingKeptSec: keptSec,
+				alreadyConsumedSec: consumedFromPrevious,
+			});
+			if (overlap > 0) overlaps.set(clip.id, overlap);
+			consumedFromPrevious = overlap;
+		}
+		previousKeptSec = keptSec;
+	}
+	return overlaps;
+}
+
+/** Kept (post-trim) seconds of one clip — the same subtraction the programme does, in one place so
+ *  the two walks cannot disagree about what a trim removed. An unprobed clip has no source extent
+ *  and keeps its ruler length. */
+function keptLengthSec(clip: AxcutClip, trimRanges: AxcutTrimRange[]): number {
+	const sourceEnd = clip.sourceEndSec ?? clip.sourceStartSec;
+	if (!(sourceEnd > clip.sourceStartSec)) {
+		return Math.max(0, clip.timelineEndSec - clip.timelineStartSec);
+	}
+	let kept: Interval[] = [{ startSec: clip.sourceStartSec, endSec: sourceEnd }];
+	for (const trim of trimRanges) {
+		if (!trimAppliesToClip(trim, clip)) continue;
+		kept = subtractInterval(kept, { startSec: trim.startSec, endSec: trim.endSec });
+	}
+	return kept.reduce((sum, piece) => sum + Math.max(0, piece.endSec - piece.startSec), 0);
+}
+
+/**
  * Project a RAW/document-timeline second (the ruler where trims still occupy their space)
  * onto the trim-COMPRESSED output programme — the concatenation of the kept segments that
  * {@link resolvePlaybackSegments} produces and that `audio::mix_external_tracks` overlays on.

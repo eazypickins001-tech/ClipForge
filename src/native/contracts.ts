@@ -226,6 +226,17 @@ export interface CompositorClipInput {
 		/** "#rrggbb" the dip passes through. */
 		color: string;
 	};
+	/** The BLEND this clip dissolves IN from — both pictures moving at once, so the two clips
+	 *  overlap and the programme is shorter by `durationSec` (`timeline/transitionOverlap.ts`).
+	 *  Distinct from `videoDip`, which lives inside each clip. Absent means a hard cut, and
+	 *  `durationSec` is the CLAMPED overlap the programme actually opened, never the authored
+	 *  duration. Emitted ahead of the compositor pass that reads it: serde ignores fields it does
+	 *  not know, so this half ships without changing what the current native build draws. */
+	incomingBlend?: {
+		/** Always a blend kind — `dissolve` so far. */
+		kind: string;
+		durationSec: number;
+	};
 }
 
 /** Bilan d'un export natif (mesure enveloppante §10 : frames, durée, fps). */

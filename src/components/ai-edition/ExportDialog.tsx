@@ -45,7 +45,7 @@ import {
 	useIsCpuCompositor,
 } from "@/native";
 import { NativeBridgeRequestError } from "@/native/client";
-import { clipVideoDips } from "@/native/clipVideoDips";
+import { clipIncomingBlends, clipVideoDips } from "@/native/clipVideoDips";
 import type { CompositorClipInput } from "@/native/contracts";
 import { buildSceneDescription, resolveVisibleClips } from "@/native/sceneDescription";
 import { exportErrorMessage } from "./exportError";
@@ -121,6 +121,7 @@ function buildNativeClipList(document: AxcutDocument): CompositorClipInput[] {
 	const assetById = new Map(document.assets.map((a) => [a.id, a]));
 	const visible = resolveVisibleClips(document);
 	const dips = clipVideoDips(document, visible);
+	const blends = clipIncomingBlends(document, visible);
 	return visible.flatMap((clip) => {
 		const asset = assetById.get(clip.assetId);
 		if (!asset?.originalPath) {
@@ -132,6 +133,7 @@ function buildNativeClipList(document: AxcutDocument): CompositorClipInput[] {
 		// → timeline-length guess). See `resolveClipSourceEndSec` for the full order.
 		const sourceEndSec = resolveClipSourceEndSec(clip, asset);
 		const dip = dips.get(clip.id);
+		const blend = blends.get(clip.id);
 		// ponytail: `hasAudio` stays optimistic about the FILE, for the same reason as in
 		// `buildSceneDescription` — nothing populates `asset.audio` yet, and the native side
 		// degrades cleanly on a stream-less file. Mute is the one thing that overrides it.
@@ -155,6 +157,9 @@ function buildNativeClipList(document: AxcutDocument): CompositorClipInput[] {
 				// The boundary dip, computed by the SAME helper the canonical list uses (see
 				// `@/native/clipVideoDips`) rather than a second copy of the rule.
 				...(dip ? { videoDip: dip } : {}),
+				// The blend, from the SAME helper the canonical list uses. Two copies of this rule
+				// is the drift this module's header warns about.
+				...(blend ? { incomingBlend: blend } : {}),
 			},
 		];
 	});

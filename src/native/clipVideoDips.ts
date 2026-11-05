@@ -1,8 +1,13 @@
+import { playbackOverlaps } from "@/lib/ai-edition/document/timeline";
 import type { AxcutDocument, AxcutTransition } from "@/lib/ai-edition/schema";
+import { isBlendKind } from "@/lib/ai-edition/timeline/transitionOverlap";
 import type { CompositorClipInput } from "./contracts";
 
 /** The dip a clip's composed frame is ramped through at a boundary. */
 export type ClipVideoDip = NonNullable<CompositorClipInput["videoDip"]>;
+
+/** The blend a clip dissolves IN from. */
+export type ClipIncomingBlend = NonNullable<CompositorClipInput["incomingBlend"]>;
 
 /**
  * The per-clip video dip that a clip's own transition and its neighbour's ask for. `fadeInSec`
@@ -55,4 +60,49 @@ export function transitionColor(transition: AxcutTransition): string {
 	if (transition.kind === "dip-white") return "#ffffff";
 	if (transition.kind === "dip-color") return transition.color ?? "#000000";
 	return "#000000";
+}
+
+/**
+ * The blend each clip dissolves IN from, keyed by the clip that FOLLOWS the cut — the same edge
+ * `clipVideoDips` writes `fadeInSec` on, and emitted from the same two clip lists for the same
+ * reason.
+ *
+ * The duration is the CLAMPED overlap `playbackOverlaps` reports, NOT `transition.durationMs / 1000`:
+ * a 3 s dissolve between two 1 s clips overlaps by 0.5 s, and a blend that ran for the authored 3 s
+ * would drift out of the window the programme actually opened — two clips' worth of material in a
+ * half-second gap. Reading it off the programme also means the walk never re-derives the clamp in
+ * Rust, where it would be a second implementation of the same rule.
+ *
+ * A dip asks for nothing: its duration is already carried by `videoDip`, and overlapping for one
+ * would shorten the video for an effect that does not need it.
+ */
+export function clipIncomingBlends(
+	document: AxcutDocument,
+	clips: Array<{ id: string }>,
+): Map<string, ClipIncomingBlend> {
+	const blends = new Map<string, ClipIncomingBlend>();
+	const present = new Set(clips.map((clip) => clip.id));
+	const requested = (document.transitions ?? []).filter(
+		(transition) =>
+			transition.side !== "out" && isBlendKind(transition.kind) && present.has(transition.clipId),
+	);
+	if (requested.length === 0) {
+		// The same property the dips rest on: a project with no blend transition emits no
+		// `incomingBlend` at all, so its payload and its render are what they were.
+		return blends;
+	}
+	const overlaps = playbackOverlaps(
+		document.timeline.clips,
+		document.timeline.trimRanges,
+		document.transitions,
+	);
+	for (const transition of requested) {
+		const durationSec = overlaps.get(transition.clipId) ?? 0;
+		// Zero means the clamp refused the boundary (a neighbour with no kept length left). A blend
+		// window of no seconds is a hard cut, so emit nothing rather than a zero-length pass.
+		if (durationSec > 0) {
+			blends.set(transition.clipId, { kind: transition.kind, durationSec });
+		}
+	}
+	return blends;
 }
