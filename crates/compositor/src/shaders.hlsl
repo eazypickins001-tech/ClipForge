@@ -4370,6 +4370,17 @@ float4 ps_blur(FSOut i) : SV_Target
 // simple copie/échantillonnage d'une texture RGBA (pour redessiner le fond flouté)
 float4 ps_tex(FSOut i) : SV_Target { return rgbTex.Sample(sampNV, i.uv); }
 
+// Fondu croisé d'une frontière : `rgbTex` porte l'image SORTANTE (un cliché du rendu précédent,
+// pris avant que le clip entrant ne commence à dessiner) et `fx.x` son opacité — 1.0 au premier
+// frame du chevauchement, 0.0 au dernier. Dessiné PAR-DESSUS le clip entrant déjà composé, avec le
+// blend « over prémultiplié » : la même convention que le calque de textes, donc le rgb est
+// multiplié par l'alpha ici plutôt que par l'état de blend.
+float4 ps_dissolve(FSOut i) : SV_Target
+{
+    float4 c = rgbTex.Sample(sampNV, i.uv);
+    return float4(c.rgb * fx.x, fx.x);
+}
+
 // ============ Dual-Kawase (fond flouté rapide) ============
 // fx.xy = texel de la texture SOURCE (1/w, 1/h), fx.z = offset. 5 taps (down) / 8 taps (up),
 // bilinéaires, à résolution décroissante -> bien moins de samples qu'un gaussien large.

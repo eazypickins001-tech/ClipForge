@@ -3573,6 +3573,58 @@ mod programme_clock {
     }
 }
 
+/// Progression 0..1 d'un fondu croisé, à `elapsed_sec` après le début du clip entrant.
+///
+/// Le fondu vit sur l'horloge de SORTIE, pas sur celle de la source : c'est un chevauchement de
+/// programme, décidé par `timeline/transitionOverlap.ts`, et les deux clips occupent ces secondes
+/// tous les deux. `duration_sec` est ce chevauchement DÉJÀ BORNÉ, jamais la durée demandée par le
+/// document.
+///
+/// Rend 1.0 hors de la fenêtre — « il n'y a plus rien à mélanger » — pour que l'appelant n'ait
+/// aucun cas particulier à écrire : à 1.0 l'image est le clip entrant seul, exactement ce que donne
+/// un clip sans `incoming_blend`.
+pub fn blend_progress_at(elapsed_sec: f32, duration_sec: f32) -> f32 {
+    if !(duration_sec > 0.0) || !elapsed_sec.is_finite() {
+        return 1.0;
+    }
+    (elapsed_sec / duration_sec).clamp(0.0, 1.0)
+}
+
+#[cfg(test)]
+mod blend_tests {
+    use super::*;
+
+    #[test]
+    fn a_blend_runs_from_zero_to_one_across_its_window() {
+        assert_eq!(blend_progress_at(0.0, 0.5), 0.0);
+        assert_eq!(blend_progress_at(0.25, 0.5), 0.5);
+        assert_eq!(blend_progress_at(0.5, 0.5), 1.0);
+    }
+
+    #[test]
+    fn past_the_window_there_is_nothing_left_to_blend() {
+        // Après la fenêtre l'image est le clip entrant seul, et rien n'est dessiné.
+        assert_eq!(blend_progress_at(5.0, 0.5), 1.0);
+    }
+
+    #[test]
+    fn an_elapsed_time_before_the_window_starts_is_still_its_start() {
+        // Un premier frame qui tombe juste avant le début de la fenêtre (erreur d'arrondi de la
+        // grille de sortie) démarre à 0 plutôt qu'à une progression négative.
+        assert_eq!(blend_progress_at(-0.01, 0.5), 0.0);
+    }
+
+    #[test]
+    fn a_zero_or_nonsense_window_is_no_blend_at_all() {
+        // Le cas d'un projet sans fondu, et celui d'un chevauchement que le programme a refusé
+        // (borné à zéro) : rien n'est dessiné.
+        assert_eq!(blend_progress_at(0.1, 0.0), 1.0);
+        assert_eq!(blend_progress_at(0.1, -0.5), 1.0);
+        assert_eq!(blend_progress_at(0.1, f32::NAN), 1.0);
+        assert_eq!(blend_progress_at(f32::NAN, 0.5), 1.0);
+    }
+}
+
 #[cfg(test)]
 mod orbit_camera_tests {
     use super::*;

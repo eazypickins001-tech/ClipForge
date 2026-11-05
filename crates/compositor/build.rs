@@ -220,6 +220,7 @@ fn compile_hlsl(out: &Path) {
         ("ps_uv", "ps_5_0", "ps_uv", None),
         ("ps_blur", "ps_5_0", "ps_blur", None),
         ("ps_tex", "ps_5_0", "ps_tex", None),
+        ("ps_dissolve", "ps_5_0", "ps_dissolve", None),
         ("ps_kawase_down", "ps_5_0", "ps_kawase_down", None),
         ("ps_kawase_up", "ps_5_0", "ps_kawase_up", None),
     ] {

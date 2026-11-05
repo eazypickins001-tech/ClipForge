@@ -89,6 +89,16 @@ struct BgCache {
     tex: ID3D11Texture2D,
 }
 
+/// Le cliché du clip sortant d'un fondu croisé : l'index du clip entrant à qui il appartient, sa
+/// copie pleine résolution et l'SRV qui permet de l'échantillonner. Garder l'index est ce qui rend
+/// la prise unique : `compose_frame` est appelé à chaque frame du clip, et le cliché ne doit être
+/// repris QUE sur le premier, sinon il écraserait l'image sortante par le clip entrant lui-même.
+struct BlendFrom {
+    clip_index: usize,
+    tex: ID3D11Texture2D,
+    srv: ID3D11ShaderResourceView,
+}
+
 /// Un effet shader de la scène (`shader_fx`), par hash de sa source.
 enum ShaderFx {
     /// naga + FXC tournent sur un thread de fond.
@@ -148,6 +158,9 @@ pub struct Compositor {
     // ping-pong demi-résolution pour le flou séparable (§7 E3)
     ps_blur: ID3D11PixelShader,
     ps_tex: ID3D11PixelShader,
+    /// La passe du fondu croisé de frontière (`shaders.hlsl::ps_dissolve`) : l'image sortante,
+    /// gardée de côté, posée par-dessus le clip entrant avec une opacité qui descend de 1 à 0.
+    ps_dissolve: ID3D11PixelShader,
     half_a_rtv: ID3D11RenderTargetView,
     half_a_srv: ID3D11ShaderResourceView,
     half_b_rtv: ID3D11RenderTargetView,
@@ -180,6 +193,17 @@ pub struct Compositor {
     /// Le dernier fond fixe composé et sa clé (`BackgroundKey`) : recopié dans le RT tant
     /// que la clé tient, au lieu d'être redessiné.
     bg_cache: RefCell<Option<BgCache>>,
+    /// Le cliché du clip SORTANT pour un fondu croisé, avec l'index du clip auquel il appartient.
+    ///
+    /// Pris au tout PREMIER frame du clip entrant, avant que `begin_image_frame` ne vide la cible :
+    /// à cet instant le render target porte encore le dernier frame du clip précédent, et une
+    /// copie suffit. C'est ce qui fait qu'un fondu croisé n'a besoin d'AUCUN décodeur
+    /// supplémentaire — c'est une image, pas une seconde source — et pourquoi les autres backends
+    /// n'ont rien à faire ici : la passe vit dans `compose_frame`, qu'ils n'ont pas.
+    ///
+    /// La texture est allouée à la demande, comme `bg_cache`, et vidée au redimensionnement (une
+    /// copie est à la résolution de rendu).
+    blend_from: RefCell<Option<BlendFrom>>,
     /// RefCell (pas un simple champ) pour que `set_cursor` reste `&self`, comme `set_scene` /
     /// `set_live_params` — nécessaire pour le rebrancher par clip dans l'export multiclip, qui
     /// n'a qu'une référence partagée au `Compositor`.
@@ -472,6 +496,8 @@ impl Compositor {
             // Caches dimensionnés à l'ancienne taille : recréés à la demande.
             resize_target: RefCell::new(None),
             bg_cache: RefCell::new(None),
+            // Une copie est à la résolution de rendu : elle ne survit pas au redimensionnement.
+            blend_from: RefCell::new(None),
             live_readback_staging: RefCell::new(None),
             nv12_readback_staging: RefCell::new(None),
             text_layer: RefCell::new(None),
@@ -742,6 +768,8 @@ impl Compositor {
         dev.CreatePixelShader(shader!("ps_blur"), None, Some(&mut ps_blur))?;
         let mut ps_tex: Option<ID3D11PixelShader> = None;
         dev.CreatePixelShader(shader!("ps_tex"), None, Some(&mut ps_tex))?;
+        let mut ps_dissolve: Option<ID3D11PixelShader> = None;
+        dev.CreatePixelShader(shader!("ps_dissolve"), None, Some(&mut ps_dissolve))?;
 
         // shaders dual-Kawase
         let mut ps_kdown: Option<ID3D11PixelShader> = None;
@@ -797,6 +825,7 @@ impl Compositor {
             rtv_uv,
             ps_blur: ps_blur.unwrap(),
             ps_tex: ps_tex.unwrap(),
+            ps_dissolve: ps_dissolve.unwrap(),
             half_a_rtv,
             half_a_srv,
             half_b_rtv,
@@ -817,6 +846,7 @@ impl Compositor {
             trail_rtv,
             trail_srv,
             bg_cache: RefCell::new(None),
+            blend_from: RefCell::new(None),
             cursor: RefCell::new(None),
             cursor_t_override: RefCell::new(None),
             footage: std::cell::Cell::new(None),
@@ -1243,6 +1273,88 @@ impl Compositor {
     pub unsafe fn begin(&self, clear: [f32; 4]) {
         self.bind_compose_state();
         self.ctx.ClearRenderTargetView(&self.rtv, &clear);
+    }
+
+    /// Prend le cliché du clip sortant, si le clip qui va se composer sort d'un fondu croisé.
+    ///
+    /// À appeler AVANT `begin_image_frame` : c'est le dernier instant où le render target porte
+    /// encore l'image du clip précédent. Une seule prise par clip — l'index mémorisé dans
+    /// `BlendFrom` l'empêche d'être reprise au frame suivant, ce qui écraserait l'image sortante
+    /// par le clip entrant lui-même.
+    ///
+    /// Un échec n'est pas fatal : il n'y a alors pas de cliché, donc pas de fondu, et la coupe
+    /// reste nette — le pire cas est celui d'aujourd'hui, jamais une image fausse.
+    unsafe fn capture_blend_source(&self) {
+        let scene_ref = self.scene.borrow();
+        let Some(scene) = scene_ref.as_ref() else {
+            return;
+        };
+        let index = scene.active_clip_index;
+        let wants_blend = scene
+            .clips
+            .get(index)
+            .and_then(|clip| clip.incoming_blend.as_ref())
+            .is_some_and(|blend| blend.duration_sec > 0.0);
+        if !wants_blend {
+            return;
+        }
+        // `(*from).as_ref()` et non `from.as_ref()` : sur un `Ref`, `AsRef` l'emporte dans la
+        // résolution de méthode et on obtiendrait `&Option<..>` au lieu de `Option<&..>`.
+        let already_taken = {
+            let from = self.blend_from.borrow();
+            (*from).as_ref().is_some_and(|held| held.clip_index == index)
+        };
+        if already_taken {
+            return;
+        }
+        let mut desc = D3D11_TEXTURE2D_DESC::default();
+        self.rt.GetDesc(&mut desc);
+        desc.MipLevels = 1;
+        desc.ArraySize = 1;
+        // Seulement échantillonnable : c'est une copie, on n'y dessine jamais.
+        desc.BindFlags = D3D11_BIND_SHADER_RESOURCE.0 as u32;
+        desc.Usage = D3D11_USAGE_DEFAULT;
+        desc.CPUAccessFlags = 0;
+        desc.MiscFlags = 0;
+        let mut tex: Option<ID3D11Texture2D> = None;
+        if self.dev.CreateTexture2D(&desc, None, Some(&mut tex)).is_err() {
+            return;
+        }
+        let Some(tex) = tex else { return };
+        let mut srv: Option<ID3D11ShaderResourceView> = None;
+        if self.dev.CreateShaderResourceView(&tex, None, Some(&mut srv)).is_err() {
+            return;
+        }
+        let Some(srv) = srv else { return };
+        self.ctx.CopyResource(&tex, &self.rt);
+        *self.blend_from.borrow_mut() = Some(BlendFrom { clip_index: index, tex, srv });
+    }
+
+    /// Pose l'image sortante d'un fondu croisé par-dessus le clip entrant, à `alpha` d'opacité.
+    /// `ps_dissolve` lit `rgbTex` au slot 0, comme `ps_tex` : les UV plein cadre sont ceux du
+    /// triangle plein écran, il n'y a aucun rect à calculer.
+    unsafe fn draw_blend_from(&self, srv: &ID3D11ShaderResourceView, alpha: f32) {
+        self.ctx.OMSetBlendState(&self.blend, None, 0xffffffff);
+        self.ctx.OMSetRenderTargets(Some(&[Some(self.rtv.clone())]), None);
+        self.ctx.PSSetShaderResources(0, Some(&[Some(srv.clone())]));
+        self.ctx.VSSetShader(&self.vs_fs, None);
+        self.ctx.PSSetShader(&self.ps_dissolve, None);
+        self.ctx.PSSetSamplers(0, Some(&[Some(self.sampler.clone())]));
+        let vp = D3D11_VIEWPORT {
+            TopLeftX: 0.0,
+            TopLeftY: 0.0,
+            Width: self.rw(),
+            Height: self.rh(),
+            MinDepth: 0.0,
+            MaxDepth: 1.0,
+        };
+        self.ctx.RSSetViewports(Some(&[vp]));
+        self.upload_cb(&LayerCB { fx: [alpha, 0.0, 0.0, 0.0], ..Default::default() });
+        self.ctx.Draw(3, 0);
+        self.ctx.PSSetShaderResources(0, Some(&[None]));
+        // Le frame suivant repart de l'état de composition, dont les ressources viennent d'être
+        // déliées : sans ça le clip entrant se dessinerait avec les notres.
+        self.bind_compose_state();
     }
 
     /// Garde le fond que le RT porte à cet instant (`bg_cache`), sous `key`.
@@ -2344,6 +2456,7 @@ impl Compositor {
         frame: f32,
         cfg: &Cfg,
     ) -> Result<()> {
+        self.capture_blend_source();
         self.begin_image_frame();
         let (sy, suv) = self.nv12_srvs(screen)?;
         let (wy, wuv) = self.nv12_srvs(webcam)?;
@@ -2986,6 +3099,42 @@ impl Compositor {
                             color,
                             ..Default::default()
                         });
+                    }
+                }
+            }
+        }
+
+        // --- fondu croisé (frontière) ---
+        // Aussi EN DERNIER, après le fondu de frontière : l'image sortante se pose sur le clip
+        // entrant DÉJÀ fini, son propre fondu compris, comme le dip enveloppe tout ce que son clip
+        // montre. Vue de l'autre côté de la coupe, c'est le même choix.
+        //
+        // La progression se mesure sur l'horloge SOURCE, comme le dip juste au-dessus, et pas sur
+        // l'horloge de sortie : `duration_sec` est un nombre de secondes de PROGRAMME (c'est le
+        // chevauchement de `timeline/transitionOverlap.ts`), donc une région de vitesse qui
+        // couvrirait l'ouverture du clip entrant ferait finir le fondu trop tôt — il serait étalé
+        // sur `duration_sec / vitesse` secondes de programme. C'est une limite connue, pas un
+        // oubli : la corriger demande de porter le début de clip en temps de programme dans la
+        // scène, et une coupe se fait presque toujours sur du 1x. Le fondu reste en tout cas
+        // strictement dans le clip entrant, il ne déborde jamais sur le suivant.
+        if let Some(scene) = scene_ref.as_ref() {
+            if let Some(clip) = scene.clips.get(scene.active_clip_index) {
+                if let Some(blend) = clip.incoming_blend.as_ref() {
+                    let elapsed = source_t - clip.source_start_sec as f32;
+                    let progress =
+                        crate::regions::blend_progress_at(elapsed, blend.duration_sec as f32);
+                    let alpha = 1.0 - progress;
+                    if alpha > 0.0 {
+                        // Le cliché doit être celui de CE clip : un fondu demandé sur un clip dont
+                        // le cliché n'a pas été pris (premier clip de la scène, ou échec
+                        // d'allocation) ne dessine rien plutôt que d'emprunter une image étrangère.
+                        let from = self.blend_from.borrow();
+                        match (*from).as_ref() {
+                            Some(held) if held.clip_index == scene.active_clip_index => {
+                                self.draw_blend_from(&held.srv, alpha);
+                            }
+                            _ => {}
+                        }
                     }
                 }
             }
