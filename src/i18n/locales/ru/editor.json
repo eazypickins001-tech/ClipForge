@@ -106,6 +106,8 @@
 		"changeLanguage": "Сменить язык",
 		"editorMode": "Режим редактора",
 		"clipMenu": "Клип",
+		"transcriptMenu": "Транскрипт",
+		"showTranscript": "Показать транскрипт",
 		"modes": {
 			"media": "Медиа",
 			"edit": "Редактирование",

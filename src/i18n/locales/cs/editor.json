@@ -106,6 +106,8 @@
 		"changeLanguage": "Změnit jazyk",
 		"editorMode": "Režim editoru",
 		"clipMenu": "Klip",
+		"transcriptMenu": "Přepis",
+		"showTranscript": "Zobrazit přepis",
 		"modes": {
 			"media": "Média",
 			"edit": "Upravit",

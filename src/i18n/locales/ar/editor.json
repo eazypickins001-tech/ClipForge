@@ -106,6 +106,8 @@
 		"changeLanguage": "تغيير اللغة",
 		"editorMode": "وضع المحرر",
 		"clipMenu": "مقطع",
+		"transcriptMenu": "النص",
+		"showTranscript": "إظهار النص",
 		"modes": {
 			"media": "الوسائط",
 			"edit": "تحرير",

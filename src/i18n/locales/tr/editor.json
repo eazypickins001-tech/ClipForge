@@ -106,6 +106,8 @@
 		"changeLanguage": "Dili değiştir",
 		"editorMode": "Düzenleyici modu",
 		"clipMenu": "Klip",
+		"transcriptMenu": "Transkript",
+		"showTranscript": "Transkripti göster",
 		"modes": {
 			"media": "Medya",
 			"edit": "Düzenle",

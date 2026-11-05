@@ -106,6 +106,8 @@
 		"changeLanguage": "言語を変更",
 		"editorMode": "エディターモード",
 		"clipMenu": "クリップ",
+		"transcriptMenu": "文字起こし",
+		"showTranscript": "文字起こしを表示",
 		"modes": {
 			"media": "メディア",
 			"edit": "編集",

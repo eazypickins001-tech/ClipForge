@@ -106,6 +106,8 @@
 		"changeLanguage": "Sprache ändern",
 		"editorMode": "Editor-Modus",
 		"clipMenu": "Clip",
+		"transcriptMenu": "Transkript",
+		"showTranscript": "Transkript anzeigen",
 		"modes": {
 			"media": "Medien",
 			"edit": "Schnitt",

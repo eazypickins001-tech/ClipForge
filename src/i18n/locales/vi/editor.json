@@ -106,6 +106,8 @@
 		"changeLanguage": "Đổi ngôn ngữ",
 		"editorMode": "Chế độ trình chỉnh sửa",
 		"clipMenu": "Clip",
+		"transcriptMenu": "Bản ghi",
+		"showTranscript": "Hiện bản ghi",
 		"modes": {
 			"media": "Media",
 			"edit": "Chỉnh sửa",

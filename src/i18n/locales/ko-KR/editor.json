@@ -106,6 +106,8 @@
 		"changeLanguage": "언어 변경",
 		"editorMode": "편집기 모드",
 		"clipMenu": "클립",
+		"transcriptMenu": "자막",
+		"showTranscript": "자막 표시",
 		"modes": {
 			"media": "미디어",
 			"edit": "편집",

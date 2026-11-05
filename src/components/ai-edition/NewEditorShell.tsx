@@ -1822,6 +1822,23 @@ export function NewEditorShell() {
 						setEditClipTarget(target);
 					},
 				}}
+				// The speech actions, named in the chrome instead of living only behind an icon in the
+				// rail. The counts are the same memos the pane's own buttons read, so a row's number is
+				// the number of cuts that click would make.
+				transcriptActions={{
+					canShowTranscript: Boolean(document),
+					showTranscript: () => {
+						setFacet("transcript");
+						setInspectorOpen(true);
+					},
+					transcribe: handleTranscribe,
+					canTranscribe: hasAsset,
+					isTranscribing: transcriptGate.state === "pending",
+					removeFillers: handleRemoveFillerWords,
+					fillerWordCount,
+					removeSilences: handleRemoveSilences,
+					silenceCutCount,
+				}}
 			/>
 
 			<div className={v4.body} style={{ gridTemplateColumns: bodyColumns }}>

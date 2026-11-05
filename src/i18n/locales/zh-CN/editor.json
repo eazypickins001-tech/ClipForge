@@ -106,6 +106,8 @@
 		"changeLanguage": "切换语言",
 		"editorMode": "编辑器模式",
 		"clipMenu": "片段",
+		"transcriptMenu": "转写",
+		"showTranscript": "显示转写",
 		"modes": {
 			"media": "媒体",
 			"edit": "编辑",

@@ -28,6 +28,7 @@ import { formatFirstFixedBinding } from "@/lib/shortcuts";
 import { StylePresetsMenu } from "../StylePresetsMenu";
 import { ClipMenu, type ClipMenuActions } from "./ClipMenu";
 import styles from "./EditorShellV4.module.css";
+import { TranscriptMenu, type TranscriptMenuActions } from "./TranscriptMenu";
 
 export type EditorMode = "media" | "edit" | "rec";
 
@@ -61,6 +62,9 @@ interface EditorTopBarProps {
 	 *  it is absent the menu is simply not rendered, the same way a missing `onEditTransition`
 	 *  removes V4Timeline's junction button. */
 	clipActions?: ClipMenuActions;
+	/** The speech-driven actions the Transcript menu offers. Optional for the same reason as
+	 *  `clipActions`: absent means the menu is not rendered at all. */
+	transcriptActions?: TranscriptMenuActions;
 }
 
 const MODES: Array<{ id: EditorMode; labelKey: string }> = [
@@ -80,6 +84,7 @@ export function EditorTopBar({
 	chatOpen,
 	actions,
 	clipActions,
+	transcriptActions,
 }: EditorTopBarProps) {
 	const t = useScopedT("editor");
 	const tShortcuts = useScopedT("shortcuts");
@@ -183,6 +188,7 @@ export function EditorTopBar({
 			</Tooltip>
 			<StylePresetsMenu />
 			{clipActions ? <ClipMenu actions={clipActions} /> : null}
+			{transcriptActions ? <TranscriptMenu actions={transcriptActions} /> : null}
 			<button
 				type="button"
 				className={styles.exportBtn}
