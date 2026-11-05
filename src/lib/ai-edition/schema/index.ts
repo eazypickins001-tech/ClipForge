@@ -803,10 +803,12 @@ export const layoutRegionSchema = endGteStart(
  * only meaningful on the final clip — the emitter ignores it anywhere else, which is what keeps
  * one junction from being written twice.
  *
- * This first phase ships the DIP family only. A dip needs no overlap between the two clips:
- * half the duration ramps the outgoing clip down, half ramps the incoming one up. Blends that
- * need both clips moving at once — dissolve, wipes, slides — are a later phase and are
- * deliberately absent from `kind` rather than accepted and silently ignored.
+ * Two families now. The DIP family needs no overlap between the two clips: half the duration ramps
+ * the outgoing clip down, half ramps the incoming one up, all inside each clip. The BLEND family —
+ * `dissolve` so far — needs both pictures at the same output instant, so the programme shortens by
+ * the transition's duration and the two clips overlap; `timeline/transitionOverlap.ts` owns that
+ * arithmetic and `resolvePlaybackSegments` applies it. Wipes and slides are the same pass with a
+ * different fragment and are still absent from `kind` rather than accepted and silently ignored.
  *
  * Optional rather than `.default([])`, for the reason `shaderEffectRanges` above gives: a
  * document written before this carries no key, every reader treats an absent list as empty, and
@@ -817,7 +819,7 @@ export const transitionSchema = z.object({
 	/** The clip whose edge this dip sits on. */
 	clipId: z.string().min(1),
 	side: z.enum(["in", "out"]).default("in"),
-	kind: z.enum(["dip-black", "dip-white", "dip-color"]).default("dip-black"),
+	kind: z.enum(["dip-black", "dip-white", "dip-color", "dissolve"]).default("dip-black"),
 	durationMs: z.number().int().positive().default(500),
 	/** What a `dip-color` passes through. Ignored by the other kinds. */
 	color: z.string().optional(),

@@ -10,6 +10,7 @@ import type {
 	AxcutClipCropRegion,
 	AxcutDocument,
 	AxcutTranscript,
+	AxcutTransition,
 	AxcutTrimRange,
 } from "../schema";
 import { createAudioTrack } from "../schema";
@@ -32,6 +33,7 @@ import {
 	dropPillById,
 	hasCompleteClipAnchor,
 } from "../timeline/timelineMap";
+import { blendOverlapSec } from "../timeline/transitionOverlap";
 import { dropTrimPillsByIds, trimAppliesToClip } from "../timeline/trim-mapping";
 import {
 	cutTakeHead,
@@ -191,21 +193,45 @@ export function resequenceClips(clips: AxcutClip[]): AxcutClip[] {
 export function resolvePlaybackSegments(
 	clips: AxcutClip[],
 	trimRanges: AxcutTrimRange[],
+	/** The document's transitions. Optional on purpose: a caller that does not pass them gets the
+	 *  contiguous programme it has always got, which is what keeps every existing caller and fixture
+	 *  byte-identical. A BLEND shortens the programme — see `blendOverlapSec`. */
+	transitions?: readonly AxcutTransition[],
 ): PlaybackSegment[] {
 	const ordered = [...clips].sort((a, b) => a.timelineStartSec - b.timelineStartSec);
+	const blends = (transitions ?? []).filter((transition) => transition.side !== "out");
 	const result: PlaybackSegment[] = [];
 	let timelineCursor = 0;
+	// The programme shrinks by this boundary's overlap, and the OUTGOING clip has that much less
+	// head-room for a dissolve on its other side (`blendOverlapSec`'s second clamp).
+	let consumedFromPrevious = 0;
+	let previousKeptSec = 0;
+	const overlapBefore = (clip: AxcutClip, outgoingKeptSec: number, incomingKeptSec: number) => {
+		if (outgoingKeptSec <= 0) return 0;
+		const transition = blends.find((candidate) => candidate.clipId === clip.id);
+		return blendOverlapSec({
+			kind: transition?.kind,
+			durationMs: transition?.durationMs,
+			outgoingKeptSec,
+			incomingKeptSec,
+			alreadyConsumedSec: consumedFromPrevious,
+		});
+	};
 	for (const clip of ordered) {
 		const sourceEnd = clip.sourceEndSec ?? clip.sourceStartSec;
 		if (sourceEnd <= clip.sourceStartSec) {
 			// Duration not probed yet — pass through as a single segment, unchanged.
 			const dur = clip.timelineEndSec - clip.timelineStartSec;
+			const overlap = overlapBefore(clip, previousKeptSec, dur);
+			timelineCursor -= overlap;
 			result.push({
 				...clip,
 				timelineStartSec: timelineCursor,
 				timelineEndSec: timelineCursor + dur,
 			});
 			timelineCursor += dur;
+			consumedFromPrevious = overlap;
+			previousKeptSec = dur;
 			continue;
 		}
 		let kept: Interval[] = [{ startSec: clip.sourceStartSec, endSec: sourceEnd }];
@@ -214,6 +240,9 @@ export function resolvePlaybackSegments(
 			kept = subtractInterval(kept, { startSec: trim.startSec, endSec: trim.endSec });
 		}
 		const pieces = kept.filter((piece) => piece.endSec > piece.startSec);
+		const keptSec = pieces.reduce((sum, piece) => sum + (piece.endSec - piece.startSec), 0);
+		const overlap = overlapBefore(clip, previousKeptSec, keptSec);
+		timelineCursor -= overlap;
 		pieces.forEach((piece, i) => {
 			const dur = piece.endSec - piece.startSec;
 			result.push({
@@ -226,6 +255,8 @@ export function resolvePlaybackSegments(
 			});
 			timelineCursor += dur;
 		});
+		consumedFromPrevious = overlap;
+		previousKeptSec = keptSec;
 	}
 	return result;
 }
