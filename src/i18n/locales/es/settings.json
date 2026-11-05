@@ -470,6 +470,7 @@
 		"title": "Transición",
 		"dipBlack": "Fundido a negro",
 		"dipWhite": "Fundido a blanco",
+		"dissolve": "Disolvencia",
 		"dipColor": "Fundido a un color",
 		"duration": "Duración",
 		"color": "Color",

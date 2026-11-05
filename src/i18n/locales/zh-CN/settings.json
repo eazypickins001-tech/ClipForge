@@ -470,6 +470,7 @@
 		"title": "转场",
 		"dipBlack": "淡出到黑色",
 		"dipWhite": "淡出到白色",
+		"dissolve": "叠化",
 		"dipColor": "淡出到颜色",
 		"duration": "时长",
 		"color": "颜色",

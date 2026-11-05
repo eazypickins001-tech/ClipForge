@@ -26,8 +26,11 @@ export type TransitionSpec = {
 	color?: string;
 };
 
-/** Only the DIP family ships: a dip needs no overlap between the two clips. */
-const KINDS: Array<AxcutTransition["kind"]> = ["dip-black", "dip-white", "dip-color"];
+/** The two families: the DIPs need no overlap between the two clips, `dissolve` does — it is a
+ *  BLEND, so the two clips overlap and the programme gets shorter by its duration. Only the Windows
+ *  compositor draws a blend today; elsewhere the kind is accepted and the boundary stays a hard cut,
+ *  the same half-port the dip family has. */
+const KINDS: Array<AxcutTransition["kind"]> = ["dip-black", "dip-white", "dip-color", "dissolve"];
 
 export function TransitionModal({
 	open,
@@ -57,12 +60,12 @@ export function TransitionModal({
 		setLiveDuration(null);
 	}, [transition?.id]);
 
-	const label = (k: AxcutTransition["kind"]) =>
-		k === "dip-white"
-			? t("transition.dipWhite")
-			: k === "dip-color"
-				? t("transition.dipColor")
-				: t("transition.dipBlack");
+	const label = (k: AxcutTransition["kind"]) => {
+		if (k === "dip-white") return t("transition.dipWhite");
+		if (k === "dip-color") return t("transition.dipColor");
+		if (k === "dissolve") return t("transition.dissolve");
+		return t("transition.dipBlack");
+	};
 
 	return (
 		<ModalShell

@@ -470,6 +470,7 @@
 		"title": "전환",
 		"dipBlack": "검은색으로 페이드",
 		"dipWhite": "흰색으로 페이드",
+		"dissolve": "디졸브",
 		"dipColor": "색상으로 페이드",
 		"duration": "길이",
 		"color": "색상",
