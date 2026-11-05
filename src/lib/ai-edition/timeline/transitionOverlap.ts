@@ -10,8 +10,24 @@
 // computed, so this file stays a function of numbers and cannot disagree with the programme builder
 // about what a trim removed.
 
-/** The transition kinds where both pictures move at once, and the programme therefore shortens. */
-export const BLEND_KINDS = ["dissolve"] as const;
+/** The transition kinds where both pictures move at once, and the programme therefore shortens.
+ *
+ *  All of them are the same pass — the outgoing picture drawn over the finished incoming one — with
+ *  different geometry: a cross fade for `dissolve`, an advancing edge for the `wipe-from-*`, and a
+ *  translation for the `slide-from-*`. The suffix names the EDGE the incoming picture arrives from,
+ *  which is what makes `wipe-from-left` unambiguous: the new picture is revealed starting at the
+ *  left edge and the boundary sweeps rightwards. */
+export const BLEND_KINDS = [
+	"dissolve",
+	"wipe-from-left",
+	"wipe-from-right",
+	"wipe-from-top",
+	"wipe-from-bottom",
+	"slide-from-left",
+	"slide-from-right",
+	"slide-from-top",
+	"slide-from-bottom",
+] as const;
 
 export type BlendKind = (typeof BLEND_KINDS)[number];
 

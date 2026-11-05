@@ -47,9 +47,11 @@ Semantics: half the duration lands on each side of the cut. A 500 ms dip = 250 m
 outgoing clip down into the colour, 250 ms ramping the incoming clip up out of it. That is why one
 duration control covers both.
 
-Test hooks for the e2e that does not exist yet: `[data-transition-at="<clipId>"]`,
-`transition-kind-dip-black`, `transition-kind-dip-white`, `transition-kind-dip-color`,
-`transition-color`, `transition-remove`, `transition-done`.
+Test hooks: `[data-transition-at="<clipId>"]`, `transition-kind-dip-black`, `transition-kind-dip-white`,
+`transition-kind-dip-color`, `transition-kind-dissolve`, `transition-kind-wipe`,
+`transition-kind-slide`, `transition-edge-<left|right|top|bottom>`, `transition-color`,
+`transition-remove`, `transition-done`. (`tests/e2e/transitions.spec.ts` exists now and runs in the
+packaged smoke step — this list used to say it did not.)
 
 **Why a boundary needs a real cut:** `joinContiguous` fuses two adjacent same-media, same-crop,
 media-contiguous clips into one unless either is `detached`. So transitions are reachable on
@@ -77,11 +79,22 @@ collaboration.
 | Clip fades (audio) | yes | yes | **yes** (since `383ed80`) |
 | Boundary dip (video) — black / white / colour | yes | **Windows compose path** | **Windows only** |
 | Boundary dip — macOS / Linux | yes | **no** — parsed, not drawn | **no** |
+| Blend — cross dissolve | yes, overlaps by `d` | **Windows compose path** (`ps_dissolve`) | **Windows only** |
+| Blend — wipe / slide, four edges | yes, overlaps by `d` | **Windows compose path** (same pass, `regions::blend_geometry`) | **Windows only** |
+| Blend — macOS / Linux | yes | **no** — parsed, not drawn | **no** |
+
+**A blend is not a dip, and the difference is not cosmetic.** A dip lives inside each clip (half the
+duration ramps each side) and costs the programme nothing. A blend shows both pictures at once, so the
+two clips OVERLAP by the transition's duration and the video gets SHORTER. `timeline/transitionOverlap.ts`
+owns that arithmetic, `resolvePlaybackSegments` applies it, and `playbackOverlaps` gives the clamped
+value per clip for the scene emit — the two walks are pinned against each other by a test that reads
+the overlap off the layout rather than off the rule.
 
 **NOT RUN, and it matters:** nobody has *watched* a dip. The envelope is unit-tested
 (`frame_geometry::dip_visible_at`), the draw path compiles, the packaged app still passes its smoke
 step — but no assertion anywhere looks at the pixels. Watch an export, and the live preview, before
-believing it.
+believing it. (The BLEND family has since been watched, in both the preview and an export; the dip
+family still has not.)
 
 ## Next task — the e2e (A4), then the rest of Phase A
 

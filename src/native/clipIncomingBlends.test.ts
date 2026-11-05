@@ -61,6 +61,14 @@ describe("clipIncomingBlends", () => {
 		expect(blends.get("b")).toEqual({ kind: "dissolve", durationSec: 0.5 });
 	});
 
+	it("carries a wipe and a slide too — same overlap, different geometry", () => {
+		// The programme does not care WHICH blend it is; only the compositor pass does.
+		for (const kind of ["wipe-from-top", "slide-from-right"]) {
+			const blends = clipIncomingBlends(doc([blend({ clipId: "b", kind })]), visible);
+			expect(blends.get("b")).toEqual({ kind, durationSec: 0.5 });
+		}
+	});
+
 	it("asks for nothing for a dip", () => {
 		// A dip lives inside each clip and costs the programme nothing; `videoDip` carries it.
 		const blends = clipIncomingBlends(doc([blend({ clipId: "b", kind: "dip-black" })]), visible);

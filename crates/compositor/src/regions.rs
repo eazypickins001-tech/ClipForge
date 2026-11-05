@@ -3590,6 +3590,34 @@ pub fn blend_progress_at(elapsed_sec: f32, duration_sec: f32) -> f32 {
     (elapsed_sec / duration_sec).clamp(0.0, 1.0)
 }
 
+/// Géométrie d'un mélange de frontière : le mode de la passe, et le bord dont l'image ENTRANTE
+/// arrive.
+///
+/// Rend `(mode, direction)` — mode 0 fondu croisé, 1 balayage, 2 glissement ; direction 0 gauche,
+/// 1 droite, 2 haut, 3 bas. La direction nomme toujours le bord d'ARRIVÉE : `wipe-from-left` est
+/// révélé depuis le bord gauche, le bord du balayage avançant vers la droite, et le glissement
+/// correspondant fait sortir l'image sortante par la droite.
+///
+/// Un kind inconnu — ou absent, ce qu'une charge utile écrite avant cette version donne — rend le
+/// fondu croisé avec une direction nulle : le mode le plus neutre, et celui qu'un `dissolve` demande
+/// de toute façon.
+pub fn blend_geometry(kind: &str) -> (f32, f32) {
+    for (prefix, mode) in [("wipe-from-", 1.0), ("slide-from-", 2.0)] {
+        let Some(edge) = kind.strip_prefix(prefix) else {
+            continue;
+        };
+        let direction = match edge {
+            "left" => 0.0,
+            "right" => 1.0,
+            "top" => 2.0,
+            "bottom" => 3.0,
+            _ => continue,
+        };
+        return (mode, direction);
+    }
+    (0.0, 0.0)
+}
+
 #[cfg(test)]
 mod blend_tests {
     use super::*;
@@ -3622,6 +3650,42 @@ mod blend_tests {
         assert_eq!(blend_progress_at(0.1, -0.5), 1.0);
         assert_eq!(blend_progress_at(0.1, f32::NAN), 1.0);
         assert_eq!(blend_progress_at(f32::NAN, 0.5), 1.0);
+    }
+
+    #[test]
+    fn a_cross_fade_is_the_default_and_the_fallback() {
+        assert_eq!(blend_geometry("dissolve"), (0.0, 0.0));
+        // Un kind inconnu, ou absent (charge utile d'une build antérieure) : fondu croisé.
+        assert_eq!(blend_geometry(""), (0.0, 0.0));
+        assert_eq!(blend_geometry("cross-dissolve"), (0.0, 0.0));
+        assert_eq!(blend_geometry("wipe-from-"), (0.0, 0.0));
+        assert_eq!(blend_geometry("wipe-from-middle"), (0.0, 0.0));
+        assert_eq!(blend_geometry("slide-from-circa"), (0.0, 0.0));
+    }
+
+    #[test]
+    fn a_wipe_reads_its_edge_into_a_mode_and_a_direction() {
+        assert_eq!(blend_geometry("wipe-from-left"), (1.0, 0.0));
+        assert_eq!(blend_geometry("wipe-from-right"), (1.0, 1.0));
+        assert_eq!(blend_geometry("wipe-from-top"), (1.0, 2.0));
+        assert_eq!(blend_geometry("wipe-from-bottom"), (1.0, 3.0));
+    }
+
+    #[test]
+    fn a_slide_shares_the_directions_under_its_own_mode() {
+        assert_eq!(blend_geometry("slide-from-left"), (2.0, 0.0));
+        assert_eq!(blend_geometry("slide-from-right"), (2.0, 1.0));
+        assert_eq!(blend_geometry("slide-from-top"), (2.0, 2.0));
+        assert_eq!(blend_geometry("slide-from-bottom"), (2.0, 3.0));
+    }
+
+    #[test]
+    fn the_two_prefixes_do_not_bleed_into_each_other() {
+        // `slide-from-` ne doit pas être lu comme un balayage, ni l'inverse : les modes sont
+        // distincts parce que la passe ne dessine pas la même chose.
+        let (wipe, _) = blend_geometry("wipe-from-left");
+        let (slide, _) = blend_geometry("slide-from-left");
+        assert_ne!(wipe, slide);
     }
 }
 

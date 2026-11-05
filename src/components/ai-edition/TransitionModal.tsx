@@ -26,11 +26,33 @@ export type TransitionSpec = {
 	color?: string;
 };
 
-/** The two families: the DIPs need no overlap between the two clips, `dissolve` does — it is a
- *  BLEND, so the two clips overlap and the programme gets shorter by its duration. Only the Windows
+/** One tile per FAMILY, not per kind. The two directional families are stored as one kind per
+ *  direction (`wipe-from-left`), but twelve tiles would mean twelve labels in fifteen languages for
+ *  four words; a family tile plus a direction row reuses `settings.anchors`, already translated
+ *  everywhere.
+ *
+ *  The two families: the DIPs need no overlap between the two clips, the BLENDs do — so the two
+ *  clips overlap and the programme gets shorter by the transition's duration. Only the Windows
  *  compositor draws a blend today; elsewhere the kind is accepted and the boundary stays a hard cut,
  *  the same half-port the dip family has. */
-const KINDS: Array<AxcutTransition["kind"]> = ["dip-black", "dip-white", "dip-color", "dissolve"];
+const TILES = ["dip-black", "dip-white", "dip-color", "dissolve", "wipe", "slide"] as const;
+
+type Tile = (typeof TILES)[number];
+type Edge = "left" | "right" | "top" | "bottom";
+
+const EDGES: Edge[] = ["left", "right", "top", "bottom"];
+
+/** Which tile a stored kind belongs to: `wipe-from-top` is the `wipe` family. */
+function tileOf(kind: AxcutTransition["kind"]): Tile | null {
+	if (kind.startsWith("wipe-from-")) return "wipe";
+	if (kind.startsWith("slide-from-")) return "slide";
+	return (TILES as readonly string[]).includes(kind) ? (kind as Tile) : null;
+}
+
+/** The edge a stored kind arrives from. Meaningless — and unused — for the non-directional kinds. */
+function edgeOf(kind: AxcutTransition["kind"]): Edge {
+	return EDGES.find((edge) => kind.endsWith(`-${edge}`)) ?? "left";
+}
 
 export function TransitionModal({
 	open,
@@ -60,12 +82,28 @@ export function TransitionModal({
 		setLiveDuration(null);
 	}, [transition?.id]);
 
-	const label = (k: AxcutTransition["kind"]) => {
-		if (k === "dip-white") return t("transition.dipWhite");
-		if (k === "dip-color") return t("transition.dipColor");
-		if (k === "dissolve") return t("transition.dissolve");
-		return t("transition.dipBlack");
+	// Explicit keys rather than one built from the tile name: the catalogue is typed, and a template
+	// key would typecheck as a plain string and drift silently.
+	const LABELS: Record<Tile, string> = {
+		"dip-black": t("transition.dipBlack"),
+		"dip-white": t("transition.dipWhite"),
+		"dip-color": t("transition.dipColor"),
+		dissolve: t("transition.dissolve"),
+		wipe: t("transition.wipe"),
+		slide: t("transition.slide"),
 	};
+	const EDGE_LABELS: Record<Edge, string> = {
+		left: t("anchors.left"),
+		right: t("anchors.right"),
+		top: t("anchors.top"),
+		bottom: t("anchors.bottom"),
+	};
+	const active = tileOf(kind);
+	const edge = edgeOf(kind);
+	// The stored kind for a tile: a family keeps the direction the panel is already showing, so
+	// switching Wipe -> Slide slides from the same edge rather than silently resetting it.
+	const kindFor = (tile: Tile): AxcutTransition["kind"] =>
+		tile === "wipe" ? `wipe-from-${edge}` : tile === "slide" ? `slide-from-${edge}` : tile;
 
 	return (
 		<ModalShell
@@ -92,18 +130,39 @@ export function TransitionModal({
 				aria-label={t("transition.title")}
 				style={{ display: "flex", gap: 6, flexWrap: "wrap" }}
 			>
-				{KINDS.map((k) => (
+				{TILES.map((tile) => (
 					<button
-						key={k}
+						key={tile}
 						type="button"
-						aria-pressed={kind === k}
-						data-testid={`transition-kind-${k}`}
-						onClick={() => onChange({ kind: k, durationMs, color })}
+						aria-pressed={active === tile}
+						data-testid={`transition-kind-${tile}`}
+						onClick={() => onChange({ kind: kindFor(tile), durationMs, color })}
 					>
-						{label(k)}
+						{LABELS[tile]}
 					</button>
 				))}
 			</div>
+
+			{active === "wipe" || active === "slide" ? (
+				<div
+					role="group"
+					aria-label={t("transition.from")}
+					style={{ marginTop: 12, display: "flex", alignItems: "center", gap: 6 }}
+				>
+					<span>{t("transition.from")}</span>
+					{EDGES.map((candidate) => (
+						<button
+							key={candidate}
+							type="button"
+							aria-pressed={edge === candidate}
+							data-testid={`transition-edge-${candidate}`}
+							onClick={() => onChange({ kind: `${active}-from-${candidate}`, durationMs, color })}
+						>
+							{EDGE_LABELS[candidate]}
+						</button>
+					))}
+				</div>
+			) : null}
 
 			<div style={{ marginTop: 12 }}>
 				<SliderCell

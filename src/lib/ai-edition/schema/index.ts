@@ -805,10 +805,12 @@ export const layoutRegionSchema = endGteStart(
  *
  * Two families now. The DIP family needs no overlap between the two clips: half the duration ramps
  * the outgoing clip down, half ramps the incoming one up, all inside each clip. The BLEND family —
- * `dissolve` so far — needs both pictures at the same output instant, so the programme shortens by
- * the transition's duration and the two clips overlap; `timeline/transitionOverlap.ts` owns that
- * arithmetic and `resolvePlaybackSegments` applies it. Wipes and slides are the same pass with a
- * different fragment and are still absent from `kind` rather than accepted and silently ignored.
+ * `dissolve`, the `wipe-from-*` and the `slide-from-*` — needs both pictures at the same output
+ * instant, so the programme shortens by the transition's duration and the two clips overlap;
+ * `timeline/transitionOverlap.ts` owns that arithmetic and `resolvePlaybackSegments` applies it.
+ * Every blend kind is the same pass with different geometry, and a `-from-<edge>` suffix names the
+ * edge the incoming picture arrives from (`wipe-from-left` = revealed from the left edge, the
+ * boundary sweeping rightwards).
  *
  * Optional rather than `.default([])`, for the reason `shaderEffectRanges` above gives: a
  * document written before this carries no key, every reader treats an absent list as empty, and
@@ -819,7 +821,22 @@ export const transitionSchema = z.object({
 	/** The clip whose edge this dip sits on. */
 	clipId: z.string().min(1),
 	side: z.enum(["in", "out"]).default("in"),
-	kind: z.enum(["dip-black", "dip-white", "dip-color", "dissolve"]).default("dip-black"),
+	kind: z
+		.enum([
+			"dip-black",
+			"dip-white",
+			"dip-color",
+			"dissolve",
+			"wipe-from-left",
+			"wipe-from-right",
+			"wipe-from-top",
+			"wipe-from-bottom",
+			"slide-from-left",
+			"slide-from-right",
+			"slide-from-top",
+			"slide-from-bottom",
+		])
+		.default("dip-black"),
 	durationMs: z.number().int().positive().default(500),
 	/** What a `dip-color` passes through. Ignored by the other kinds. */
 	color: z.string().optional(),

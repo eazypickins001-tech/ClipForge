@@ -4370,15 +4370,47 @@ float4 ps_blur(FSOut i) : SV_Target
 // simple copie/échantillonnage d'une texture RGBA (pour redessiner le fond flouté)
 float4 ps_tex(FSOut i) : SV_Target { return rgbTex.Sample(sampNV, i.uv); }
 
-// Fondu croisé d'une frontière : `rgbTex` porte l'image SORTANTE (un cliché du rendu précédent,
-// pris avant que le clip entrant ne commence à dessiner) et `fx.x` son opacité — 1.0 au premier
-// frame du chevauchement, 0.0 au dernier. Dessiné PAR-DESSUS le clip entrant déjà composé, avec le
-// blend « over prémultiplié » : la même convention que le calque de textes, donc le rgb est
-// multiplié par l'alpha ici plutôt que par l'état de blend.
+// Mélange d'une frontière : `rgbTex` porte l'image SORTANTE (un cliché du rendu précédent, pris
+// avant que le clip entrant ne commence à dessiner), dessinée PAR-DESSUS le clip entrant déjà
+// composé. C'est un
+// blend « over prémultiplié », la convention du calque de textes : le rgb est donc multiplié par
+// l'alpha ici plutôt que par l'état de blend.
+//
+// fx.x = progression 0..1 du chevauchement, fx.y = mode, fx.z = bord d'ARRIVÉE de l'image entrante
+// (0 gauche, 1 droite, 2 haut, 3 bas). Les trois modes ne diffèrent que par OÙ le cliché reste
+// visible — la géométrie est décidée côté Rust (`regions::blend_geometry`), pas ici.
 float4 ps_dissolve(FSOut i) : SV_Target
 {
-    float4 c = rgbTex.Sample(sampNV, i.uv);
-    return float4(c.rgb * fx.x, fx.x);
+    float p = fx.x;
+    float2 uv = i.uv;
+    float visible;
+    float2 at = uv;
+    if (fx.y < 0.5) {
+        // Fondu croisé : l'image sortante s'efface partout à la fois.
+        visible = 1.0 - p;
+    } else if (fx.y < 1.5) {
+        // Balayage : l'image sortante ne bouge pas, un bord avance depuis le côté d'arrivée.
+        // `t` mesure la distance à ce bord : 0 dessus, 1 à l'opposé.
+        float t = uv.x;
+        if (fx.z > 2.5)      { t = 1.0 - uv.y; }   // depuis le bas
+        else if (fx.z > 1.5) { t = uv.y; }         // depuis le haut
+        else if (fx.z > 0.5) { t = 1.0 - uv.x; }   // depuis la droite
+        visible = step(p, t);
+    } else {
+        // Glissement : le cliché sort par le côté OPPOSÉ à l'arrivée, donc uv.x/y = 0 est bien le
+        // bord gauche/haut de la texture. Échantillonner décalé fait glisser l'image dans l'autre
+        // sens : `at = uv - sortie * p` déplace le contenu de `+sortie * p`.
+        float2 out_dir = float2(1.0, 0.0);         // arrivée par la gauche -> sortie à droite
+        if (fx.z > 2.5)      { out_dir = float2(0.0, -1.0); }   // par le bas -> sortie en haut
+        else if (fx.z > 1.5) { out_dir = float2(0.0, 1.0); }    // par le haut -> sortie en bas
+        else if (fx.z > 0.5) { out_dir = float2(-1.0, 0.0); }   // par la droite -> sortie à gauche
+        at = uv - out_dir * p;
+        // Hors cadre : rien. Sans ce test le sampler (CLAMP) étirerait le bord de l'image sur
+        // toute la bande libérée, ce qui se voit tout de suite.
+        visible = (at.x >= 0.0 && at.x <= 1.0 && at.y >= 0.0 && at.y <= 1.0) ? 1.0 : 0.0;
+    }
+    float4 c = rgbTex.Sample(sampNV, saturate(at));
+    return float4(c.rgb * visible, visible);
 }
 
 // ============ Dual-Kawase (fond flouté rapide) ============

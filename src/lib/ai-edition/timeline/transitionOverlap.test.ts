@@ -16,8 +16,12 @@ const at = (over: Partial<Parameters<typeof blendOverlapSec>[0]> = {}) =>
 	});
 
 describe("isBlendKind", () => {
-	it("takes dissolve and leaves the dips alone", () => {
+	it("takes every family that moves both pictures and leaves the dips alone", () => {
 		expect(isBlendKind("dissolve")).toBe(true);
+		expect(isBlendKind("wipe-from-left")).toBe(true);
+		expect(isBlendKind("wipe-from-bottom")).toBe(true);
+		expect(isBlendKind("slide-from-top")).toBe(true);
+		expect(isBlendKind("slide-from-right")).toBe(true);
 		// A dip is modelled inside the clip; overlapping for one would shorten the video for nothing.
 		expect(isBlendKind("dip-black")).toBe(false);
 		expect(isBlendKind("dip-white")).toBe(false);

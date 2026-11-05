@@ -1330,10 +1330,19 @@ impl Compositor {
         *self.blend_from.borrow_mut() = Some(BlendFrom { clip_index: index, tex, srv });
     }
 
-    /// Pose l'image sortante d'un fondu croisé par-dessus le clip entrant, à `alpha` d'opacité.
+    /// Pose l'image sortante d'un mélange par-dessus le clip entrant. `progress` va de 0 (l'image
+    /// sortante pleine) à 1 (le clip entrant seul), `mode` et `direction` viennent de
+    /// `regions::blend_geometry` : c'est la passe qui décide de la géométrie, pas ce fichier.
+    ///
     /// `ps_dissolve` lit `rgbTex` au slot 0, comme `ps_tex` : les UV plein cadre sont ceux du
     /// triangle plein écran, il n'y a aucun rect à calculer.
-    unsafe fn draw_blend_from(&self, srv: &ID3D11ShaderResourceView, alpha: f32) {
+    unsafe fn draw_blend_from(
+        &self,
+        srv: &ID3D11ShaderResourceView,
+        progress: f32,
+        mode: f32,
+        direction: f32,
+    ) {
         self.ctx.OMSetBlendState(&self.blend, None, 0xffffffff);
         self.ctx.OMSetRenderTargets(Some(&[Some(self.rtv.clone())]), None);
         self.ctx.PSSetShaderResources(0, Some(&[Some(srv.clone())]));
@@ -1349,7 +1358,7 @@ impl Compositor {
             MaxDepth: 1.0,
         };
         self.ctx.RSSetViewports(Some(&[vp]));
-        self.upload_cb(&LayerCB { fx: [alpha, 0.0, 0.0, 0.0], ..Default::default() });
+        self.upload_cb(&LayerCB { fx: [progress, mode, direction, 0.0], ..Default::default() });
         self.ctx.Draw(3, 0);
         self.ctx.PSSetShaderResources(0, Some(&[None]));
         // Le frame suivant repart de l'état de composition, dont les ressources viennent d'être
@@ -3104,10 +3113,11 @@ impl Compositor {
             }
         }
 
-        // --- fondu croisé (frontière) ---
+        // --- mélange de frontière (fondu croisé, balayage, glissement) ---
         // Aussi EN DERNIER, après le fondu de frontière : l'image sortante se pose sur le clip
         // entrant DÉJÀ fini, son propre fondu compris, comme le dip enveloppe tout ce que son clip
-        // montre. Vue de l'autre côté de la coupe, c'est le même choix.
+        // montre. Vue de l'autre côté de la coupe, c'est le même choix. Les trois modes ne
+        // diffèrent que par la géométrie passée à la passe (`regions::blend_geometry`).
         //
         // La progression se mesure sur l'horloge SOURCE, comme le dip juste au-dessus, et pas sur
         // l'horloge de sortie : `duration_sec` est un nombre de secondes de PROGRAMME (c'est le
@@ -3123,15 +3133,17 @@ impl Compositor {
                     let elapsed = source_t - clip.source_start_sec as f32;
                     let progress =
                         crate::regions::blend_progress_at(elapsed, blend.duration_sec as f32);
-                    let alpha = 1.0 - progress;
-                    if alpha > 0.0 {
-                        // Le cliché doit être celui de CE clip : un fondu demandé sur un clip dont
+                    // À 1 il ne reste rien à poser, quel que soit le mode : le balayage a fini son
+                    // parcours et le glissement est sorti du cadre comme le fondu s'est effacé.
+                    if progress < 1.0 {
+                        let (mode, direction) = crate::regions::blend_geometry(&blend.kind);
+                        // Le cliché doit être celui de CE clip : un mélange demandé sur un clip dont
                         // le cliché n'a pas été pris (premier clip de la scène, ou échec
                         // d'allocation) ne dessine rien plutôt que d'emprunter une image étrangère.
                         let from = self.blend_from.borrow();
                         match (*from).as_ref() {
                             Some(held) if held.clip_index == scene.active_clip_index => {
-                                self.draw_blend_from(&held.srv, alpha);
+                                self.draw_blend_from(&held.srv, progress, mode, direction);
                             }
                             _ => {}
                         }
