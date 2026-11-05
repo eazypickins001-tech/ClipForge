@@ -74,7 +74,7 @@ import { clipAtPlayhead } from "@/lib/ai-edition/timeline/clipTargets";
 import { formatSeconds } from "@/lib/ai-edition/timeline/format";
 import { coalescedTrimGroups } from "@/lib/ai-edition/timeline/trim-mapping";
 import { zoomLevelFor } from "@/lib/ai-edition/timeline/zoom-scale";
-import { addFocusKeyframe } from "@/lib/ai-edition/timeline/zoomKeyframes";
+import { addZoomKeyframe } from "@/lib/ai-edition/timeline/zoomKeyframes";
 import { clampToBound } from "@/lib/projectDefaults";
 import { checkShaderEffectCode } from "@/native/compositorViewClient";
 import { annotationFootageRect, zoomScaleLimit } from "@/native/sceneDescription";
@@ -1034,6 +1034,14 @@ function SelectionPane({ tl, onClose }: { tl: TimelineApi; onClose: () => void }
 									<span style={{ flex: 1, fontVariantNumeric: "tabular-nums" }}>
 										{Math.round(key.at * 100)}%
 									</span>
+									{/* The level this key was captured at. Without it a push-in is
+									    indistinguishable from a pan in this list — the keys differ only
+									    by a number that would otherwise be invisible. */}
+									{key.scale === undefined ? null : (
+										<span style={{ fontVariantNumeric: "tabular-nums", opacity: 0.75 }}>
+											{key.scale.toFixed(2)}×
+										</span>
+									)}
 									<button
 										type="button"
 										aria-label={ts("zoom.keyframes.remove")}
@@ -1057,7 +1065,7 @@ function SelectionPane({ tl, onClose }: { tl: TimelineApi; onClose: () => void }
 									// Read at click time, never subscribed: the playhead is rewritten every
 									// animation frame of playback and this pane must not re-render on it.
 									// The capture rule is shared with the zoom pill's own button.
-									const next = addFocusKeyframe(region, useProjectStore.getState().currentTimeSec);
+									const next = addZoomKeyframe(region, useProjectStore.getState().currentTimeSec);
 									if (!next) {
 										// The hit is reported, not disabled — the same contract as every other
 										// playhead action in this pane (see the rail's Split).

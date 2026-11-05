@@ -519,21 +519,26 @@ export const annotationRegionSchema = endGteStart(
 export const MAX_ZOOM_KEYFRAMES = 24;
 
 /**
- * One point on a zoom's focus path.
+ * One point on a zoom's path: where the camera looks, and how far in it is.
  *
  * `at` is normalized INSIDE the region (0 = its start, 1 = its end), never absolute time: a region
  * is resized and re-anchored by split, join and every `rederiveRegionMs`, and a keyframe stored in
  * ms would have to be re-anchored on each of those. Normalized, the path survives all of them —
  * the same reason the region's anchors are source seconds rather than ruler milliseconds.
  *
- * The compositor samples these instead of the region's single `focus` point; see
- * `regions.rs::focus_path_at`. Absent (or empty) means the region keeps that point, which is what
- * every document written so far carries.
+ * `scale` is the key's own zoom level, so a region can push in or pull out instead of holding one
+ * depth. Absent means "the region's own scale", which is what makes an older document — and a
+ * document whose keys only ever moved the camera — render exactly as before: every key falls back to
+ * the same number, and the interpolation is flat. The compositor reads both through
+ * `regions.rs::path_at`.
  */
 export const zoomKeyframeSchema = z.object({
 	at: z.number().min(0).max(1),
 	cx: z.number().min(0).max(1),
 	cy: z.number().min(0).max(1),
+	/** The zoom level AT this key. Positive like `customScale`; the scene emit clamps it into the
+	 *  renderer's range, so a legal-but-absurd document cannot ask for more than 5×. */
+	scale: z.number().positive().optional(),
 });
 
 export const zoomRegionSchema = endGteStart(

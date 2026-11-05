@@ -83,7 +83,7 @@ import {
 	transitionCutsMs,
 	zoomTransitions,
 } from "@/lib/ai-edition/timeline/zoom-transitions";
-import { addFocusKeyframe } from "@/lib/ai-edition/timeline/zoomKeyframes";
+import { addZoomKeyframe } from "@/lib/ai-edition/timeline/zoomKeyframes";
 import { formatBinding } from "@/lib/shortcuts";
 import { nativeBridgeClient } from "@/native/client";
 import { TransportBar } from "../TransportBar";
@@ -1900,7 +1900,7 @@ export function V4Timeline({
 									(z) => playhead >= z.startMs / 1000 && playhead <= z.endMs / 1000,
 								) ?? zoomRegions[0];
 							if (!region) return;
-							const next = addFocusKeyframe(region, playhead);
+							const next = addZoomKeyframe(region, playhead);
 							if (!next) {
 								// Outside every region this pill covers: say so rather than no-op.
 								toast.info(ts("zoom.keyframes.needsPlayhead"));

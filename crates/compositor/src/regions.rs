@@ -757,20 +757,27 @@ pub fn arrow_local_geometry(
     )
 }
 
-/// Le focus d'une région au temps `t`, lu sur son chemin de keyframes. `None` quand elle n'en a pas.
+/// Le chemin d'une région au temps `t` : où la caméra regarde, et son niveau de zoom quand les clés
+/// en portent un.
 ///
 /// La progression se mesure sur l'horloge ÉCRAN, comme l'enveloppe (`zoom_region_strength`) : sous
 /// une speed region, le chemin avance donc avec le temps que le spectateur voit, pas avec la source.
 ///
-/// Linéaire entre deux points. Les courbes du module (`ease_spring`, `scale_lerp`) servent des
-/// transitions entières, pas des segments de chemin — une pente par keyframe est une décision de
-/// modèle plus large que cette tranche.
-fn focus_path_at(region: &SceneZoomRegion, t: f32, clock: &ScreenClock) -> Option<[f32; 2]> {
+/// Linéaire entre deux points, en position comme en échelle. Les courbes du module (`ease_spring`,
+/// `scale_lerp`) servent des transitions entières, pas des segments de chemin — une pente par
+/// keyframe est une décision de modèle plus large que cette tranche.
+///
+/// `None` seulement quand la région n'a AUCUNE clé : une clé sans échelle retombe sur celle de la
+/// région, donc un chemin purement caméra rend la même échelle partout, exactement comme avant.
+fn path_at(region: &SceneZoomRegion, t: f32, clock: &ScreenClock) -> Option<([f32; 2], Option<f32>)> {
     let keys = region.keyframes.as_slice();
     let first = keys.first()?;
+    let scale_of = |key: &crate::scene::ZoomKeyframe| {
+        key.scale.map(|scale| scale as f32).unwrap_or(region.scale)
+    };
     // Une seule clé, c'est une caméra posée : la même partout dans la région.
     if keys.len() == 1 {
-        return Some([first.cx, first.cy]);
+        return Some(([first.cx, first.cy], Some(scale_of(first))));
     }
     let start = clock.at(region.start_sec as f32);
     let end = clock.at(region.end_sec as f32);
@@ -780,10 +787,10 @@ fn focus_path_at(region: &SceneZoomRegion, t: f32, clock: &ScreenClock) -> Optio
     // l'ease déborde sur des frames voisines ne doit pas voir la caméra sauter d'un bout à l'autre.
     let last = keys[keys.len() - 1];
     if u <= keys[0].at {
-        return Some([keys[0].cx, keys[0].cy]);
+        return Some(([keys[0].cx, keys[0].cy], Some(scale_of(&keys[0]))));
     }
     if u >= last.at {
-        return Some([last.cx, last.cy]);
+        return Some(([last.cx, last.cy], Some(scale_of(&last))));
     }
 
     // Les clés arrivent triées par `at` (l'émetteur les trie), donc un balayage suffit.
@@ -791,10 +798,27 @@ fn focus_path_at(region: &SceneZoomRegion, t: f32, clock: &ScreenClock) -> Optio
         let (a, b) = (pair[0], pair[1]);
         if u >= a.at && u <= b.at {
             let k = clamp01((u - a.at) / (b.at - a.at).max(1e-6));
-            return Some([lerp(a.cx, b.cx, k), lerp(a.cy, b.cy, k)]);
+            return Some((
+                [lerp(a.cx, b.cx, k), lerp(a.cy, b.cy, k)],
+                Some(lerp(scale_of(&a), scale_of(&b), k)),
+            ));
         }
     }
-    Some([last.cx, last.cy])
+    Some(([last.cx, last.cy], Some(scale_of(&last))))
+}
+
+/// Le focus d'une région au temps `t`, lu sur son chemin de keyframes. `None` quand elle n'en a pas.
+fn focus_path_at(region: &SceneZoomRegion, t: f32, clock: &ScreenClock) -> Option<[f32; 2]> {
+    path_at(region, t, clock).map(|(focus, _)| focus)
+}
+
+/// L'échelle effective d'une région à `t` : le niveau de son chemin quand il en porte un, sinon la
+/// sienne. C'est le seul point d'entrée des appelants, pour qu'aucun d'eux ne puisse lire
+/// `region.scale` et ignorer un chemin keyframé.
+fn effective_scale(region: &SceneZoomRegion, t: f32, clock: &ScreenClock) -> f32 {
+    path_at(region, t, clock)
+        .and_then(|(_, scale)| scale)
+        .unwrap_or(region.scale)
 }
 
 /// Focus effectif d'une région à `t` : sa position fixe, sauf en mode "auto" où elle suit la
@@ -998,7 +1022,11 @@ pub fn zoom_state_in(
         let mix =
             |p: [f32; 2], q: [f32; 2]| [lerp(p[0], q[0], progress), lerp(p[1], q[1], progress)];
         return ZoomState {
-            scale: scale_lerp(cur.scale, next.scale, progress),
+            scale: scale_lerp(
+                effective_scale(cur, t, clock),
+                effective_scale(next, t, clock),
+                progress,
+            ),
             strength: 1.0,
             focus: [
                 lerp(cur_focus[0], next_focus[0], progress),
@@ -1020,7 +1048,7 @@ pub fn zoom_state_in(
             let camera = orbit_flag(next);
             let seen = orbit_at(next, t, frame);
             return ZoomState {
-                scale: next.scale,
+                scale: effective_scale(next, t, clock),
                 strength: 1.0,
                 focus: resolve_focus(next, t, cursor, clock),
                 rotation: fixed_rotation(next),
@@ -1061,7 +1089,7 @@ pub fn zoom_state_in(
         Some((i, strength)) => {
             let r = &regions[i];
             let focus = resolve_focus(r, t, cursor, clock);
-            let scale = scale_lerp(1.0, r.scale, strength);
+            let scale = scale_lerp(1.0, effective_scale(r, t, clock), strength);
             // La référence (`zoomTransform.ts`) fait converger le point de focus vers le centre
             // de l'écran LINÉAIREMENT : screen(f) = 0.5 + (f - 0.5)(1 - strength). Passer
             // `lerp(0.5, f, strength)` comme centre de crop ne donne pas ça — le crop mappant
@@ -3733,11 +3761,13 @@ mod orbit_camera_tests {
                     at: 0.0,
                     cx: 0.2,
                     cy: 0.5,
+                    scale: None,
                 },
                 crate::scene::ZoomKeyframe {
                     at: 1.0,
                     cx: 0.8,
                     cy: 0.5,
+                    scale: None,
                 },
             ],
         }
@@ -3755,6 +3785,7 @@ mod orbit_camera_tests {
             at: 0.5,
             cx: 0.3,
             cy: 0.7,
+            scale: None,
         }];
         for t in [0.0, 2.0, 5.0, 8.0, 20.0] {
             assert_eq!(
@@ -3763,6 +3794,69 @@ mod orbit_camera_tests {
                 "t = {t}"
             );
         }
+    }
+
+    /// Le cas de tout document écrit avant le zoom animé, et de tout chemin qui ne fait que
+    /// déplacer la caméra : aucune clé ne porte d'échelle, l'interpolation est plate, l'image est
+    /// celle d'avant.
+    #[test]
+    fn a_path_without_scales_keeps_the_region_scale_everywhere() {
+        let r = keyed(2.0, 8.0);
+        let clock = ScreenClock::default();
+        for t in [0.0, 2.0, 5.0, 8.0, 20.0] {
+            assert_eq!(effective_scale(&r, t, &clock), 2.0, "t = {t}");
+        }
+    }
+
+    #[test]
+    fn a_keyframed_scale_interpolates_between_its_keys() {
+        let mut r = keyed(2.0, 8.0);
+        r.keyframes = vec![
+            crate::scene::ZoomKeyframe {
+                at: 0.0,
+                cx: 0.5,
+                cy: 0.5,
+                scale: Some(1.5),
+            },
+            crate::scene::ZoomKeyframe {
+                at: 1.0,
+                cx: 0.5,
+                cy: 0.5,
+                scale: Some(3.5),
+            },
+        ];
+        let clock = ScreenClock::default();
+        assert_eq!(effective_scale(&r, 2.0, &clock), 1.5);
+        assert_eq!(effective_scale(&r, 5.0, &clock), 2.5);
+        assert_eq!(effective_scale(&r, 8.0, &clock), 3.5);
+        // Hors de la région, le chemin TIENT ses extrémités, échelle comprise : la caméra ne doit
+        // ni sauter avant l'entrée ni revenir en arrière après la sortie.
+        assert_eq!(effective_scale(&r, 0.0, &clock), 1.5);
+        assert_eq!(effective_scale(&r, 40.0, &clock), 3.5);
+    }
+
+    /// Un chemin MIXTE : la clé qui ne porte pas d'échelle retombe sur celle de la région, donc
+    /// l'interpolation part de là au lieu de sauter vers zéro.
+    #[test]
+    fn a_key_without_a_scale_falls_back_to_the_regions_own() {
+        let mut r = keyed(2.0, 8.0);
+        r.keyframes = vec![
+            crate::scene::ZoomKeyframe {
+                at: 0.0,
+                cx: 0.5,
+                cy: 0.5,
+                scale: None,
+            },
+            crate::scene::ZoomKeyframe {
+                at: 1.0,
+                cx: 0.5,
+                cy: 0.5,
+                scale: Some(4.0),
+            },
+        ];
+        let clock = ScreenClock::default();
+        assert_eq!(effective_scale(&r, 2.0, &clock), 2.0);
+        assert_eq!(effective_scale(&r, 5.0, &clock), 3.0);
     }
 
     #[test]

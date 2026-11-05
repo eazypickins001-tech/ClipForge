@@ -54,6 +54,7 @@ import {
 import {
 	MAGNIFICATION_REFERENCE_PX,
 	MAX_ZOOM_SCALE,
+	MIN_ZOOM_SCALE,
 	maxZoomScaleFor,
 } from "@/lib/ai-edition/timeline/zoom-scale";
 import {
@@ -129,7 +130,7 @@ export interface SceneZoomRegion {
 	/** A keyframed focus path, normalized INSIDE the region (`at` 0..1), sorted and clamped at emit.
 	 *  `regions.rs::focus_path_at` samples it in preference to `focusX`/`focusY`; absent means the
 	 *  region keeps that single point, which is every document that has no path. */
-	keyframes?: Array<{ at: number; cx: number; cy: number }>;
+	keyframes?: Array<{ at: number; cx: number; cy: number; scale?: number }>;
 }
 
 /** One fragment of a shader effect region (`(document.shaderEffectRanges ?? [])`), projected onto its
@@ -829,19 +830,29 @@ function zoomScaleLimitOf(
 export function clampZoomKeyframes(
 	region: AxcutZoomRegion,
 	scale: number,
-): Array<{ at: number; cx: number; cy: number }> {
+): Array<{ at: number; cx: number; cy: number; scale?: number }> {
 	const keys = region.keyframes ?? [];
 	if (keys.length === 0) return [];
-	const bounds = getFocusBoundsForScale(scale);
 	// Last wins at one instant: two keys at the same `at` are one key, and the later one is the edit
 	// the user just made.
-	const byAt = new Map<number, { at: number; cx: number; cy: number }>();
+	const byAt = new Map<number, { at: number; cx: number; cy: number; scale?: number }>();
 	for (const key of keys) {
 		const at = Math.min(1, Math.max(0, key.at));
+		// The key's OWN level decides how far its focus may sit: a 5× key can look further out than a
+		// 1.25× one, exactly as the region-level clamp already does for a single point. Clamping every
+		// key against the region's scale would refuse a legal push-in, which is the whole feature.
+		const keyScale =
+			key.scale === undefined
+				? undefined
+				: Math.min(MAX_ZOOM_SCALE, Math.max(MIN_ZOOM_SCALE, key.scale));
+		const bounds = getFocusBoundsForScale(keyScale ?? scale);
 		byAt.set(at, {
 			at,
 			cx: Math.min(bounds.maxX, Math.max(bounds.minX, key.cx)),
 			cy: Math.min(bounds.maxY, Math.max(bounds.minY, key.cy)),
+			// Emitted only when the key carries one: a document whose keys only ever moved the camera
+			// keeps the payload it had, and the compositor falls back to the region's own scale.
+			...(keyScale === undefined ? {} : { scale: keyScale }),
 		});
 	}
 	return [...byAt.values()].sort((a, b) => a.at - b.at);

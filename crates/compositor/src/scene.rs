@@ -663,6 +663,13 @@ pub struct ZoomKeyframe {
     pub at: f32,
     pub cx: f32,
     pub cy: f32,
+    /// Le niveau de zoom À cette clé, quand elle en porte un : c'est ce qui permet à une région de
+    /// se resserrer ou de s'élargir au lieu de tenir une seule profondeur. Absent = l'échelle de la
+    /// région, donc une charge utile d'avant cette version — ou un chemin qui ne fait que déplacer
+    /// la caméra — rend exactement la même image : toutes les clés retombent sur le même nombre et
+    /// l'interpolation est plate.
+    #[serde(default)]
+    pub scale: Option<f64>,
 }
 
 /// Une zone de vitesse portée par le temps source d'un clip.

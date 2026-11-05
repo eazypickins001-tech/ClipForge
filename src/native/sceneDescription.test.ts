@@ -20,6 +20,7 @@ import type {
 	AxcutZoomRegion,
 } from "@/lib/ai-edition/schema";
 import { axcutSchemaVersion } from "@/lib/ai-edition/schema";
+import { MAX_ZOOM_SCALE } from "@/lib/ai-edition/timeline/zoom-scale";
 import { CURSOR_KIND_IDS, DEFAULT_CURSOR_THEME_ID } from "@/lib/cursor/cursorThemes";
 import { DEVICE_FRAMES } from "@/lib/projectDefaults";
 import { getFocusBoundsForScale } from "@/lib/zoomMath/focusUtils";
@@ -834,6 +835,60 @@ describe("buildSceneDescription.zoomRegions", () => {
 		expect(clampZoomKeyframes(z, getZoomScale({ depth: 2 }))).toEqual([
 			{ at: 0.5, cx: 0.64, cy: 0.64 },
 		]);
+	});
+
+	it("emits a key's own zoom level, clamped into what the renderer can produce", () => {
+		const z = makeZoom({
+			id: "z",
+			startMs: 0,
+			endMs: 2000,
+			depth: 3,
+			focus: { cx: 0.5, cy: 0.5 },
+			keyframes: [
+				{ at: 0, cx: 0.5, cy: 0.5, scale: 1.5 },
+				// Legal in the schema, impossible to render: the emit carries the clamp, not the number
+				// the document happens to store.
+				{ at: 1, cx: 0.5, cy: 0.5, scale: 12 },
+			],
+		});
+		const region = buildSceneDescription(makeDoc({ zoomRanges: [z] })).zoomRegions[0];
+		expect(region.keyframes).toEqual([
+			{ at: 0, cx: 0.5, cy: 0.5, scale: 1.5 },
+			{ at: 1, cx: 0.5, cy: 0.5, scale: MAX_ZOOM_SCALE },
+		]);
+	});
+
+	it("leaves a camera-only path without any scale, so its payload is what it was", () => {
+		// The property the whole feature rests on: keys that only ever moved the camera emit what they
+		// always did, and the compositor falls back to the region's own scale.
+		const z = makeZoom({
+			id: "z",
+			startMs: 0,
+			endMs: 1000,
+			depth: 2,
+			focus: { cx: 0.5, cy: 0.5 },
+			keyframes: [{ at: 0, cx: 0.4, cy: 0.4 }],
+		});
+		const region = buildSceneDescription(makeDoc({ zoomRanges: [z] })).zoomRegions[0];
+		expect(region.keyframes).toEqual([{ at: 0, cx: 0.4, cy: 0.4 }]);
+	});
+
+	it("lets a key's own scale decide how far its focus may sit", () => {
+		// A far-out focus is past what a 1.25× frame can show, but a 5× one can reach it. Clamping
+		// every key against the REGION's scale would refuse a legal push-in — the feature itself.
+		const z = makeZoom({
+			id: "z",
+			startMs: 0,
+			endMs: 1000,
+			depth: 1,
+			focus: { cx: 0.5, cy: 0.5 },
+			keyframes: [{ at: 0.5, cx: 0.9, cy: 0.5, scale: 5 }],
+		});
+		const region = buildSceneDescription(makeDoc({ zoomRanges: [z] })).zoomRegions[0];
+		expect(region.keyframes?.[0]?.cx).toBeGreaterThan(getFocusBoundsForScale(1.25).maxX);
+		expect(region.keyframes?.[0]?.cx).toBe(
+			Math.min(0.9, getFocusBoundsForScale(MAX_ZOOM_SCALE).maxX),
+		);
 	});
 
 	it("converts ms→sec for start/end", () => {
