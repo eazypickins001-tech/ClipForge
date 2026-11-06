@@ -204,6 +204,7 @@ describe("the mutating-tool table", () => {
 				"addZoom",
 				"addZooms",
 				"addAutoZooms",
+				"autoReframe",
 				"duplicateClip",
 				"insertClip",
 				"moveClip",
@@ -4113,5 +4114,59 @@ describe("the executor's view of a check asked beforehand", () => {
 		expect(
 			shaderEffectToCheck(document, "setEffectDefinition", { effectId: "fx_missing", code: "x" }),
 		).toBeNull();
+	});
+});
+
+describe("autoReframe", () => {
+	/** The fixture's asset carries no probe, which is the state that must refuse. This one knows its
+	 *  source size, the way a real project does once the probe has landed. */
+	const probed = () =>
+		documentSchema.parse({
+			...fixtureDocument(),
+			assets: [{ ...fixtureDocument().assets[0], video: { width: 1920, height: 1080 } }],
+		});
+
+	it("crops every clip to the target and says what it centred on", () => {
+		const result = executeAgentTool(
+			probed(),
+			"autoReframe",
+			JSON.stringify({ targetAspect: "9:16" }),
+		);
+		expect(result.ok).toBe(true);
+		// 16:9 → 9:16 keeps full height and gives up width, centred because the fixture zooms nothing.
+		for (const clip of result.document?.timeline.clips ?? []) {
+			expect(clip.cropRegion?.height).toBe(1);
+			expect(clip.cropRegion?.width).toBeCloseTo(9 / 16 / (16 / 9), 6);
+		}
+		// The FORMAT is part of the same edit: a 9:16 crop inside a 16:9 canvas would letterbox rather
+		// than reframe, so the two writes must not be separable.
+		expect(result.resultJson).toContain('"aspectRatio":"9:16"');
+		expect(() => documentSchema.parse(result.document)).not.toThrow();
+	});
+
+	it("refuses the whole request when a clip has no probed dimensions", () => {
+		// All-or-nothing: reframing only the clips that happen to know their size would leave the
+		// format changing mid-timeline.
+		const result = executeAgentTool(
+			fixtureDocument(),
+			"autoReframe",
+			JSON.stringify({ targetAspect: "9:16" }),
+		);
+		expect(result.ok).toBe(false);
+		expect(result.resultJson).toContain("probed dimensions");
+		// Nothing was changed: no document comes back at all.
+		expect(result.document).toBeUndefined();
+	});
+
+	it("refuses a format that is not a shape", () => {
+		// `auto` follows the first clip, so there is no ratio to crop to. Refused, not guessed.
+		const result = executeAgentTool(
+			fixtureDocument(),
+			"autoReframe",
+			JSON.stringify({ targetAspect: "auto" }),
+		);
+		expect(result.ok).toBe(false);
+		expect(result.resultJson).toContain("not a shape");
+		expect(result.document).toBeUndefined();
 	});
 });

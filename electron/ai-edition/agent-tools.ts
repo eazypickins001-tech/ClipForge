@@ -39,6 +39,7 @@ import {
 	setLayoutPreset,
 } from "../../src/lib/ai-edition/document/layout";
 import { resolveAspectRatioValue } from "../../src/lib/ai-edition/document/outputFormat";
+import { parseAspectRatioToken, planReframe } from "../../src/lib/ai-edition/document/reframe";
 import {
 	duplicateClip,
 	insertAssetClip,
@@ -770,6 +771,19 @@ export const setAspectRatioArgs = z.object({
 		),
 });
 
+export const autoReframeArgs = z.object({
+	targetAspect: z
+		.string()
+		.describe(
+			`The format to reframe for: one of ${ASPECT_RATIO_PRESETS.join(", ")}. Not "auto" — a crop needs a fixed shape.`,
+		),
+	assetId: z
+		.string()
+		.min(1)
+		.optional()
+		.describe("Reframe only the clips using this asset. Omit to reframe every clip."),
+});
+
 export const replaceTimelineArgs = z.object({
 	intervals: z.array(z.object({ startSec: secondsSchema, endSec: secondsSchema })).min(1),
 	reason: z.string().default(""),
@@ -1164,6 +1178,7 @@ export const OPENSCREEN_TOOL_NAMES = [
 	"addTrims",
 	"setTrim",
 	"setClipRange",
+	"autoReframe",
 	"moveClip",
 	"insertClip",
 	"duplicateClip",
@@ -1248,6 +1263,7 @@ export const MUTATING_TOOL_NAMES: ReadonlySet<string> = new Set([
 	"addZooms",
 	"setTrim",
 	"setClipRange",
+	"autoReframe",
 	"moveClip",
 	"insertClip",
 	"duplicateClip",
@@ -2086,6 +2102,52 @@ export function executeAgentTool(
 				...execution,
 				resultJson: JSON.stringify({ aspectRatio: parsed.data.aspectRatio, previous }),
 				summary: `set the format to ${parsed.data.aspectRatio}`,
+			};
+		}
+
+		case "autoReframe": {
+			const parsed = autoReframeArgs.safeParse(args);
+			if (!parsed.success) return failure(parsed.error.message);
+			const { targetAspect, assetId } = parsed.data;
+			// The format names a SHAPE, and a crop can only be computed from a ratio: "auto" follows the
+			// first clip, so it is refused here rather than resolved to something the caller did not ask
+			// for.
+			const ratio = parseAspectRatioToken(targetAspect);
+			if (ratio === null) {
+				return failure(
+					`"${targetAspect}" is not a shape this can crop to. Give one of ${ASPECT_RATIO_PRESETS.join(", ")}.`,
+				);
+			}
+			const plan = planReframe(document, { width: ratio, height: 1 }, assetId);
+			if ("refused" in plan) return failure(plan.refused);
+			// The crops AND the output format, in ONE document. Cropping a clip to 9:16 inside a 16:9
+			// canvas does not reframe it — it letterboxes the picture — so the two writes belong to the
+			// same call, and the agent must not be able to make only the first one.
+			let cropped = document;
+			for (const entry of plan.entries) cropped = setClipCrop(cropped, entry.clipId, entry.crop);
+			const formatted = executeSetEditorSettings(
+				cropped,
+				{ aspectRatio: targetAspect },
+				options?.cameraSegmentation?.() ?? null,
+			);
+			if (!formatted.ok || !formatted.document) return failure(formatted.resultJson);
+			return {
+				ok: true,
+				document: formatted.document,
+				resultJson: JSON.stringify({
+					aspectRatio: targetAspect,
+					reframed: plan.entries.map((entry) => ({
+						clipId: entry.clipId,
+						crop: entry.crop,
+						centredOn: entry.centredOn,
+					})),
+					...(assetId === undefined ? {} : { assetId }),
+					// Said out loud because it is the one thing a caller could reasonably assume and be
+					// wrong about: this centres on what the project already framed, and never reads the
+					// cursor track, so nothing here "followed the action".
+					note: 'Each clip now shows the part of its source that fills the new format. A crop centred on "centre" had no zoom on that clip to follow — this does not read the cursor track.',
+				}),
+				summary: `reframed ${plan.entries.length} clip${plan.entries.length === 1 ? "" : "s"} for ${targetAspect}`,
 			};
 		}
 

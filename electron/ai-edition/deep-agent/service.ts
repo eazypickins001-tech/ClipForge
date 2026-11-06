@@ -62,6 +62,7 @@ import {
 	addTrimsArgs,
 	addZoomArgs,
 	addZoomsArgs,
+	autoReframeArgs,
 	type CursorTelemetryLoad,
 	duplicateClipArgs,
 	executeAgentTool,
@@ -264,6 +265,8 @@ export const TOOL_DESCRIPTIONS: Record<string, string> = {
 		"Change an existing annotation by id: its span (virtual-timeline seconds), its type, its centre (x/y, percent of its box), its size (width/height, arrow and blur only), its text and look (text only: fontSize, color, background, bold, animation), or its figureData / blurData, of which only the keys you pass change. Only the fields you pass are changed. A type change converts it as the editor's type switch does: it stays where it is on screen, a text turned into an arrow or a blur takes the default box, and the text is kept to come back to. A text box is refitted to its text around its centre. Arguments that belong to another kind (width on a text, blurData on an arrow) are refused. A new span that would run into another annotation is refused, naming it.",
 	setAspectRatio:
 		"Set the shape of the exported video: 16:9 for X, YouTube or a slide, 9:16 for a vertical story or short, 1:1 or 4:5 for a square feed, auto to follow the recording, or one of the clips' own shapes (getCurrentDocument's settingsContext.originalAspectRatios). Annotations on the frame keep their place and shape. The same as setEditorSettings with aspectRatio alone.",
+	autoReframe:
+		"Reframe every clip for a different shape, the way you would for a vertical short: each clip is cropped to the part of its source that fills the target, centred on whatever the project already zooms on (so a clip the author framed stays framed), and the output format is set to match in the same edit. Give a fixed shape — 16:9, 9:16, 1:1, 4:5 — not auto, which has no shape to crop to. Refuses without changing anything when a clip's dimensions have not been probed yet, because reframing only some clips would leave the format changing mid-timeline. This does not read the cursor track: it follows the project's own zooms, not the action.",
 	setEditorSettings:
 		'Change the project\'s look: pass only the settings to change, named as getCurrentDocument returns them under `settings`. Background: wallpaper (a bundled path from settingsContext.bundledWallpapers, a CSS colour or gradient, or a base64 PNG/JPEG data URL; never a file path or web URL; an embedded image reads back as a marker, leave the key out to keep it), wallpaperMotion (moves a gradient or image only), backgroundBlur 0–1. Frame: aspectRatio ("auto", a preset, or an originalAspectRatios token; a fixed format picked for the first time fills the frame with a window that follows the cursor, which formatFollowCursor turns off when settingsContext.formatFill is "available"), padding 0–100 %, borderRadius 0–64 px, shadowIntensity 0–1, frame (none, window, laptop, phone, monitor) and frameTheme (light, dark), motionBlurAmount 0–1, depthOfField (blurs 3D-tilted zooms only). Camera: webcamLayoutPreset, webcamMirrored, webcamReactiveZoom (shrinks on zoom), webcamMaskShape (square or rectangle, the camera\'s own proportions; an untouched roundness follows it), webcamRoundness 0–1, webcamSizePreset 15–60, webcamAnchor (a corner or an edge middle), webcamCropRegion (the framing: a square share of the picture, width = height ≥ 1/3) and webcamCropPan (where that window sits, 0–1 per axis, 0.5 centred), webcamBackgroundMode (none, transparent, blur, custom: needs settingsContext.cameraSegmentation ready), webcamBlurIntensity 0–1, webcamWallpaper (as wallpaper). Cursor, under `cursor`: show, autoHide, theme (settingsContext.cursorThemes), asArrow (the recorded cursor kinds drawn as the arrow instead), size 1.5–6, smoothing 0–1, motionBlur 0–1, clickBounce 0–2, clickImpact, clickSound (only heard when the take recorded clicks) and clickSoundGainDb −24–0, model3d. Also autoFocusAll (every zoom follows the cursor) and audioGainDb −12–12 dB, the master volume. A value out of range or a key not listed is refused with the reason, and nothing changes. The result lists what was applied, including what the editor changes with it, and `inactive` for any of those the current state leaves without effect.',
 	addEffect:
@@ -560,6 +563,7 @@ export const TOOL_ARG_SCHEMAS: ReadonlyArray<readonly [string, z.ZodObject]> = [
 	["addTrims", addTrimsArgs],
 	["setTrim", setTrimArgs],
 	["setClipRange", setClipRangeArgs],
+	["autoReframe", autoReframeArgs],
 	["moveClip", moveClipArgs],
 	["insertClip", insertClipArgs],
 	["duplicateClip", duplicateClipArgs],

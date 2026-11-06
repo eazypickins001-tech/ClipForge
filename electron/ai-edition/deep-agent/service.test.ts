@@ -68,6 +68,7 @@ const ARGS: Record<string, unknown> = {
 	addTrims: { ranges: [{ startSec: 1, endSec: 2 }] },
 	setTrim: { trimRangeId: "trim_1", startSec: 1, endSec: 2 },
 	setClipRange: { clipId: "clip_1", sourceStartSec: 0, sourceEndSec: 10 },
+	autoReframe: { targetAspect: "9:16" },
 	moveClip: { clipId: "clip_1", beforeClipId: null },
 	insertClip: { assetId: "asset_1", sourceStartSec: 2, sourceEndSec: 4 },
 	duplicateClip: { clipId: "clip_1" },
