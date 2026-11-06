@@ -96,24 +96,40 @@ step — but no assertion anywhere looks at the pixels. Watch an export, and the
 believing it. (The BLEND family has since been watched, in both the preview and an export; the dip
 family still has not.)
 
-## Next task — the e2e (A4), then the rest of Phase A
+## Where this stands — Phases A, B and C have all shipped
 
-1. **A4 — e2e + CI wiring.** New `tests/e2e/transitions.spec.ts` in the shape of
-   `clip-edits.spec.ts`: boot with a recording, split it (or use two assets), click
-   `[data-transition-at="<clipId>"]`, pick a kind, `poll` the SAVED project for
-   `transitions[0] === { clipId, side: "in", kind, durationMs }`.
-   **It runs NOWHERE until it is added to the explicit list at `build.yml:162`.**
-2. **Phase B — true cross-boundary blends (dissolve, wipe, slide).** These need the two clips to
-   OVERLAP in the output programme, which shortens the video. Touches
-   `resolvePlaybackSegments`, `outputFrameCount.ts`, `build_audio_concat_plan` +
-   `assemble_concatenated_pcm`, and `walk_timeline`. Windows first. §3 of the plan has the detail,
-   including why no cheaper model is correct.
-3. **Phase C — scene animations (keyframes/curves on regions).** `regions.rs` already has the
-   easing but keeps it private (`ease_spring`, `lerp`, `scale_lerp`, `clamp01`, `smoothstep`).
-   Widen and add one `KeyframeTrack::sample(t)`.
-4. Then the CapCut parity roadmap (§7 of the plan). Cheapest big wins: remove-filler-words /
-   silence, scene detection, auto-reframe, and script-to-video **as agent tools** — our agent
-   already writes the timeline, so those are new tools, not new engines.
+Watched in the app by hand, in the preview AND in an exported file: the dip family has still never
+been looked at, the blend family has.
+
+| # | What | Commits |
+|---|---|---|
+| A4 | `tests/e2e/transitions.spec.ts`, wired into the packaged smoke step | `303dad2`, `69822ca` |
+| B | **cross dissolve**: the two clips OVERLAP by `d`, so the programme shortens | `1257edd`, `1edb555`, `784490f`, `7e4bf60` |
+| B+ | **wipes and slides**, four edges each — the same pass, geometry from `regions::blend_geometry` | `5b9bb42` |
+| C | **keyframed focus path** (`regions.rs::path_at`) | previous session |
+| C+ | **keyframed SCALE**: a key records its zoom level, so a region can push in | `87eb752` |
+
+**How a blend is drawn, because the plan predicted it wrong.** The plan expected the shared
+`walk_timeline` to orchestrate the overlap, a stub on every backend (the walk was thought to be typed
+against a trait), and `live.rs` to HOLD the outgoing decoders across the boundary. None of that was
+needed: the walk already calls `set_scene` per clip, so the WINDOWS `compose_frame` sees the blend on
+its own — no cross-backend work, no trait. And the outgoing picture is a **copy of the render target**
+taken at the very top of `compose_frame`, before `begin_image_frame` clears it, so the previous clip's
+last frame is still there: one `CopyResource`, one full-screen pass, and **no second decoder at all**.
+That is also why the live preview blends for free.
+
+## What is left, in the order I would take it
+
+1. **Speed ramps.** The blend window is the last piece still on the source clock (see Open flags), and
+   ramps are what would make that visible.
+2. **Colour grade** (LUT / saturation / levels) — a pass plus a panel; the compositor already has the
+   shader plumbing (`apply_shader_effect`).
+3. **Effects library** — the same pass machinery, a curated list instead of a code box.
+4. **Scene detection → split**, **auto-reframe**, **TTS**, **script-to-video**: the last three are
+   **agent tools**, not engines — the agent already writes the timeline. Scene detection is the one
+   that needs a new capability (an FFmpeg pass over a source).
+5. Still unclaimed from before: `side: "out"` transitions are modelled and honoured by the emitter but
+   nothing in the UI writes one (no fade-out at the end of the programme).
 
 ## Open flags
 
@@ -123,7 +139,19 @@ family still has not.)
 - **macOS / Linux draw no dip.** Deliberate half-port: `SceneClip.video_dip` parses everywhere, the
   pass exists only in `compositor_windows.rs`. `dip_visible_at` is in `frame_geometry` so the ports
   share the envelope.
-- **No e2e for transitions**, so nothing in CI proves the UI path beyond tsc.
+- **The blend window is on the SOURCE clock.** `compose_frame` measures it as `source_t - clip start`
+  (as the dip beside it does), while `durationSec` is a PROGRAMME number — so a speed region covering
+  the clip's opening ends the blend early. Written in the code as a known limit, not an oversight:
+  fixing it means carrying the clip's programme start in the scene, and a cut almost always lands on
+  1x. It is the last source-clock leftover.
+- **macOS / Linux draw no blend either.** `SceneClip.incoming_blend` parses everywhere; the pass is in
+  `compositor_windows.rs`. The blend is fail-closed, so an unwatched path degrades to today's hard cut
+  rather than to a wrong frame.
+- **`migrate.ts` does not carry zoom `keyframes` — CHECKED, NOT A BUG.** Both zoom rewriting sites
+  there drop them, but the legacy `ZoomRegion` type has no `keyframes` field (so a v2 project has
+  nowhere to keep a path), the reverse function `migrateAxcutDocumentToProjectData` has no production
+  caller, and `importProjectFile` routes anything with `schemaVersion` + `timeline` to the schema
+  parser, which preserves them. Nothing to fix; recorded so nobody re-investigates it.
 - **`npm run i18n:check` is broken in this repo state** — it throws
   `Could not find appx block in electron-builder.json5` before checking anything. Pre-existing and
   unrelated. Locale parity was verified directly instead (15 locales, 388 keys each, identical).
