@@ -6,7 +6,13 @@
 // bar that lies, and it has already shipped once (OpenScreen#371, the "frozen at ~80%").
 
 import { describe, expect, it } from "vitest";
-import { clipOutputFrameCount, clipProgrammeStarts, outputFrameCount } from "./outputFrameCount";
+import {
+	clipOutputFrameCount,
+	clipProgrammeEndSec,
+	clipProgrammeStarts,
+	clipSourceEndAtProgrammeSec,
+	outputFrameCount,
+} from "./outputFrameCount";
 
 const FPS = 30;
 
@@ -158,6 +164,32 @@ describe("outputFrameCount", () => {
 		expect(outputFrameCount([], [], FPS)).toBe(1);
 		expect(outputFrameCount([{ sourceStartSec: 4, sourceEndSec: 4 }], [], FPS)).toBe(1);
 		expect(outputFrameCount([{ sourceStartSec: 0, sourceEndSec: 10 }], [], 0)).toBe(1);
+	});
+});
+
+describe("clipSourceEndAtProgrammeSec", () => {
+	it("drops exactly the requested programme seconds at 1x", () => {
+		const clip = { sourceStartSec: 2, sourceEndSec: 10 };
+		const natural = clipProgrammeEndSec(clip, [], 0);
+		expect(clipSourceEndAtProgrammeSec(clip, [], 0, natural - 1)).toBeCloseTo(9, 6);
+	});
+
+	it("converts programme seconds to SOURCE seconds under a speed region", () => {
+		// The whole 10 s window plays at 2×, i.e. in 5 programme seconds. Dropping one programme
+		// second of tail means dropping TWO source seconds — a blend must not under-trim a ramp.
+		const clip = { sourceStartSec: 0, sourceEndSec: 10 };
+		const regions = [{ startSec: 0, endSec: 10, speed: 2 }];
+		expect(clipSourceEndAtProgrammeSec(clip, regions, 0, 4)).toBeCloseTo(8, 6);
+	});
+
+	it("clamps to the clip's own source window", () => {
+		const clip = { sourceStartSec: 4, sourceEndSec: 10 };
+		expect(clipSourceEndAtProgrammeSec(clip, [], 0, 0)).toBe(4);
+		expect(clipSourceEndAtProgrammeSec(clip, [], 0, 999)).toBe(10);
+	});
+
+	it("returns the start for an unprobed clip", () => {
+		expect(clipSourceEndAtProgrammeSec({ sourceStartSec: 4 }, [], 0, 1)).toBe(4);
 	});
 });
 

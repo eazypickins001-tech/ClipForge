@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
 	type AxcutClip,
 	type AxcutDocument,
+	type AxcutTransition,
 	type AxcutTrimRange,
 	axcutSchemaVersion,
 } from "../schema";
@@ -2284,6 +2285,47 @@ describe("projectRawTimelineSecToPlayback with speed regions", () => {
 	it("ignores a nonsense rate rather than dividing by it", () => {
 		const speed = [{ startMs: 0, endMs: 4000, speed: 0 }];
 		expect(projectRawTimelineSecToPlayback([clip], [], 4, speed)).toBeCloseTo(4, 6);
+	});
+});
+
+describe("projectRawTimelineSecToPlayback with a blend", () => {
+	const clips: AxcutClip[] = [
+		makeClip({
+			id: "a",
+			assetId: "a",
+			sourceStartSec: 0,
+			sourceEndSec: 10,
+			timelineStartSec: 0,
+			timelineEndSec: 10,
+		}),
+		makeClip({
+			id: "b",
+			assetId: "b",
+			sourceStartSec: 0,
+			sourceEndSec: 10,
+			timelineStartSec: 10,
+			timelineEndSec: 20,
+		}),
+	];
+	const dissolve: AxcutTransition = {
+		id: "t",
+		clipId: "b",
+		side: "in",
+		kind: "dissolve",
+		durationMs: 1000,
+	};
+	const project = (rawSec: number, transitions: AxcutTransition[] = [dissolve]) =>
+		projectRawTimelineSecToPlayback(clips, [], rawSec, [], transitions);
+
+	it("plays everything from the incoming clip `d` earlier", () => {
+		expect(project(9)).toBeCloseTo(9, 6);
+		expect(project(10)).toBeCloseTo(9, 6);
+		expect(project(12)).toBeCloseTo(11, 6);
+		expect(project(20)).toBeCloseTo(19, 6);
+	});
+
+	it("is the unchanged projection without transitions", () => {
+		expect(project(12, [])).toBeCloseTo(12, 6);
 	});
 });
 

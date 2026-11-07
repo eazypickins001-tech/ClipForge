@@ -104,6 +104,46 @@ export function clipProgrammeEndSec(
 	return sec;
 }
 
+/**
+ * The SOURCE second at which a clip must end for its programme length to be `targetProgrammeSec`
+ * instead of its natural one — the inverse of `clipProgrammeEndSec`.
+ *
+ * Solved by bisection ON that forward function rather than by a second walk. A second walk would
+ * have to reproduce the 1x-gap / clamped-region / minimum-span rules exactly, and a blend's
+ * programme start would then drift from the frame grid the moment the two disagreed. The function
+ * is monotonic in the source end, so 48 halvings land well inside float noise for any clip length.
+ *
+ * Used by `clipBlendTailTrims`: a BLEND overlaps the outgoing and incoming clips by `d` PROGRAMME
+ * seconds, so the outgoing must lose that much from its tail. Under a speed region the source
+ * seconds to drop are NOT `d` — the tail pays `d × speed` source seconds.
+ */
+export function clipSourceEndAtProgrammeSec(
+	clip: OutputFrameClip,
+	regions: OutputFrameSpeedRegion[],
+	programmeSec: number,
+	targetProgrammeSec: number,
+): number {
+	const sourceEndSec = clip.sourceEndSec ?? clip.sourceStartSec;
+	if (!(sourceEndSec > clip.sourceStartSec)) {
+		return clip.sourceStartSec;
+	}
+	if (!(targetProgrammeSec > programmeSec)) {
+		return clip.sourceStartSec;
+	}
+	if (targetProgrammeSec >= clipProgrammeEndSec(clip, regions, programmeSec)) {
+		return sourceEndSec;
+	}
+	let lo = clip.sourceStartSec;
+	let hi = sourceEndSec;
+	for (let i = 0; i < 48; i += 1) {
+		const mid = (lo + hi) / 2;
+		const end = clipProgrammeEndSec({ ...clip, sourceEndSec: mid }, regions, programmeSec);
+		if (end < targetProgrammeSec) lo = mid;
+		else hi = mid;
+	}
+	return (lo + hi) / 2;
+}
+
 /** Frames one clip renders when it opens the timeline. */
 export function clipOutputFrameCount(
 	clip: OutputFrameClip,
@@ -149,13 +189,10 @@ export function outputFrameCount(
  * reads it), so no frame-grid rounding belongs here.
  *
  * The regions must be the ones the scene emits — projected onto each clip's source time, `clipIndex`
- * set (`SceneDescription.speedRegions`) — and the clips the trim-narrowed visible list, so a clip's
- * start agrees with what the walk actually composes.
- *
- * ponytail: NO overlap is subtracted, because `resolveVisibleClips` builds a CONTIGUOUS clip list —
- * it does not pass `document.transitions` to `resolvePlaybackSegments`, so a blend does not shorten
- * the programme today. If a blend is ever wired to shorten it, this and that call site must move
- * together, or a dissolve's window drifts by every overlap ahead of it.
+ * set (`SceneDescription.speedRegions`) — and the clips the windows that scene emits: BLEND-TRIMMED
+ * on the export paths (`clipBlendTailTrims`; a dissolve takes `d` programme seconds off the
+ * outgoing clip's tail), FULL on the live preview, whose clock must stay on the raw ruler. A start
+ * that did not see the export's trim would drift by every overlap ahead of it.
  */
 export function clipProgrammeStarts(
 	clips: ReadonlyArray<OutputFrameClip>,

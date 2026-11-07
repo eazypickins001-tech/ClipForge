@@ -29,6 +29,7 @@ import {
 	annotationFootageRect,
 	buildSceneDescription,
 	clampZoomKeyframes,
+	resolveVisibleClips,
 	wallpaperAcceptsMotion,
 	zoomScaleLimit,
 } from "./sceneDescription";
@@ -104,6 +105,7 @@ function makeDoc(
 		annotations: overrides.annotations ?? [],
 		zoomRanges: overrides.zoomRanges ?? [],
 		audioTracks: overrides.audioTracks ?? [],
+		transitions: overrides.transitions ?? [],
 		...(overrides.shaderEffects ? { shaderEffects: overrides.shaderEffects } : {}),
 		...(overrides.shaderEffectRanges ? { shaderEffectRanges: overrides.shaderEffectRanges } : {}),
 		legacyEditor: overrides.legacyEditor ?? null,
@@ -1313,6 +1315,110 @@ describe("buildSceneDescription.clips programmeStartSec", () => {
 		});
 		const { clips } = buildSceneDescription(doc);
 		expect(clips.map((clip) => clip.programmeStartSec)).toEqual([0, 2]);
+	});
+
+	it("opens the incoming clip `d` early on a dissolve and trims the outgoing's tail", () => {
+		const assetA = makeAsset({ id: "a", originalPath: "/a.mp4" });
+		const assetB = makeAsset({ id: "b", originalPath: "/b.mp4" });
+		const clip1 = makeClip({
+			id: "c1",
+			assetId: "a",
+			sourceStartSec: 0,
+			sourceEndSec: 10,
+			timelineStartSec: 0,
+			timelineEndSec: 10,
+		});
+		const clip2 = makeClip({
+			id: "c2",
+			assetId: "b",
+			sourceStartSec: 0,
+			sourceEndSec: 10,
+			timelineStartSec: 10,
+			timelineEndSec: 20,
+		});
+		const document = makeDoc({
+			assets: [assetA, assetB],
+			clips: [clip1, clip2],
+			transitions: [{ id: "t1", clipId: "c2", side: "in", kind: "dissolve", durationMs: 1000 }],
+		});
+		const { clips } = buildSceneDescription(document, null, { trimBlendTails: true });
+		// The programme is 19 s, not 20: the incoming clip opens at 9 (the bisection lands within
+		// float noise of the second).
+		expect(clips[0].programmeStartSec).toBeCloseTo(0, 6);
+		expect(clips[1].programmeStartSec).toBeCloseTo(9, 6);
+		// The OUTGOING gives up the overlap from its tail; the incoming keeps its full window.
+		expect(clips[0].sourceEndSec).toBeCloseTo(9, 6);
+		expect(clips[1].sourceEndSec).toBe(10);
+		// The blend window is the same second, carried on the incoming clip.
+		expect(clips[1].incomingBlend).toEqual({ kind: "dissolve", durationSec: 1 });
+	});
+
+	it("leaves the PREVIEW's windows and clock alone, while still emitting the blend", () => {
+		// The live preview's transport runs on the raw ruler, so its scene must keep the full
+		// windows and the natural programme start; only the export path shortens the programme.
+		const assetA = makeAsset({ id: "a", originalPath: "/a.mp4" });
+		const assetB = makeAsset({ id: "b", originalPath: "/b.mp4" });
+		const clip1 = makeClip({
+			id: "c1",
+			assetId: "a",
+			sourceStartSec: 0,
+			sourceEndSec: 10,
+			timelineStartSec: 0,
+			timelineEndSec: 10,
+		});
+		const clip2 = makeClip({
+			id: "c2",
+			assetId: "b",
+			sourceStartSec: 0,
+			sourceEndSec: 10,
+			timelineStartSec: 10,
+			timelineEndSec: 20,
+		});
+		const document = makeDoc({
+			assets: [assetA, assetB],
+			clips: [clip1, clip2],
+			transitions: [{ id: "t1", clipId: "c2", side: "in", kind: "dissolve", durationMs: 1000 }],
+		});
+		const { clips } = buildSceneDescription(document);
+		expect(clips[0].sourceEndSec).toBe(10);
+		expect(clips[1].sourceEndSec).toBe(10);
+		expect(clips[1].programmeStartSec).toBe(10);
+		expect(clips[1].incomingBlend).toEqual({ kind: "dissolve", durationSec: 1 });
+	});
+
+	it("keeps the visible segments contiguous — the transport's raw mapping", () => {
+		const assetA = makeAsset({ id: "a", originalPath: "/a.mp4" });
+		const assetB = makeAsset({ id: "b", originalPath: "/b.mp4" });
+		const clip1 = makeClip({
+			id: "c1",
+			assetId: "a",
+			sourceStartSec: 0,
+			sourceEndSec: 10,
+			timelineStartSec: 0,
+			timelineEndSec: 10,
+		});
+		const clip2 = makeClip({
+			id: "c2",
+			assetId: "b",
+			sourceStartSec: 0,
+			sourceEndSec: 10,
+			timelineStartSec: 10,
+			timelineEndSec: 20,
+		});
+		const document = makeDoc({
+			assets: [assetA, assetB],
+			clips: [clip1, clip2],
+			transitions: [{ id: "t1", clipId: "c2", side: "in", kind: "dissolve", durationMs: 1000 }],
+		});
+		expect(
+			resolveVisibleClips(document).map((segment) => [
+				segment.timelineStartSec,
+				segment.timelineEndSec,
+			]),
+		).toEqual([
+			[0, 10],
+			[10, 20],
+		]);
 	});
 });
 

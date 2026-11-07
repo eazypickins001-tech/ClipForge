@@ -450,6 +450,13 @@ export function projectRawTimelineSecToPlayback(
 	 * projection behaves exactly as it did before speed was modelled.
 	 */
 	speedRegions: PlaybackSpeedRegion[] = [],
+	/**
+	 * The document's transitions, supplied only by the EXPORT paths. A BLEND shortens the
+	 * programme by its overlap, so everything from the incoming clip's raw start plays `d`
+	 * earlier; without this an imported track (or a frame request) after a dissolve lands `d`
+	 * late. Omitted by the live preview on purpose — its transport stays on the raw ruler.
+	 */
+	transitions: readonly AxcutTransition[] = [],
 ): number {
 	const ordered = [...clips].sort((a, b) => a.timelineStartSec - b.timelineStartSec);
 	let outCursor = 0; // output length of the kept content walked so far
@@ -473,7 +480,31 @@ export function projectRawTimelineSecToPlayback(
 	}
 	// Past every kept frame: programme end plus whatever raw time hangs off the end (identity when
 	// there are no clips at all). A value ≥ programme length just means the mixer skips the track.
-	return landed ?? outCursor + Math.max(0, rawSec - lastRawEnd);
+	const projected = landed ?? outCursor + Math.max(0, rawSec - lastRawEnd);
+	return Math.max(0, projected - blendShiftBefore(ordered, trimRanges, transitions, rawSec));
+}
+
+/**
+ * Programme seconds every BLEND boundary at or before `rawSec` has taken off the programme —
+ * the shift `projectRawTimelineSecToPlayback` subtracts. Reads the overlaps from
+ * `playbackOverlaps`, the same walk the clip list and the scene use, so the number here can
+ * never be a second interpretation of the clamp.
+ */
+function blendShiftBefore(
+	clips: AxcutClip[],
+	trimRanges: AxcutTrimRange[],
+	transitions: readonly AxcutTransition[],
+	rawSec: number,
+): number {
+	if (transitions.length === 0) return 0;
+	const overlaps = playbackOverlaps(clips, trimRanges, transitions);
+	if (overlaps.size === 0) return 0;
+	let shift = 0;
+	for (const [clipId, overlap] of overlaps) {
+		const incoming = clips.find((clip) => clip.id === clipId);
+		if (incoming && incoming.timelineStartSec <= rawSec) shift += overlap;
+	}
+	return shift;
 }
 
 export function invertIntervals(intervals: Interval[], durationSec: number): Interval[] {

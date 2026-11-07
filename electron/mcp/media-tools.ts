@@ -571,7 +571,7 @@ export function createMediaTools(deps: MediaToolDeps): MediaTools {
 		);
 		let frames: Awaited<ReturnType<NonNullable<MediaToolDeps["renderFrames"]>>>;
 		try {
-			const scene = JSON.stringify(buildSceneDescription(document));
+			const scene = JSON.stringify(buildSceneDescription(document, null, { trimBlendTails: true }));
 			frames = await deps.renderFrames(clips, scene, EXPORT_FPS, indices, FRAME_WIDTH);
 		} catch (error) {
 			const message = error instanceof Error ? error.message : String(error);
@@ -1172,7 +1172,10 @@ export function createMediaTools(deps: MediaToolDeps): MediaTools {
 
 /**
  * Where a ruler second plays in the export: the exporter's own projection, through the trims
- * (holes in the ruler that the export skips) and the speed regions (spans it plays faster).
+ * (holes in the ruler that the export skips), the speed regions (spans it plays faster) and the
+ * BLEND overlaps (a dissolve takes `d` off the outgoing clip's tail). The transitions are passed
+ * here for the same reason `buildNativeClipList` trims the clip windows: the frame indices this
+ * feeds must land on the export's shortened grid.
  */
 function programmeSecOf(document: AxcutDocument, rulerSec: number): number {
 	return projectRawTimelineSecToPlayback(
@@ -1180,5 +1183,6 @@ function programmeSecOf(document: AxcutDocument, rulerSec: number): number {
 		document.timeline.trimRanges,
 		rulerSec,
 		readSpeedRegions(document),
+		document.transitions,
 	);
 }

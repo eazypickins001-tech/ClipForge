@@ -133,7 +133,7 @@ async function runExport(request: CliExportRequest): Promise<CliDoneResult> {
 	// scene build cannot await — without this a cold CLI export builds its scene from empty
 	// caches and comes out silent. Clicks that will not load must not cost the export.
 	if (!soloTrack) await prepareClickSound(axcutDocument).catch(() => undefined);
-	const built = buildSceneDescription(axcutDocument);
+	const built = buildSceneDescription(axcutDocument, null, { trimBlendTails: true });
 	// A track alone is heard without the take's sound and the clicks.
 	const sceneDesc = soloTrack ? { ...built, clickSound: undefined } : built;
 	if (soloTrack && sceneDesc.audioTracks.length === 0) {

@@ -74,7 +74,7 @@ import type { FrameTheme, RecordingFrame, WebcamAnchor } from "@/lib/projectDefa
 import { resolveTextFontFamily } from "@/lib/textFonts";
 import { classifyWallpaper } from "@/lib/wallpaper";
 import { getFocusBoundsForScale } from "@/lib/zoomMath/focusUtils";
-import { clipIncomingBlends, clipVideoDips } from "./clipVideoDips";
+import { clipBlendTailTrims, clipIncomingBlends, clipVideoDips } from "./clipVideoDips";
 import type { CompositorClipInput } from "./contracts";
 import { ROUNDNESS_REFERENCE_PX } from "./paramUnits";
 
@@ -715,6 +715,11 @@ function clipAssetIsResolvable(
  */
 export function resolveVisibleClips(document: AxcutDocument): PlaybackSegment[] {
 	const assetById = new Map(document.assets.map((a) => [a.id, a]));
+	// NO transitions on purpose: the editor's playhead and the virtual transport both run on the
+	// raw ruler, and the preview's programme clock is summed from these segments. Pulling a clip
+	// earlier here would make raw→programme discontinuous across the cut and desync the preview.
+	// The BLEND's overlap is applied to the EXPORT's clip windows instead
+	// (`clipBlendTailTrims` + `buildNativeClipList`), where a shorter programme is the point.
 	return resolvePlaybackSegments(document.timeline.clips, document.timeline.trimRanges)
 		.sort((a, b) => a.timelineStartSec - b.timelineStartSec)
 		.filter((clip) => clipAssetIsResolvable(clip, assetById));
@@ -729,9 +734,17 @@ export function resolveVisibleClips(document: AxcutDocument): PlaybackSegment[] 
 export function buildNativeClipList(document: AxcutDocument): CompositorClipInput[] {
 	const assetById = new Map(document.assets.map((a) => [a.id, a]));
 	const visible = resolveVisibleClips(document);
+	const resolvedEnds = visible.map((clip) =>
+		resolveClipSourceEndSec(clip, assetById.get(clip.assetId)),
+	);
+	// A BLEND takes `d` programme seconds off the outgoing clip's tail, so the native walk — which
+	// derives its frame count from these source windows — emits the shortened programme. This list
+	// feeds the export paths only; `buildSceneDescription(document, null, { trimBlendTails: true })`
+	// applies the same trim to that scene, so the export's frames and its blend clock agree.
+	const tailTrims = clipBlendTailTrims(document, visible, resolvedEnds);
 	const dips = clipVideoDips(document, visible);
 	const blends = clipIncomingBlends(document, visible);
-	return visible.flatMap((clip) => {
+	return visible.flatMap((clip, index) => {
 		const asset = assetById.get(clip.assetId);
 		if (!asset?.originalPath) {
 			return [];
@@ -740,7 +753,10 @@ export function buildNativeClipList(document: AxcutDocument): CompositorClipInpu
 		// sourceEndSec is optional in the schema (unknown until probed) — fall back through
 		// the single canonical precedence used by every consumer (clip.probe → asset.duration
 		// → timeline-length guess). See `resolveClipSourceEndSec` for the full order.
-		const sourceEndSec = resolveClipSourceEndSec(clip, asset);
+		const sourceEndSec = Math.max(
+			clip.sourceStartSec,
+			resolvedEnds[index] - (tailTrims[index] ?? 0),
+		);
 		const dip = dips.get(clip.id);
 		const blend = blends.get(clip.id);
 		// ponytail: `hasAudio` stays optimistic about the FILE, for the same reason as in
@@ -951,6 +967,16 @@ export function webcamBoxSourceSize(
 export function buildSceneDescription(
 	document: AxcutDocument,
 	webcamSourceSize: { width: number; height: number } | null = null,
+	/**
+	 * EXPORT paths (ExportDialog, the CLI, the MCP frame renderer) pass
+	 * `{ trimBlendTails: true }`: a BLEND shortens the programme, so the scene the export's
+	 * compositor reads must carry the same shortened windows and programme starts as the
+	 * export ARGUMENT list. The LIVE PREVIEW deliberately omits it — its transport and playhead
+	 * run on the raw ruler, and `resolveVisibleClips` keeps the preview's programme unshortened,
+	 * so trimming here would desync it. Both scenes still describe the same blend; only the
+	 * export's is shorter.
+	 */
+	options: { trimBlendTails?: boolean } = {},
 ): SceneDescription {
 	const settings = getEditorSettings(document);
 
@@ -997,6 +1023,9 @@ export function buildSceneDescription(
 		clickSound: settings.cursorShow && settings.cursor.clickSound,
 		clickSoundGainDb: settings.cursor.clickSoundGainDb,
 	});
+	// Only the export scene shifts tracks across a blend's shortened programme; the preview's
+	// raw-ruler transport is not shortened, so passing them there would desync it.
+	const blendTransitions = options.trimBlendTails ? (document.transitions ?? []) : [];
 	const audioTracks = document.audioTracks.flatMap((fragment) => {
 		const track = takes.get(fragment.id);
 		if (!track || track.muted) return [];
@@ -1009,6 +1038,7 @@ export function buildSceneDescription(
 			document.timeline.trimRanges,
 			track.startMs / 1000,
 			rawSpeedRegions,
+			blendTransitions,
 		);
 		// Length is measured WITHOUT speed, position WITH it — the two do different
 		// things to a track and must not be conflated.
@@ -1024,11 +1054,15 @@ export function buildSceneDescription(
 				projectedClips,
 				document.timeline.trimRanges,
 				track.endMs / 1000,
+				[],
+				blendTransitions,
 			) -
 			projectRawTimelineSecToPlayback(
 				projectedClips,
 				document.timeline.trimRanges,
 				track.startMs / 1000,
+				[],
+				blendTransitions,
 			);
 		const spanSec = trimmedSpanSec;
 		if (spanSec <= 0) return [];
@@ -1076,6 +1110,7 @@ export function buildSceneDescription(
 						document.timeline.trimRanges,
 						piece.rawStartSec,
 						rawSpeedRegions,
+						blendTransitions,
 					),
 					trimStartSec: piece.sourceStartSec,
 					trimEndSec: Math.min(offsetSec + voWindowSec, piece.sourceEndSec),
@@ -1130,6 +1165,21 @@ export function buildSceneDescription(
 		return entries;
 	});
 	const visibleClips = resolveVisibleClips(document);
+	// The BLEND overlap on the EXPORT's clip windows. The incoming clip opens `d` programme seconds
+	// early, so the OUTGOING loses `d` from its tail; the scene then emits that shorter window and
+	// its programme starts move with it. The preview opts out (see `trimBlendTails`), because its
+	// clock is summed from the raw-length windows. Index-aligned with `visibleClips`.
+	const resolvedEnds = visibleClips.map((clip) =>
+		resolveClipSourceEndSec(clip, assetById.get(clip.assetId)),
+	);
+	// Only the EXPORT triangle trims (see the option's note): the preview keeps the raw-length
+	// windows so its clock stays aligned with the editor's raw-ruler playhead.
+	const tailTrims = options.trimBlendTails
+		? clipBlendTailTrims(document, visibleClips, resolvedEnds)
+		: visibleClips.map(() => 0);
+	const emittedEnds = resolvedEnds.map((end, index) =>
+		Math.max(visibleClips[index].sourceStartSec, end - (tailTrims[index] ?? 0)),
+	);
 	// The boundary dip is a SCENE property: the compositor reads it as it composes a clip, and the
 	// live preview composes from this very scene. The export's clip ARGUMENT never reaches the
 	// draw path, so this list is the one that has to carry it.
@@ -1151,7 +1201,10 @@ export function buildSceneDescription(
 	// number, while `source_t` runs `speed×` faster under a speed region covering the clip's opening.
 	// Index-aligned with `visibleClips`.
 	const programmeStarts = clipProgrammeStarts(
-		visibleClips,
+		visibleClips.map((clip, index) => ({
+			sourceStartSec: clip.sourceStartSec,
+			sourceEndSec: emittedEnds[index],
+		})),
 		speedSpans.map((region) => ({
 			startSec: region.startMs / 1000,
 			endSec: region.endMs / 1000,
@@ -1181,7 +1234,7 @@ export function buildSceneDescription(
 				screenPath: asset.originalPath,
 				webcamPath: camera.path,
 				sourceStartSec: clip.sourceStartSec,
-				sourceEndSec: resolveClipSourceEndSec(clip, asset),
+				sourceEndSec: emittedEnds[index],
 				webcamOffsetSec: camera.offsetSec,
 				hasAudio: !clip.muted,
 				gainDb: clip.gainDb ?? 0,

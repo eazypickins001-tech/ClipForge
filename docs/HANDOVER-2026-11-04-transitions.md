@@ -90,6 +90,12 @@ owns that arithmetic, `resolvePlaybackSegments` applies it, and `playbackOverlap
 value per clip for the scene emit — the two walks are pinned against each other by a test that reads
 the overlap off the layout rather than off the rule.
 
+**As of 2026-11-07 the shortening is wired on the EXPORT side** (clip windows, frame grid, progress
+total and the export scene's programme starts; see `HANDOVER-2026-11-07-speed-ramps-programme-clock.md`
+§4). The LIVE PREVIEW still keeps the raw-length clock, so it does not shorten. The outgoing's last
+composed frame is still held (a freeze, not per-frame composition), and the audio boundary is still the
+240-sample crossfade rather than `d`.
+
 **NOT RUN, and it matters:** nobody has *watched* a dip. The envelope is unit-tested
 (`frame_geometry::dip_visible_at`), the draw path compiles, the packaged app still passes its smoke
 step — but no assertion anywhere looks at the pixels. Watch an export, and the live preview, before

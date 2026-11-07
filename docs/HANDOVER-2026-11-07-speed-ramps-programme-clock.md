@@ -6,6 +6,10 @@ Read that one and `HANDOVER-2026-11-04-transitions.md` first.
 **State at handover: `2e3ef8e`, CI green, Build green, one build on disk (`%LOCALAPPDATA%\cf-2e3ef8e`).**
 Working tree clean. The artifact's `app.asar` carries the SHA stamp — the tree is the commit.
 
+> **Follow-up, same day (uncommitted):** the blend overlap is wired on the export side — §4 is now
+> a WIRED section, not a flag. tsc / biome / the unit suite were run; **no new Windows build and
+> no watched export**. `git status` is dirty by this session's changes only.
+
 ---
 
 ## 1. What shipped, and how far it is actually verified
@@ -50,27 +54,48 @@ is a PROGRAMME number — so a speed region over the incoming clip's opening end
 without the field keeps today's render exactly. **Emitted on the SCENE's clip list only**: the export ARGUMENT
 list never reaches the draw path, and this number needs the projected speed spans, which only the scene builds.
 
-## 4. FLAGGED, NOT FIXED — the blend's overlap is inert. Read this before touching transitions.
+## 4. WIRED (same session) — the blend's overlap now shortens the EXPORT
 
-`blendOverlapSec` (`timeline/transitionOverlap.ts`), `resolvePlaybackSegments`' optional third argument, and
-`playbackOverlaps` all exist and are tested. **But `resolveVisibleClips` (`sceneDescription.ts`) calls
-`resolvePlaybackSegments(clips, trimRanges)` with no transitions** — and that is the clip list the scene, the
-export and the walk all consume. So today a `dissolve`:
+`blendOverlapSec` (`timeline/transitionOverlap.ts`), `resolvePlaybackSegments`' optional third
+argument and `playbackOverlaps` all existed and were tested. The bug was that nothing consumed
+them: `resolveVisibleClips` built a contiguous list, so a dissolve drew a freeze-frame blend over
+the incoming clip's opening and the programme did not shorten.
 
-- ships `incomingBlend.durationSec` (the CLAMPED overlap the arithmetic computes), and
-- the compositor draws the outgoing clip's **frozen last frame** over the incoming clip's opening for that many
-  seconds — but the programme does **not** shorten.
+**The export grid is now shortened.** `clipBlendTailTrims` (`native/clipVideoDips.ts`) reads the
+CLAMPED overlap back from `clipIncomingBlends` and cuts that many PROGRAMME seconds off the
+outgoing clip's tail. `clipSourceEndAtProgrammeSec` (`lib/exporter/outputFrameCount.ts`, the
+bisected inverse of `clipProgrammeEndSec`) converts that to source seconds — a 2x tail loses `d × 2`,
+not `d`. `buildNativeClipList` (ExportDialog, CLI, MCP `getFrames`) emits the shortened windows, so
+the native walk derives a shorter frame grid and the progress total follows it.
+`buildSceneDescription(document, null, { trimBlendTails: true })` emits the same windows AND the
+moved programme starts, so the blend window still begins at the incoming clip's first frame.
+`projectRawTimelineSecToPlayback` gained an optional transitions argument, so imported tracks and
+the MCP frame indices follow the shortened programme on the export side.
 
-`HANDOVER-2026-11-04-transitions.md` §2 says "the two clips overlap by `d`, the programme shortens". That
-describes the arithmetic module, not the wiring. It was "watched in the app" as a *transition effect*; it is not
-a true cross-dissolve. **Fixing it changes the frame grid** (and the audio concat path, whose 240-sample crossfade
-would become `d`), i.e. it is Phase B work — a slice of its own. Until then, do not budget from §2's estimate, and
-note that `clipProgrammeStarts`' comment says the same thing: it and `resolveVisibleClips` must move together.
+**What did NOT change, on purpose: the LIVE PREVIEW.** `resolveVisibleClips` still passes no
+transitions, because the editor's playhead and the virtual transport run on the RAW ruler; a
+shortened preview clock would be discontinuous with it. The preview keeps the full windows and the
+freeze-frame blend it was watched with. Making the editor's transport programme-time — so the
+preview and the ruler shorten too — is a slice of its own.
+
+**Still a freeze, not a true dissolve.** The outgoing clip's last COMPOSED frame is held over the
+incoming's opening; its final `d` seconds of motion are not advanced. The plan's Phase B item 3
+(compose the outgoing per frame during the window) is untouched. The audio boundary is still the
+240-sample crossfade, not `d`: the outgoing's tail audio is dropped with its window, so a true
+`d`-length equal-power crossfade remains open. Export click sounds (`clickSound.ts`) are still
+projected without the blend shift.
+
+**Verified by tests only:** app tsc, biome, and the unit suite (the one full-suite failure was
+`LeftPanel.copyMessage`, green on re-run — the known flake class). **No new Windows build was
+produced and no exported picture was watched.** That remains §6, now with a dissolve that must
+visibly shorten the file by the transition's duration.
+
 
 ## 5. Next, in the order I would take it
 
-1. **Wire the overlap** (§4) — or, at minimum, correct the transitions handover §2 so nobody builds on a false
-   premise. Small in code, large in blast radius.
+1. **Wire the overlap** — DONE for the export grid (§4). What remains of it: the true animated
+   outgoing during the blend, the `d`-length audio crossfade, and the preview/transport
+   programme clock. Otherwise, at minimum, the transitions handover §2 is now corrected.
 2. **Colour grade** — a pass plus a panel; `apply_shader_effect` already carries the plumbing.
 3. **Scene detection → split.** The only one needing a new capability (an FFmpeg pass over a source).
 4. **`script-to-video`** — composition over `insertClip` / `addAnnotation` / `addZoom`.
@@ -86,6 +111,10 @@ Run `%LOCALAPPDATA%\cf-2e3ef8e\release\0.1.0\win-unpacked\ClipForge.exe`. Then:
   If it looks steppy, lower `SPEED_CURVE_STEP_SEC` (one constant in `speedCurve.ts`).
 - **§4**: a dissolve whose INCOMING clip opens under a speed region on a `ramp-down` curve (so the opening is
   fast) — the fade should now run its full duration.
+- **Export overlap (new)**: export a dissolve between two known-length clips. The file must be SHORTER than
+  the raw timeline by the transition's duration (clamped to half the shorter neighbour), while the blend
+  still starts at the cut. Imported audio after the cut must stay in sync. The preview deliberately does
+  NOT shorten — do not judge the export's length from it.
 - Nothing about either is asserted against pixels.
 
 ## 7. Traps that cost time here
@@ -120,3 +149,11 @@ Run `%LOCALAPPDATA%\cf-2e3ef8e\release\0.1.0\win-unpacked\ClipForge.exe`. Then:
 `compositor_windows.rs`
 
 **Docs:** `docs/ROADMAP.md` (F5 step 7)
+
+**Export overlap wiring (same session):** `src/native/clipVideoDips.ts` (`clipBlendTailTrims`) ·
+`src/lib/exporter/outputFrameCount.ts` (`clipSourceEndAtProgrammeSec`) · `src/native/sceneDescription.ts`
+(`trimBlendTails`; the doc note on `resolveVisibleClips`) · `src/lib/ai-edition/document/timeline.ts`
+(`projectRawTimelineSecToPlayback`'s optional transitions) · `src/components/ai-edition/ExportDialog.tsx` ·
+`src/cli/CliExportRunner.tsx` · `electron/mcp/media-tools.ts`. Tests: `src/native/clipBlendTails.test.ts`
+(new), `src/native/sceneDescription.test.ts`, `src/lib/exporter/outputFrameCount.test.ts`,
+`src/lib/ai-edition/document/timeline.test.ts`.

@@ -1,6 +1,12 @@
-import { playbackOverlaps } from "@/lib/ai-edition/document/timeline";
-import type { AxcutDocument, AxcutTransition } from "@/lib/ai-edition/schema";
+import { playbackOverlaps, readSpeedSpans } from "@/lib/ai-edition/document/timeline";
+import type { AxcutClip, AxcutDocument, AxcutTransition } from "@/lib/ai-edition/schema";
+import { projectRegionsToSource } from "@/lib/ai-edition/timeline/timelineMap";
 import { isBlendKind } from "@/lib/ai-edition/timeline/transitionOverlap";
+import {
+	clipProgrammeEndSec,
+	clipSourceEndAtProgrammeSec,
+	type OutputFrameSpeedRegion,
+} from "@/lib/exporter/outputFrameCount";
 import type { CompositorClipInput } from "./contracts";
 
 /** The dip a clip's composed frame is ramped through at a boundary. */
@@ -105,4 +111,65 @@ export function clipIncomingBlends(
 		}
 	}
 	return blends;
+}
+
+/**
+ * Source seconds to cut from each clip's TAIL because the clip AFTER it blends in over that much
+ * PROGRAMME time — the frame-grid half of the overlap `clipIncomingBlends` describes.
+ *
+ * A blend really does cost the programme `d`: the incoming clip opens `d` earlier, so the outgoing
+ * keeps its head and loses its tail. The compositor's freeze-frame blend then holds the outgoing's
+ * last COMPOSED frame over the incoming's opening, and the walk's frame count drops by exactly the
+ * frames those seconds produced. Shortening the window here is what makes the export, its
+ * `outputFrameCount` progress total and its scene's programme clock agree without a second
+ * implementation in Rust. The LIVE PREVIEW deliberately does not use this: its transport and
+ * playhead run on the raw ruler, so it keeps the full windows and the blend it was watched with.
+ *
+ * Reads the CLAMPED overlap back from `clipIncomingBlends`, so a boundary the programme refused
+ * (a neighbour with nothing left) trims nothing — the same fail-closed rule the drawn blend uses.
+ * Under a speed region the trim is not `d` source seconds: `clipSourceEndAtProgrammeSec` inverts
+ * the speed arithmetic, so a 2× tail loses TWO source seconds per programme second.
+ *
+ * `resolvedEnds` is `resolveClipSourceEndSec` per clip — the same effective end the clip list
+ * emits, not the raw `sourceEndSec` a not-yet-probed clip may not have.
+ */
+export function clipBlendTailTrims(
+	document: AxcutDocument,
+	clips: AxcutClip[],
+	resolvedEnds: readonly number[],
+): number[] {
+	const trims = clips.map(() => 0);
+	const blends = clipIncomingBlends(document, clips);
+	if (blends.size === 0) return trims;
+	const regions: OutputFrameSpeedRegion[] = projectRegionsToSource(
+		readSpeedSpans(document),
+		clips,
+		document.timeline.clips,
+		() => "speed",
+	).map((region) => ({
+		startSec: region.startMs / 1000,
+		endSec: region.endMs / 1000,
+		speed: region.speed,
+		clipIndex: region.clipIndex,
+	}));
+	for (let index = 1; index < clips.length; index += 1) {
+		const overlap = blends.get(clips[index].id)?.durationSec ?? 0;
+		if (!(overlap > 0)) continue;
+		const previous = clips[index - 1];
+		const previousEnd = resolvedEnds[index - 1];
+		if (!(previousEnd > previous.sourceStartSec)) continue;
+		const ownRegions = regions.filter(
+			(region) => region.clipIndex === undefined || region.clipIndex === index - 1,
+		);
+		const window = { sourceStartSec: previous.sourceStartSec, sourceEndSec: previousEnd };
+		const naturalEnd = clipProgrammeEndSec(window, ownRegions, 0);
+		const trimmedEnd = clipSourceEndAtProgrammeSec(
+			window,
+			ownRegions,
+			0,
+			Math.max(0, naturalEnd - overlap),
+		);
+		trims[index - 1] = Math.max(0, previousEnd - trimmedEnd);
+	}
+	return trims;
 }

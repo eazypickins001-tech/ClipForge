@@ -45,7 +45,7 @@ import {
 	useIsCpuCompositor,
 } from "@/native";
 import { NativeBridgeRequestError } from "@/native/client";
-import { clipIncomingBlends, clipVideoDips } from "@/native/clipVideoDips";
+import { clipBlendTailTrims, clipIncomingBlends, clipVideoDips } from "@/native/clipVideoDips";
 import type { CompositorClipInput } from "@/native/contracts";
 import { buildSceneDescription, resolveVisibleClips } from "@/native/sceneDescription";
 import { exportErrorMessage } from "./exportError";
@@ -120,9 +120,15 @@ function revealExportedFile(filePath: string): void {
 function buildNativeClipList(document: AxcutDocument): CompositorClipInput[] {
 	const assetById = new Map(document.assets.map((a) => [a.id, a]));
 	const visible = resolveVisibleClips(document);
+	const resolvedEnds = visible.map((clip) =>
+		resolveClipSourceEndSec(clip, assetById.get(clip.assetId)),
+	);
+	// A BLEND shortens the outgoing clip's tail by the overlap; the export's frame total and the
+	// native walk both read these windows, and the canvas copy must therefore trim them too.
+	const tailTrims = clipBlendTailTrims(document, visible, resolvedEnds);
 	const dips = clipVideoDips(document, visible);
 	const blends = clipIncomingBlends(document, visible);
-	return visible.flatMap((clip) => {
+	return visible.flatMap((clip, index) => {
 		const asset = assetById.get(clip.assetId);
 		if (!asset?.originalPath) {
 			return [];
@@ -131,7 +137,10 @@ function buildNativeClipList(document: AxcutDocument): CompositorClipInput[] {
 		// sourceEndSec is optional in the schema (unknown until probed) — fall back through
 		// the single canonical precedence used by every consumer (clip.probe → asset.duration
 		// → timeline-length guess). See `resolveClipSourceEndSec` for the full order.
-		const sourceEndSec = resolveClipSourceEndSec(clip, asset);
+		const sourceEndSec = Math.max(
+			clip.sourceStartSec,
+			resolvedEnds[index] - (tailTrims[index] ?? 0),
+		);
 		const dip = dips.get(clip.id);
 		const blend = blends.get(clip.id);
 		// ponytail: `hasAudio` stays optimistic about the FILE, for the same reason as in
@@ -431,7 +440,7 @@ export function ExportDialog({ open, onClose, document }: ExportDialogProps) {
 			// region emits 80% of `duration * fps`, which is where the "frozen at ~80%" of
 			// OpenScreen#371 came from — the bar climbed to 80% and the export finished
 			// there. `outputFrameCount` mirrors the compositor's own span arithmetic.
-			const sceneDesc = buildSceneDescription(document);
+			const sceneDesc = buildSceneDescription(document, null, { trimBlendTails: true });
 			const totalFrames = outputFrameCount(clips, sceneDesc.speedRegions, outFps);
 			const startedAt = Date.now();
 			const unsubscribeProgress = window.electronAPI?.onNativeExportProgress?.(
