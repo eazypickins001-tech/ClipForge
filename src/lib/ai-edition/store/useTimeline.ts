@@ -72,6 +72,7 @@ import {
 	annotationDropLayers,
 	annotationTrackPills,
 } from "../timeline/regionTracks";
+import type { SpeedCurvePreset } from "../timeline/speedCurve";
 import {
 	anchorRegionsWithDerivedMs,
 	dropPillsByIds,
@@ -1299,6 +1300,32 @@ export function useTimeline() {
 		[document, saveDocument],
 	);
 
+	// The ramp shape of a region — `updateSpeedValue` one field over: one discrete edit, one save,
+	// one undo step. `null` clears the curve, so the region is a plain constant span again and
+	// `readSpeedSpans` emits exactly one.
+	const updateSpeedCurve = useCallback(
+		async (id: string, curve: SpeedCurvePreset | null) => {
+			if (!document) return;
+			const legacy = (document.legacyEditor as Record<string, unknown>) ?? {};
+			const prev = ((legacy.speedRegions as unknown[]) ?? []) as Array<{
+				id: string;
+				startMs: number;
+				endMs: number;
+				speed: number;
+				curve?: SpeedCurvePreset;
+			}>;
+			const next: AxcutDocument = {
+				...document,
+				legacyEditor: {
+					...legacy,
+					speedRegions: patchRegionById(prev, id, { curve: curve ?? undefined }),
+				},
+			};
+			await saveDocument(next, { history: true });
+		},
+		[document, saveDocument],
+	);
+
 	const removeRegion = useCallback(
 		async (kind: RegionKind, id: string) => {
 			if (!document) return;
@@ -1713,7 +1740,13 @@ export function useTimeline() {
 	);
 
 	const speedRegions = hasDoc
-		? readSpeedRegions<{ id: string; startMs: number; endMs: number; speed: number }>(document)
+		? readSpeedRegions<{
+				id: string;
+				startMs: number;
+				endMs: number;
+				speed: number;
+				curve?: SpeedCurvePreset;
+			}>(document)
 		: [];
 
 	const cameraFullscreenRegions = useMemo(
@@ -1998,6 +2031,7 @@ export function useTimeline() {
 		commitAnnotationChange,
 		updateSpeedSpan,
 		updateSpeedValue,
+		updateSpeedCurve,
 		updateCameraFullscreenSpan,
 		updateShaderEffectSpan,
 		updateShaderEffect,

@@ -257,6 +257,12 @@
 		"deleteRegion": "删除速度区域",
 		"maxSpeedError": "速度不能超过 {{max}}×",
 		"selectRegion": "选择要调整的速度区域",
+		"curve": "速度曲线",
+		"curveNone": "无",
+		"curveRampUp": "加速",
+		"curveRampDown": "减速",
+		"curvePeak": "峰值",
+		"curveValley": "谷值",
 		"playbackSpeed": "播放速度",
 		"customPlaybackSpeed": "自定义播放速度",
 		"previewFrameSteppingHint": "超过 {{native}}× 时，预览为逐帧跳转且静音，导出不受影响。"

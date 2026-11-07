@@ -137,6 +137,12 @@ No code exists. Start with the half that needs no credentials or spend.
 4. Then direct generation via OpenRouter, with consent and cost disclosure, timeouts and rate limits.
 5. Editor: text/font/alignment/outline, logo, crop, 1280×720 preset, PNG + JPEG export.
 6. Composition stored as versioned data; image binaries never inside project JSON.
+7. **Publishing copy, beside the thumbnail prompt** (added by request): generate a **video description**
+   — platform-ready title, description body, tags/hashtags — from the same evidence basis as the concepts,
+   prompt-only first with no API, so a creator can get from footage to publishable metadata without leaving
+   ClipForge. This is the Thumbnail Studio half of "everything done inside ClipForge"; the Content Studio's
+   per-platform copy (Phase 3) is the other. Keep both honest: copy is derived from the declared evidence,
+   never invented.
 
 ### F6 — AI stem separation (vocal isolation) · spike, not a feature
 

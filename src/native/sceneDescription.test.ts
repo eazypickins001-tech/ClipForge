@@ -1230,6 +1230,90 @@ describe("buildSceneDescription.speedRegions", () => {
 			{ startSec: 200, endSec: 202, speed: 3.0, clipIndex: 1 },
 		]);
 	});
+
+	it("expands a region with a ramp curve into constant sub-spans over the same window", () => {
+		const asset = makeAsset({ id: "a", originalPath: "/a.mp4" });
+		const clip = makeClip({
+			id: "c1",
+			assetId: "a",
+			sourceStartSec: 0,
+			sourceEndSec: 10,
+			timelineStartSec: 0,
+			timelineEndSec: 10,
+		});
+		const doc = makeDoc({
+			assets: [asset],
+			clips: [clip],
+			legacyEditor: {
+				speedRegions: [{ id: "s1", startMs: 2000, endMs: 5000, speed: 3, curve: "ramp-up" }],
+			},
+		});
+		const { speedRegions } = buildSceneDescription(doc);
+		// The compositor has no notion of a curve: it sees the constant staircase, and the spans
+		// still tile the region exactly.
+		expect(speedRegions.length).toBeGreaterThan(1);
+		const first = speedRegions[0];
+		const last = speedRegions[speedRegions.length - 1];
+		expect(first?.startSec).toBeCloseTo(2, 6);
+		expect(last?.endSec).toBeCloseTo(5, 6);
+		// A ramp-up climbs: its last span is faster than its first.
+		expect(first?.speed ?? 0).toBeLessThan(last?.speed ?? 0);
+		expect(speedRegions.every((region) => region.clipIndex === 0)).toBe(true);
+	});
+});
+
+// --- programmeStartSec (the blend window's clock) ----------------------------
+
+describe("buildSceneDescription.clips programmeStartSec", () => {
+	it("gives each clip the programme second it opens at", () => {
+		const asset = makeAsset({ id: "a", originalPath: "/a.mp4" });
+		const clip1 = makeClip({
+			id: "c1",
+			assetId: "a",
+			sourceStartSec: 0,
+			sourceEndSec: 4,
+			timelineStartSec: 0,
+			timelineEndSec: 4,
+		});
+		const clip2 = makeClip({
+			id: "c2",
+			assetId: "a",
+			sourceStartSec: 100,
+			sourceEndSec: 106,
+			timelineStartSec: 4,
+			timelineEndSec: 10,
+		});
+		const { clips } = buildSceneDescription(makeDoc({ assets: [asset], clips: [clip1, clip2] }));
+		expect(clips.map((clip) => clip.programmeStartSec)).toEqual([0, 4]);
+	});
+
+	it("pulls a later clip earlier when a speed region shortens the one before it", () => {
+		const asset = makeAsset({ id: "a", originalPath: "/a.mp4" });
+		const clip1 = makeClip({
+			id: "c1",
+			assetId: "a",
+			sourceStartSec: 0,
+			sourceEndSec: 4,
+			timelineStartSec: 0,
+			timelineEndSec: 4,
+		});
+		const clip2 = makeClip({
+			id: "c2",
+			assetId: "a",
+			sourceStartSec: 100,
+			sourceEndSec: 106,
+			timelineStartSec: 4,
+			timelineEndSec: 10,
+		});
+		const doc = makeDoc({
+			assets: [asset],
+			clips: [clip1, clip2],
+			// 2× over clip1's whole 4 s span: it plays in 2 s, so clip2 opens at programme 2.
+			legacyEditor: { speedRegions: [{ id: "s1", startMs: 0, endMs: 4000, speed: 2 }] },
+		});
+		const { clips } = buildSceneDescription(doc);
+		expect(clips.map((clip) => clip.programmeStartSec)).toEqual([0, 2]);
+	});
 });
 
 // --- cropByClip --------------------------------------------------------------

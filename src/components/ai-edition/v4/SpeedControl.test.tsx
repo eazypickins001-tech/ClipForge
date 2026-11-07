@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import "@testing-library/jest-dom";
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 // The pane is only reachable with a project open and a speed region selected, so drive the
@@ -17,13 +17,21 @@ vi.mock("sonner", () => ({ toast: { error: (message: string) => toastError(messa
 
 import { SpeedControl } from "./FloatingInspector";
 
-function renderControl(speed: number) {
+function renderControl(speed: number, curve?: "ramp-up" | "peak") {
 	const updateSpeedValue = vi.fn(async () => {
 		// the control only awaits the promise, never its value
 	});
-	render(<SpeedControl region={{ id: "sp1", speed }} tl={{ updateSpeedValue }} />);
+	const updateSpeedCurve = vi.fn(async () => {
+		// likewise: a curve edit is awaited, never read
+	});
+	render(
+		<SpeedControl
+			region={{ id: "sp1", speed, ...(curve ? { curve } : {}) }}
+			tl={{ updateSpeedValue, updateSpeedCurve }}
+		/>,
+	);
 	const field = screen.getByPlaceholderText(`${speed}×`);
-	return { updateSpeedValue, field };
+	return { updateSpeedValue, updateSpeedCurve, field };
 }
 
 describe("SpeedControl", () => {
@@ -86,9 +94,30 @@ describe("SpeedControl", () => {
 	it("does not misreport a custom speed as a preset", () => {
 		// 12× matches no preset: no button may claim it, and the field reads it back instead.
 		renderControl(12);
-		for (const button of screen.getAllByRole("button")) {
+		const row = screen.getByRole("group", { name: "speed.playbackSpeed" });
+		for (const button of within(row).getAllByRole("button")) {
 			expect(button).toHaveAttribute("aria-pressed", "false");
 		}
 		expect(screen.getByPlaceholderText("12×")).toBeInTheDocument();
+	});
+
+	it("offers a ramp shape, reads it back, and clears it to None", () => {
+		const { updateSpeedCurve } = renderControl(2);
+		expect(screen.getByRole("button", { name: "speed.curveNone" })).toHaveAttribute(
+			"aria-pressed",
+			"true",
+		);
+		fireEvent.click(screen.getByRole("button", { name: "speed.curvePeak" }));
+		expect(updateSpeedCurve).toHaveBeenCalledWith("sp1", "peak");
+	});
+
+	it("shows the region's own curve as pressed, and clears it", () => {
+		const { updateSpeedCurve } = renderControl(2, "ramp-up");
+		expect(screen.getByRole("button", { name: "speed.curveRampUp" })).toHaveAttribute(
+			"aria-pressed",
+			"true",
+		);
+		fireEvent.click(screen.getByRole("button", { name: "speed.curveNone" }));
+		expect(updateSpeedCurve).toHaveBeenCalledWith("sp1", null);
 	});
 });

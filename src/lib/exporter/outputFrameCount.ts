@@ -35,10 +35,12 @@ const SPEED_FRAME_EPSILON_SEC = 0.001;
 /** `MIN_SPEED_SEGMENT_SEC` in the same file: a span thinner than this emits nothing. */
 const MIN_SPEED_SEGMENT_SEC = 0.0001;
 
-/** The trimmed source window of one clip, as `buildNativeClipList` produces it. */
+/** The trimmed source window of one clip, as `buildNativeClipList` produces it. `sourceEndSec` is
+ *  optional because a trim-narrowed `PlaybackSegment` (`resolveVisibleClips`) may not be probed yet
+ *  — an unprobed window contributes nothing and is skipped by the walk below. */
 export interface OutputFrameClip {
 	sourceStartSec: number;
-	sourceEndSec: number;
+	sourceEndSec?: number;
 }
 
 /** A speed region already projected onto source time — `SceneDescription.speedRegions`. */
@@ -64,12 +66,13 @@ function spanSec(startSec: number, endSec: number, speed: number): number {
 /** Programme time at the end of a clip that starts at `programmeSec`. Port of
  *  `speed_segments_for_window`, including its overlap rule: regions are walked in start order
  *  and a later one never reclaims source time an earlier one already covered. */
-function clipProgrammeEndSec(
+export function clipProgrammeEndSec(
 	clip: OutputFrameClip,
 	regions: OutputFrameSpeedRegion[],
 	programmeSec: number,
 ): number {
-	const { sourceStartSec, sourceEndSec } = clip;
+	const sourceStartSec = clip.sourceStartSec;
+	const sourceEndSec = clip.sourceEndSec ?? clip.sourceStartSec;
 	if (!(sourceEndSec > sourceStartSec)) {
 		return programmeSec;
 	}
@@ -137,4 +140,36 @@ export function outputFrameCount(
 		0,
 	);
 	return Math.max(1, framesDue(programmeSec, fps));
+}
+
+/**
+ * The programme second each clip STARTS at, in clip order — the same fold `outputFrameCount` walks,
+ * read as positions rather than summed. Fps-free on purpose: the cross-dissolve window it feeds is
+ * measured in SECONDS (the scene carries it per clip as `programmeStartSec`, `compositor_windows.rs`
+ * reads it), so no frame-grid rounding belongs here.
+ *
+ * The regions must be the ones the scene emits — projected onto each clip's source time, `clipIndex`
+ * set (`SceneDescription.speedRegions`) — and the clips the trim-narrowed visible list, so a clip's
+ * start agrees with what the walk actually composes.
+ *
+ * ponytail: NO overlap is subtracted, because `resolveVisibleClips` builds a CONTIGUOUS clip list —
+ * it does not pass `document.transitions` to `resolvePlaybackSegments`, so a blend does not shorten
+ * the programme today. If a blend is ever wired to shorten it, this and that call site must move
+ * together, or a dissolve's window drifts by every overlap ahead of it.
+ */
+export function clipProgrammeStarts(
+	clips: ReadonlyArray<OutputFrameClip>,
+	regions: OutputFrameSpeedRegion[],
+): number[] {
+	const starts: number[] = [];
+	let sec = 0;
+	clips.forEach((clip, index) => {
+		starts.push(sec);
+		sec = clipProgrammeEndSec(
+			clip,
+			regions.filter((region) => region.clipIndex === undefined || region.clipIndex === index),
+			sec,
+		);
+	});
+	return starts;
 }

@@ -257,6 +257,12 @@
 		"deleteRegion": "Tempo-Bereich löschen",
 		"maxSpeedError": "Das Tempo kann nicht höher als {{max}}× sein",
 		"selectRegion": "Wähle einen Tempo-Bereich zum Anpassen",
+		"curve": "Geschwindigkeitskurve",
+		"curveNone": "Keine",
+		"curveRampUp": "Beschleunigen",
+		"curveRampDown": "Verlangsamen",
+		"curvePeak": "Spitze",
+		"curveValley": "Tal",
 		"playbackSpeed": "Wiedergabetempo",
 		"customPlaybackSpeed": "Eigenes Wiedergabetempo",
 		"previewFrameSteppingHint": "Über {{native}}× läuft die Vorschau Bild für Bild und stumm. Der Export ist davon nicht betroffen."

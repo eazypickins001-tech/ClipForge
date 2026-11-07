@@ -6,7 +6,7 @@
 // bar that lies, and it has already shipped once (OpenScreen#371, the "frozen at ~80%").
 
 import { describe, expect, it } from "vitest";
-import { clipOutputFrameCount, outputFrameCount } from "./outputFrameCount";
+import { clipOutputFrameCount, clipProgrammeStarts, outputFrameCount } from "./outputFrameCount";
 
 const FPS = 30;
 
@@ -158,5 +158,46 @@ describe("outputFrameCount", () => {
 		expect(outputFrameCount([], [], FPS)).toBe(1);
 		expect(outputFrameCount([{ sourceStartSec: 4, sourceEndSec: 4 }], [], FPS)).toBe(1);
 		expect(outputFrameCount([{ sourceStartSec: 0, sourceEndSec: 10 }], [], 0)).toBe(1);
+	});
+});
+
+describe("clipProgrammeStarts", () => {
+	it("is the running programme length, zero for the first clip", () => {
+		const clips = [
+			{ sourceStartSec: 0, sourceEndSec: 10 },
+			{ sourceStartSec: 4, sourceEndSec: 14 },
+			{ sourceStartSec: 0, sourceEndSec: 5 },
+		];
+		expect(clipProgrammeStarts(clips, [])).toEqual([0, 10, 20]);
+	});
+
+	it("pulls the clips after a sped-up one earlier", () => {
+		// 10 s at 2× plays in 5, so the second clip opens at programme 5, not 10 — which is exactly
+		// the number the blend window needs.
+		const clips = [
+			{ sourceStartSec: 0, sourceEndSec: 10 },
+			{ sourceStartSec: 0, sourceEndSec: 10 },
+		];
+		expect(
+			clipProgrammeStarts(clips, [{ startSec: 0, endSec: 10, speed: 2, clipIndex: 0 }]),
+		).toEqual([0, 5]);
+	});
+
+	it("ignores a region that belongs to a later clip", () => {
+		const clips = [
+			{ sourceStartSec: 0, sourceEndSec: 10 },
+			{ sourceStartSec: 0, sourceEndSec: 10 },
+		];
+		expect(
+			clipProgrammeStarts(clips, [{ startSec: 0, endSec: 10, speed: 2, clipIndex: 1 }]),
+		).toEqual([0, 10]);
+	});
+
+	it("treats an unprobed clip as contributing nothing", () => {
+		const clips = [
+			{ sourceStartSec: 4, sourceEndSec: undefined },
+			{ sourceStartSec: 0, sourceEndSec: 3 },
+		];
+		expect(clipProgrammeStarts(clips, [])).toEqual([0, 0]);
 	});
 });

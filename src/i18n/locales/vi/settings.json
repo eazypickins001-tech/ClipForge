@@ -257,6 +257,12 @@
 		"deleteRegion": "Xóa vùng tốc độ",
 		"maxSpeedError": "Tốc độ không thể cao hơn {{max}}×",
 		"selectRegion": "Chọn vùng tốc độ để điều chỉnh",
+		"curve": "Đường cong tốc độ",
+		"curveNone": "Không",
+		"curveRampUp": "Tăng tốc",
+		"curveRampDown": "Giảm tốc",
+		"curvePeak": "Đỉnh",
+		"curveValley": "Đáy",
 		"playbackSpeed": "Tốc độ phát",
 		"customPlaybackSpeed": "Tốc độ phát tùy chỉnh",
 		"previewFrameSteppingHint": "Trên {{native}}×, bản xem trước tua từng khung hình và tắt tiếng. Xuất video không bị ảnh hưởng."

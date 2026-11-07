@@ -237,6 +237,15 @@ export interface CompositorClipInput {
 		kind: string;
 		durationSec: number;
 	};
+	/** The PROGRAMME second (output clock) this clip starts at, so the compositor can measure the
+	 *  blend window above in programme seconds instead of source seconds. `incomingBlend.durationSec`
+	 *  is a programme number, but `source_t` advances `speed×` faster under a speed region covering
+	 *  the clip's opening — measuring `source_t − sourceStartSec` against it ended the dissolve early.
+	 *  Absent falls back to that source-clock expression (byte-identical to before), so an older
+	 *  payload or a document that does not carry the field is unaffected. It lives only on the SCENE's
+	 *  clip list: the export ARGUMENT list never reaches the draw path, and unlike `videoDip` /
+	 *  `incomingBlend` this number needs the projected speed spans, which only the scene builds. */
+	programmeStartSec?: number;
 }
 
 /** Bilan d'un export natif (mesure enveloppante §10 : frames, durée, fps). */

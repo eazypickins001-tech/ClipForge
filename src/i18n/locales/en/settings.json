@@ -257,6 +257,12 @@
 		"deleteRegion": "Delete speed region",
 		"maxSpeedError": "Speed can't go higher than {{max}}×",
 		"selectRegion": "Select a speed region to adjust",
+		"curve": "Speed curve",
+		"curveNone": "None",
+		"curveRampUp": "Ramp up",
+		"curveRampDown": "Ramp down",
+		"curvePeak": "Peak",
+		"curveValley": "Valley",
 		"playbackSpeed": "Playback speed",
 		"customPlaybackSpeed": "Custom speed",
 		"previewFrameSteppingHint": "Above {{native}}×, preview is frame-stepped and muted. Export is unaffected."

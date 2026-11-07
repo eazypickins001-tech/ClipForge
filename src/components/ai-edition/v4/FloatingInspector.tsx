@@ -72,6 +72,7 @@ import { useEditorSettings } from "@/lib/ai-edition/store/useEditorSettings";
 import type { ShaderEffectPatch, useTimeline } from "@/lib/ai-edition/store/useTimeline";
 import { clipAtPlayhead } from "@/lib/ai-edition/timeline/clipTargets";
 import { formatSeconds } from "@/lib/ai-edition/timeline/format";
+import type { SpeedCurvePreset } from "@/lib/ai-edition/timeline/speedCurve";
 import { coalescedTrimGroups } from "@/lib/ai-edition/timeline/trim-mapping";
 import { zoomLevelFor } from "@/lib/ai-edition/timeline/zoom-scale";
 import { addZoomKeyframe } from "@/lib/ai-edition/timeline/zoomKeyframes";
@@ -665,6 +666,17 @@ export function ZoomLevelControl({
 // `MAX_PLAYBACK_SPEED`) is one entry in the free field below, which is why the row stays short.
 const SPEED_PRESETS = [0.5, 1, 1.5, 2, 4];
 
+// The ramp shapes a speed region can wear, as a row of buttons. "None" is a value of its own here —
+// `ChoiceRow` cannot hold a null — and turns the region back into a plain constant span.
+type SpeedCurveChoice = "none" | SpeedCurvePreset;
+const SPEED_CURVE_OPTIONS: ReadonlyArray<{ value: SpeedCurveChoice; labelKey: string }> = [
+	{ value: "none", labelKey: "speed.curveNone" },
+	{ value: "ramp-up", labelKey: "speed.curveRampUp" },
+	{ value: "ramp-down", labelKey: "speed.curveRampDown" },
+	{ value: "peak", labelKey: "speed.curvePeak" },
+	{ value: "valley", labelKey: "speed.curveValley" },
+];
+
 /**
  * Preset select + free numeric field, the speed UX this editor already had translations for
  * (`settings.speed.customPlaybackSpeed` / `maxSpeedError`) but no longer any control for: the V4
@@ -678,8 +690,8 @@ export function SpeedControl({
 	region,
 	tl,
 }: {
-	region: { id: string; speed: number };
-	tl: Pick<TimelineApi, "updateSpeedValue">;
+	region: { id: string; speed: number; curve?: SpeedCurvePreset };
+	tl: Pick<TimelineApi, "updateSpeedValue" | "updateSpeedCurve">;
 }) {
 	const ts = useScopedT("settings");
 	// "" means the field is idle and the select is showing the truth. A non-empty draft is
@@ -700,6 +712,20 @@ export function SpeedControl({
 
 	return (
 		<>
+			{/* The ramp shape: the region's speed becomes a peak (or trough) the multiplier climbs
+			    to and falls from, instead of holding flat. Absent reads as "None". */}
+			{paneStack(
+				ts("speed.curve"),
+				<ChoiceRow<SpeedCurveChoice>
+					label={ts("speed.curve")}
+					options={SPEED_CURVE_OPTIONS.map((option) => ({
+						value: option.value,
+						label: ts(option.labelKey),
+					}))}
+					value={region.curve ?? "none"}
+					onChange={(value) => void tl.updateSpeedCurve(region.id, value === "none" ? null : value)}
+				/>,
+			)}
 			{/* A speed outside the row presses no button; the field below shows it as its
 			    placeholder. */}
 			{paneStack(

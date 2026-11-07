@@ -257,6 +257,12 @@
 		"deleteRegion": "Smazat oblast rychlosti",
 		"maxSpeedError": "Rychlost nemůže být vyšší než {{max}}×",
 		"selectRegion": "Vyberte oblast rychlosti pro úpravu",
+		"curve": "Křivka rychlosti",
+		"curveNone": "Žádná",
+		"curveRampUp": "Zrychlení",
+		"curveRampDown": "Zpomalení",
+		"curvePeak": "Vrchol",
+		"curveValley": "Údolí",
 		"playbackSpeed": "Rychlost přehrávání",
 		"customPlaybackSpeed": "Vlastní rychlost přehrávání",
 		"previewFrameSteppingHint": "Nad {{native}}× náhled postupuje po snímcích a je bez zvuku. Export není ovlivněn."

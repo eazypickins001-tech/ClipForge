@@ -257,6 +257,12 @@
 		"deleteRegion": "再生速度の範囲を削除",
 		"maxSpeedError": "速度は{{max}}×を超えることはできません",
 		"selectRegion": "再生速度の範囲を選択して調整",
+		"curve": "速度カーブ",
+		"curveNone": "なし",
+		"curveRampUp": "加速",
+		"curveRampDown": "減速",
+		"curvePeak": "山",
+		"curveValley": "谷",
 		"playbackSpeed": "再生速度",
 		"customPlaybackSpeed": "カスタム再生速度",
 		"previewFrameSteppingHint": "{{native}}×を超えるとプレビューはフレーム送りかつ無音になります。書き出しには影響しません。"

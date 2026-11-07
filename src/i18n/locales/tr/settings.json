@@ -257,6 +257,12 @@
 		"deleteRegion": "Hız Bölgesini Sil",
 		"maxSpeedError": "Hız {{max}}× değerinden yüksek olamaz",
 		"selectRegion": "Ayarlamak için bir hız bölgesi seçin",
+		"curve": "Hız eğrisi",
+		"curveNone": "Yok",
+		"curveRampUp": "Hızlanma",
+		"curveRampDown": "Yavaşlama",
+		"curvePeak": "Tepe",
+		"curveValley": "Çukur",
 		"playbackSpeed": "Oynatma Hızı",
 		"customPlaybackSpeed": "Özel Oynatma Hızı",
 		"previewFrameSteppingHint": "{{native}}× üzerinde önizleme kare kare ilerler ve sessizdir. Dışa aktarma etkilenmez."

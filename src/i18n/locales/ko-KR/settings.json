@@ -257,6 +257,12 @@
 		"deleteRegion": "속도 구간 삭제",
 		"maxSpeedError": "속도는 {{max}}×를 초과할 수 없습니다",
 		"selectRegion": "조정할 속도 구간을 선택하세요",
+		"curve": "속도 곡선",
+		"curveNone": "없음",
+		"curveRampUp": "가속",
+		"curveRampDown": "감속",
+		"curvePeak": "최고점",
+		"curveValley": "최저점",
 		"playbackSpeed": "재생 속도",
 		"customPlaybackSpeed": "재생 속도 직접 입력",
 		"previewFrameSteppingHint": "{{native}}×를 초과하면 미리보기가 프레임 단위로 재생되고 음소거됩니다. 내보내기에는 영향이 없습니다."

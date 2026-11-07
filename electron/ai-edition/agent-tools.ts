@@ -87,6 +87,7 @@ import {
 	type CursorTrackSample,
 } from "../../src/lib/ai-edition/timeline/cursor-track";
 import { breatheCut, mergeCloseCuts } from "../../src/lib/ai-edition/timeline/cut-breath";
+import { SPEED_CURVE_PRESETS } from "../../src/lib/ai-edition/timeline/speedCurve";
 import {
 	anchorRegionsWithDerivedMs,
 	coalesceRegionsForRuler,
@@ -948,10 +949,18 @@ const speedSchema = z
 	.min(SETTING_BOUNDS.playbackSpeed[0])
 	.max(SETTING_BOUNDS.playbackSpeed[1]);
 
+/** The ramp shapes the editor's inspector offers (`SpeedCurvePreset`), so the agent asks for a
+ *  named shape rather than inventing one the scene would drop. */
+const speedCurveSchema = z.enum(SPEED_CURVE_PRESETS);
+/** A ramp shape, or `"none"` to clear one — a region starts with no curve, so only `setSpeed`
+ *  needs the clearing value. */
+const speedCurveArg = z.union([speedCurveSchema, z.literal("none")]);
+
 export const addSpeedArgs = z.object({
 	startSec: secondsSchema,
 	endSec: secondsSchema,
 	speed: speedSchema.default(1.5),
+	curve: speedCurveSchema.optional(),
 });
 
 export const setSpeedArgs = z.object({
@@ -959,6 +968,7 @@ export const setSpeedArgs = z.object({
 	startSec: secondsSchema.optional(),
 	endSec: secondsSchema.optional(),
 	speed: speedSchema.optional(),
+	curve: speedCurveArg.optional(),
 });
 
 /** How a text annotation looks: the settings the editor's inspector offers for one. */
@@ -1308,7 +1318,7 @@ function zoomTransitionsForAgent(document: AxcutDocument) {
 	const legacy = document.legacyEditor as Record<string, unknown> | null;
 	const speedRegions =
 		(legacy?.speedRegions as
-			| Array<{ id: string; startMs: number; endMs: number; speed: number }>
+			| Array<{ id: string; startMs: number; endMs: number; speed: number; curve?: string }>
 			| undefined) ?? [];
 	// A trim with no clipId cuts every clip of its asset in playback, while the ruler maps it
 	// through one: measured per clip, so a zoom on any of them learns of the cut.
@@ -1410,7 +1420,7 @@ export function documentSnapshotForModel(
 	const legacy = document.legacyEditor as Record<string, unknown> | null;
 	const speedRegions =
 		(legacy?.speedRegions as
-			| Array<{ id: string; startMs: number; endMs: number; speed: number }>
+			| Array<{ id: string; startMs: number; endMs: number; speed: number; curve?: string }>
 			| undefined) ?? [];
 	const cameraFullscreenRegions =
 		(legacy?.cameraFullscreenRegions as
@@ -1547,6 +1557,7 @@ export function documentSnapshotForModel(
 			startSec: roundSec(s.startMs),
 			endSec: roundSec(s.endMs),
 			speed: s.speed,
+			...(s.curve ? { curve: s.curve } : {}),
 		})),
 		annotations: coalesceForAgent(document.annotations, true).map((a) => ({
 			id: a.id,
@@ -3108,7 +3119,13 @@ export function executeAgentTool(
 			const endMs = toMs(Math.max(parsed.data.startSec, parsed.data.endSec));
 			const legacy = (document.legacyEditor as Record<string, unknown>) ?? {};
 			const prev = (legacy.speedRegions as unknown[] | undefined) ?? [];
-			const region = { id: createId("speed"), startMs, endMs, speed: parsed.data.speed };
+			const region = {
+				id: createId("speed"),
+				startMs,
+				endMs,
+				speed: parsed.data.speed,
+				...(parsed.data.curve ? { curve: parsed.data.curve } : {}),
+			};
 			const placed = anchorForAgent(region, document, "speed");
 			const landing = landingOf(placed, document);
 			if (!landing.anchored) {
@@ -3124,6 +3141,7 @@ export function executeAgentTool(
 				resultJson: JSON.stringify({
 					speedId: landing.ids[0],
 					speed: region.speed,
+					...(parsed.data.curve ? { curve: parsed.data.curve } : {}),
 					...landingReport(landing, startMs / 1000, endMs / 1000),
 				}),
 				summary:
@@ -3138,7 +3156,13 @@ export function executeAgentTool(
 			const legacy = (document.legacyEditor as Record<string, unknown>) ?? {};
 			const prev =
 				(legacy.speedRegions as
-					| Array<{ id: string; startMs: number; endMs: number; speed: number }>
+					| Array<{
+							id: string;
+							startMs: number;
+							endMs: number;
+							speed: number;
+							curve?: string;
+					  }>
 					| undefined) ?? [];
 			const existing = prev.find((s) => s.id === parsed.data.speedId);
 			const speedPill = new Set(resolvePillIds(prev, parsed.data.speedId));
@@ -3150,8 +3174,18 @@ export function executeAgentTool(
 			});
 			if (blocked) return blocked;
 			const speed = parsed.data.speed ?? existing.speed;
+			const curve = parsed.data.curve;
 			const rebuiltSpeeds = replacePillSpan(
-				prev.map((s) => (speedPill.has(s.id) ? { ...s, speed } : s)),
+				prev.map((s) =>
+					speedPill.has(s.id)
+						? {
+								...s,
+								speed,
+								// `"none"` clears the ramp, so the region plays flat again.
+								...(curve === undefined ? {} : { curve: curve === "none" ? undefined : curve }),
+							}
+						: s,
+				),
 				parsed.data.speedId,
 				startMs,
 				endMs,
@@ -3172,6 +3206,7 @@ export function executeAgentTool(
 				resultJson: JSON.stringify({
 					speedId: landing.ids[0] ?? parsed.data.speedId,
 					speed,
+					...(curve && curve !== "none" ? { curve } : {}),
 					...landingReport(landing, startMs / 1000, endMs / 1000),
 				}),
 				summary:

@@ -257,6 +257,12 @@
 		"deleteRegion": "Elimina regione velocità",
 		"maxSpeedError": "La velocità non può superare {{max}}×",
 		"selectRegion": "Seleziona una regione velocità da regolare",
+		"curve": "Curva di velocità",
+		"curveNone": "Nessuna",
+		"curveRampUp": "Accelerazione",
+		"curveRampDown": "Decelerazione",
+		"curvePeak": "Picco",
+		"curveValley": "Valle",
 		"playbackSpeed": "Velocità di riproduzione",
 		"customPlaybackSpeed": "Velocità di riproduzione personalizzata",
 		"previewFrameSteppingHint": "Oltre {{native}}×, l'anteprima procede fotogramma per fotogramma e senza audio. L'esportazione non è influenzata."

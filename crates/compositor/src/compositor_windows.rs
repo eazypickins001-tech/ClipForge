@@ -3119,18 +3119,24 @@ impl Compositor {
         // montre. Vue de l'autre côté de la coupe, c'est le même choix. Les trois modes ne
         // diffèrent que par la géométrie passée à la passe (`regions::blend_geometry`).
         //
-        // La progression se mesure sur l'horloge SOURCE, comme le dip juste au-dessus, et pas sur
-        // l'horloge de sortie : `duration_sec` est un nombre de secondes de PROGRAMME (c'est le
-        // chevauchement de `timeline/transitionOverlap.ts`), donc une région de vitesse qui
-        // couvrirait l'ouverture du clip entrant ferait finir le fondu trop tôt — il serait étalé
-        // sur `duration_sec / vitesse` secondes de programme. C'est une limite connue, pas un
-        // oubli : la corriger demande de porter le début de clip en temps de programme dans la
-        // scène, et une coupe se fait presque toujours sur du 1x. Le fondu reste en tout cas
-        // strictement dans le clip entrant, il ne déborde jamais sur le suivant.
+        // La progression se mesure sur l'horloge de PROGRAMME quand la scène porte le début programme
+        // du clip (`clip.programme_start_sec`), sinon sur l'horloge SOURCE d'avant le champ :
+        // `duration_sec` est un nombre de secondes de PROGRAMME (le chevauchement de
+        // `timeline/transitionOverlap.ts`), donc mesurée sur la source une région de vitesse couvrant
+        // l'ouverture du clip entrant ferait finir le fondu trop tôt — étalé sur
+        // `duration_sec / vitesse` secondes de programme. `blend_elapsed_sec` (regions.rs) choisit
+        // l'horloge ; sans `programme_start_sec`, le fondu garde exactement son rendu d'avant. Le
+        // fondu reste de toute façon strictement dans le clip entrant, il ne déborde jamais sur le
+        // suivant.
         if let Some(scene) = scene_ref.as_ref() {
             if let Some(clip) = scene.clips.get(scene.active_clip_index) {
                 if let Some(blend) = clip.incoming_blend.as_ref() {
-                    let elapsed = source_t - clip.source_start_sec as f32;
+                    let elapsed = crate::regions::blend_elapsed_sec(
+                        source_t,
+                        clip.source_start_sec as f32,
+                        g.programme_t,
+                        clip.programme_start_sec,
+                    );
                     let progress =
                         crate::regions::blend_progress_at(elapsed, blend.duration_sec as f32);
                     // À 1 il ne reste rien à poser, quel que soit le mode : le balayage a fini son

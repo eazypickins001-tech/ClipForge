@@ -257,6 +257,12 @@
 		"deleteRegion": "حذف منطقة السرعة",
 		"maxSpeedError": "لا يمكن للسرعة أن تتجاوز {{max}}×",
 		"selectRegion": "حدد منطقة السرعة للتعديل",
+		"curve": "منحنى السرعة",
+		"curveNone": "بلا",
+		"curveRampUp": "تسريع",
+		"curveRampDown": "تباطؤ",
+		"curvePeak": "قمة",
+		"curveValley": "قاع",
 		"playbackSpeed": "سرعة التشغيل",
 		"customPlaybackSpeed": "سرعة تشغيل مخصصة",
 		"previewFrameSteppingHint": "فوق {{native}}×، تعرض المعاينة إطارًا تلو الآخر وبدون صوت. لا يتأثر التصدير."

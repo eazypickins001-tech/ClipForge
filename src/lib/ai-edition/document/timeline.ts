@@ -28,6 +28,11 @@ import { pruneUnusedShaderEffects } from "../shaderEffects";
 import { type Interval, subtractInterval } from "../timeline/intervals";
 import { keptRawSpans } from "../timeline/programme-time";
 import {
+	expandCurvedRegion,
+	isSpeedCurvePreset,
+	type SpeedCurvePreset,
+} from "../timeline/speedCurve";
+import {
 	anchoredToRawSpanSec,
 	anchorRegionsWithDerivedMs,
 	dropPillById,
@@ -356,9 +361,45 @@ export function readSpeedRegions<T extends PlaybackSpeedRegion = PlaybackSpeedRe
 	const stored = (document.legacyEditor as { speedRegions?: unknown } | null | undefined)
 		?.speedRegions;
 	if (!Array.isArray(stored)) return [];
-	return (stored as T[])
+	return (stored as Array<T & { curve?: unknown }>)
 		.filter((r) => typeof r?.speed === "number" && Number.isFinite(r.speed) && r.speed > 0)
-		.map((r) => ({ ...r, speed: clampToBound(r.speed, "playbackSpeed") }));
+		.map(({ curve, ...rest }) => ({
+			...rest,
+			speed: clampToBound(rest.speed, "playbackSpeed"),
+			// A ramp shape survives only if it is one this build knows; any other value is dropped
+			// rather than guessed at, so an unknown name reads as "no curve" and not as some preset.
+			...(isSpeedCurvePreset(curve) ? { curve } : {}),
+		})) as T[];
+}
+
+/** A speed region as a CONSTANT span: what the programme arithmetic and the emitted scene both
+ *  understand (`outputDurationOfRawSpan` here, `speed_segments_for_window` in Rust). */
+export interface PlaybackSpeedSpan extends PlaybackSpeedRegion {
+	id: string;
+}
+
+/**
+ * The project's speed regions with every ramp EXPANDED into constant sub-spans — the one place a
+ * `curve` stops being a shape and becomes the staircase the compositor and the frame grid consume
+ * (`expandCurvedRegion`). Every arithmetic reader goes through here; `readSpeedRegions` above is the
+ * AUTHORED list, which the UI pills and the agent summary still want as the user drew it.
+ *
+ * A region with no curve passes through verbatim, so a document that never used a ramp expands to
+ * exactly the regions it always had.
+ */
+export function readSpeedSpans(document: Pick<AxcutDocument, "legacyEditor">): PlaybackSpeedSpan[] {
+	return readSpeedRegions<PlaybackSpeedSpan & { curve?: SpeedCurvePreset }>(document).flatMap(
+		(region) =>
+			region.curve
+				? expandCurvedRegion({
+						id: region.id,
+						startMs: region.startMs,
+						endMs: region.endMs,
+						speed: region.speed,
+						curve: region.curve,
+					})
+				: [{ id: region.id, startMs: region.startMs, endMs: region.endMs, speed: region.speed }],
+	);
 }
 
 /**

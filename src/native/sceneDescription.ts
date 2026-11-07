@@ -16,7 +16,6 @@
 
 import type {
 	Rotation3DPreset,
-	SpeedRegion,
 	WallpaperMotion,
 	WebcamBackgroundMode,
 } from "@/components/video-editor/types";
@@ -36,7 +35,7 @@ import { isFormatFillActive, pickOutputDims } from "@/lib/ai-edition/document/ou
 import {
 	type PlaybackSegment,
 	projectRawTimelineSecToPlayback,
-	readSpeedRegions,
+	readSpeedSpans,
 	resolvePlaybackSegments,
 } from "@/lib/ai-edition/document/timeline";
 import type { AxcutClip, AxcutDocument, AxcutZoomRegion } from "@/lib/ai-edition/schema";
@@ -68,6 +67,7 @@ import {
 } from "@/lib/compositeLayout";
 import type { CursorKind } from "@/lib/cursor/cursorThemes";
 import { parseCssGradient, resolveLinearGradientAngle } from "@/lib/exporter/gradientParser";
+import { clipProgrammeStarts } from "@/lib/exporter/outputFrameCount";
 import { LAYOUT_TRANSITION_SECONDS, type LayoutPreset } from "@/lib/layoutTypes";
 import type { FrameTheme, RecordingFrame, WebcamAnchor } from "@/lib/projectDefaults";
 import { resolveTextFontFamily } from "@/lib/textFonts";
@@ -978,7 +978,7 @@ export function buildSceneDescription(
 	// after a speed region at the wrong second. The tracks themselves are never
 	// stretched — a voiceover should not chipmunk because the video under it was
 	// sped up.
-	const rawSpeedRegions = readSpeedRegions(document);
+	const rawSpeedRegions = readSpeedSpans(document);
 	// The one removed set, hoisted out of the map: every voiceover asks it the same
 	// question, and it does not depend on the track.
 	// Placed once: the projection below counts them, so a track after a pause lands where
@@ -1136,7 +1136,29 @@ export function buildSceneDescription(
 	// Same reasoning as the dip above, and the same helper: a blend is a SCENE property too, and it
 	// has to be the scene's copy of the clip list that carries it.
 	const blends = clipIncomingBlends(document, visibleClips);
-	const clips: CompositorClipInput[] = visibleClips.flatMap((clip) => {
+	// Speed spans, projected onto each clip's SOURCE time. Hoisted above the clip list because the
+	// programme start below is derived from them, and `projectedSpeedRegions` further down is this
+	// very same call — one projection, one answer.
+	const speedSpans = projectRegionsToSource(
+		readSpeedSpans(document),
+		visibleClips,
+		document.timeline.clips,
+		() => createId("speed"),
+	);
+	// Where each clip sits on the OUTPUT programme (trims and speed applied). The compositor needs it
+	// to measure a blend window in programme seconds — `incomingBlend.durationSec` is a programme
+	// number, while `source_t` runs `speed×` faster under a speed region covering the clip's opening.
+	// Index-aligned with `visibleClips`.
+	const programmeStarts = clipProgrammeStarts(
+		visibleClips,
+		speedSpans.map((region) => ({
+			startSec: region.startMs / 1000,
+			endSec: region.endMs / 1000,
+			speed: region.speed,
+			clipIndex: region.clipIndex,
+		})),
+	);
+	const clips: CompositorClipInput[] = visibleClips.flatMap((clip, index) => {
 		const asset = assetById.get(clip.assetId);
 		if (!asset?.originalPath) return [];
 		const camera = assetCameraSource(asset);
@@ -1171,6 +1193,10 @@ export function buildSceneDescription(
 				// The dissolve this clip comes IN from: both pictures at once, over the window the
 				// programme opened. Absent on a clip with no blend on its left edge.
 				...(blend ? { incomingBlend: blend } : {}),
+				// The programme second this clip opens at, so the compositor measures the blend
+				// window in programme seconds rather than source seconds (issue §4; see
+				// `CompositorClipInput.programmeStartSec`).
+				programmeStartSec: programmeStarts[index] ?? 0,
 				// A held segment has an empty source window and exists only for the frames it
 				// holds; every other clip holds nothing.
 			},
@@ -1265,15 +1291,15 @@ export function buildSceneDescription(
 	// Speed regions carry an extra `speed` field the standard `rangeSchema` does not, so we
 	// can't read from `document.timeline.speedRanges` today (see SceneDescription.speedRegions
 	// comment). The legacy web exporter reads from `legacyEditor.speedRegions`; we mirror it.
+	// `readSpeedSpans` (not `readSpeedRegions`) because a region with a ramp `curve` reaches the
+	// compositor as the constant sub-spans `expandCurvedRegion` produced — the compositor has no
+	// notion of a curve, and the programme arithmetic has to see the very same spans.
 	// `projectRegionsToSource` accepts any `T extends { id; startMs; endMs }` and copies
 	// every other field verbatim via `{...region}` — so the `speed` field passes through,
 	// and the splitting-across-clips semantics match zoomRegions / cameraFullscreenRegions.
-	const projectedSpeedRegions = projectRegionsToSource(
-		readSpeedRegions<SpeedRegion>(document),
-		visibleClips,
-		document.timeline.clips,
-		() => createId("speed"),
-	);
+	// The projection itself was hoisted above the clip list (see `speedSpans`), because the
+	// per-clip programme start is derived from it; this is the same list, named for its reader.
+	const projectedSpeedRegions = speedSpans;
 
 	// Shader effects: projected like the zooms, and each fragment told where its WHOLE pill sits
 	// on the programme clock, through the same projection the exporter plays the timeline with

@@ -257,6 +257,12 @@
 		"deleteRegion": "Удалить область скорости",
 		"maxSpeedError": "Скорость не может быть выше {{max}}×",
 		"selectRegion": "Выберите область скорости для настройки",
+		"curve": "Кривая скорости",
+		"curveNone": "Нет",
+		"curveRampUp": "Разгон",
+		"curveRampDown": "Замедление",
+		"curvePeak": "Пик",
+		"curveValley": "Впадина",
 		"playbackSpeed": "Скорость воспроизведения",
 		"customPlaybackSpeed": "Пользовательская скорость воспроизведения",
 		"previewFrameSteppingHint": "Выше {{native}}× предпросмотр идёт покадрово и без звука. На экспорт это не влияет."

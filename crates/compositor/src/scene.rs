@@ -51,6 +51,14 @@ pub struct SceneClip {
     /// la même moitié de portage assumée que pour `video_dip`.
     #[serde(default)]
     pub incoming_blend: Option<SceneBlend>,
+    /// Le temps PROGRAMME (horloge de sortie) où ce clip commence, pour mesurer le mélange de
+    /// frontière en secondes de PROGRAMME. `incoming_blend.duration_sec` est déjà un nombre de
+    /// programme, alors que `source_t` avance `vitesse×` plus vite sous une région de vitesse
+    /// couvrant l'ouverture du clip : mesurer `source_t - source_start_sec` faisait finir le fondu
+    /// trop tôt. `None` retombe sur cette expression en temps SOURCE — une charge utile plus
+    /// ancienne, ou un document qui ne porte pas le champ, garde exactement son rendu d'avant.
+    #[serde(default)]
+    pub programme_start_sec: Option<f64>,
 }
 
 /// Un mélange entre deux clips (`incoming_blend` ci-dessus). `kind` n'est lu que pour un futur

@@ -3601,6 +3601,28 @@ mod programme_clock {
     }
 }
 
+/// Le temps écoulé depuis le début du clip ENTRANT, pour `blend_progress_at` : mesuré sur l'horloge
+/// de PROGRAMME quand la scène porte le début programme du clip, sinon sur l'horloge SOURCE
+/// (l'expression d'avant ce champ).
+///
+/// Le fondu croisé est un chevauchement de PROGRAMME (`duration_sec` est un nombre de programme,
+/// cf. `timeline/transitionOverlap.ts`), donc la seule horloge juste est celle de programme. Sur
+/// l'horloge source, une région de vitesse couvrant l'ouverture du clip entrant fait avancer
+/// `elapsed` `vitesse×` trop vite et le fondu finit trop tôt. `None` garde exactement le
+/// comportement d'avant — et un fondu se fait presque toujours sur du 1×, où les deux horloges
+/// coïncident.
+pub fn blend_elapsed_sec(
+    source_t: f32,
+    source_start_sec: f32,
+    programme_t: f32,
+    programme_start_sec: Option<f64>,
+) -> f32 {
+    match programme_start_sec {
+        Some(start) => programme_t - start as f32,
+        None => source_t - source_start_sec,
+    }
+}
+
 /// Progression 0..1 d'un fondu croisé, à `elapsed_sec` après le début du clip entrant.
 ///
 /// Le fondu vit sur l'horloge de SORTIE, pas sur celle de la source : c'est un chevauchement de
@@ -3714,6 +3736,30 @@ mod blend_tests {
         let (wipe, _) = blend_geometry("wipe-from-left");
         let (slide, _) = blend_geometry("slide-from-left");
         assert_ne!(wipe, slide);
+    }
+
+    #[test]
+    fn a_blend_measures_on_the_programme_clock_when_the_clip_carries_a_start() {
+        // 1× : les deux horloges coïncident, donc les deux chemins rendent le même temps écoulé.
+        assert_eq!(blend_elapsed_sec(3.0, 2.0, 5.0, None), 1.0);
+        assert_eq!(blend_elapsed_sec(3.0, 2.0, 5.0, Some(4.0)), 1.0);
+
+        // 2× : le temps SOURCE avance deux fois plus vite que le programme. À la même frame, le
+        // chemin source a déjà consommé 0.75 s de la fenêtre d'une seconde, le programme 0.375 s.
+        // Le fondu doit suivre le programme : mesuré sur la source il finirait à mi-chemin.
+        let (source_t, source_start) = (2.75_f32, 2.0_f32);
+        let (programme_t, programme_start) = (2.375_f32, 2.0_f64);
+        assert_eq!(
+            blend_progress_at(
+                blend_elapsed_sec(source_t, source_start, programme_t, Some(programme_start)),
+                1.0
+            ),
+            0.375
+        );
+        assert_eq!(
+            blend_progress_at(blend_elapsed_sec(source_t, source_start, programme_t, None), 1.0),
+            0.75
+        );
     }
 }
 
