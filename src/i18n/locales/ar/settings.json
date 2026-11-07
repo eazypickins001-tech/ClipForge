@@ -250,6 +250,14 @@
 		},
 		"customize": "تخصيص"
 	},
+	"colour": {
+		"title": "اللون",
+		"exposure": "التعريض",
+		"contrast": "التباين",
+		"saturation": "التشبع",
+		"temperature": "درجة الحرارة",
+		"tint": "الصبغة"
+	},
 	"panes": {
 		"help": "مساعدة"
 	},

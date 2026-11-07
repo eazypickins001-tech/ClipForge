@@ -250,6 +250,14 @@
 		},
 		"customize": "사용자 지정"
 	},
+	"colour": {
+		"title": "색상",
+		"exposure": "노출",
+		"contrast": "대비",
+		"saturation": "채도",
+		"temperature": "색온도",
+		"tint": "틴트"
+	},
 	"panes": {
 		"help": "도움말"
 	},

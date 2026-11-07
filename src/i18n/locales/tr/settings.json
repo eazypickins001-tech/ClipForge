@@ -250,6 +250,14 @@
 		},
 		"customize": "Özelleştir"
 	},
+	"colour": {
+		"title": "Renk",
+		"exposure": "Pozlama",
+		"contrast": "Kontrast",
+		"saturation": "Doygunluk",
+		"temperature": "Sıcaklık",
+		"tint": "Renk tonu"
+	},
 	"panes": {
 		"help": "Yardım"
 	},

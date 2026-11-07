@@ -319,6 +319,13 @@ export const SETTING_BOUNDS = {
 	playbackSpeed: [0.25, 16],
 	// Text annotations, in pixels at 1080 (see annotationScale.ts).
 	annotationFontSize: [8, 200],
+	// The global colour grade (colourGrade.ts): EV stops for exposure, a linear gain around 1 for
+	// contrast/saturation, and a −100..100 warm/cool and green/magenta shift for temperature/tint.
+	colourExposure: [-2, 2],
+	colourContrast: [0.5, 1.5],
+	colourSaturation: [0, 2],
+	colourTemperature: [-100, 100],
+	colourTint: [-100, 100],
 } as const satisfies Record<string, readonly [number, number]>;
 
 export type SettingBound = keyof typeof SETTING_BOUNDS;

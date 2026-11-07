@@ -250,6 +250,14 @@
 		},
 		"customize": "カスタマイズ"
 	},
+	"colour": {
+		"title": "カラー",
+		"exposure": "露出",
+		"contrast": "コントラスト",
+		"saturation": "彩度",
+		"temperature": "色温度",
+		"tint": "色合い"
+	},
 	"panes": {
 		"help": "ヘルプ"
 	},

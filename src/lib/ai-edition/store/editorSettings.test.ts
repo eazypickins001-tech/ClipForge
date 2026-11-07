@@ -8,6 +8,7 @@ import {
 import { DEFAULT_CURSOR_THEME_ID } from "@/lib/cursor/cursorThemes";
 import { SETTING_BOUNDS } from "@/lib/projectDefaults";
 import { ROUNDNESS_SLIDER_MAX_PX } from "@/native/paramUnits";
+import { DEFAULT_COLOUR_GRADE } from "../colourGrade";
 import type { AxcutDocument } from "../schema";
 import { axcutSchemaVersion } from "../schema";
 import { DEFAULT_EDITOR_SETTINGS, getEditorSettings, patchEditorSettings } from "./editorSettings";
@@ -178,6 +179,17 @@ describe("patchEditorSettings", () => {
 		const snap = getEditorSettings(next);
 		expect(snap.cursor.size).toBe(2);
 		expect(snap.cursor.smoothing).toBe(0.9);
+	});
+
+	it("patches the colour grade without clobbering its siblings, neutral by default", () => {
+		expect(getEditorSettings(baseDoc).colourGrade).toEqual(DEFAULT_COLOUR_GRADE);
+		const seed = patchEditorSettings(baseDoc, { colourGrade: { exposure: 0.5 } });
+		expect(seed.legacyEditor).toMatchObject({ colourExposure: 0.5 });
+		const next = patchEditorSettings(seed, { colourGrade: { saturation: 0.6 } });
+		const snap = getEditorSettings(next);
+		expect(snap.colourGrade.exposure).toBe(0.5);
+		expect(snap.colourGrade.saturation).toBe(0.6);
+		expect(snap.colourGrade.contrast).toBe(DEFAULT_COLOUR_GRADE.contrast);
 	});
 
 	it("switches the 3D cursor without clobbering its siblings, off by default", () => {

@@ -250,6 +250,14 @@
 		},
 		"customize": "自訂"
 	},
+	"colour": {
+		"title": "顏色",
+		"exposure": "曝光",
+		"contrast": "對比度",
+		"saturation": "飽和度",
+		"temperature": "色溫",
+		"tint": "色調"
+	},
 	"panes": {
 		"help": "說明"
 	},

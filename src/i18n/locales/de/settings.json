@@ -250,6 +250,14 @@
 		},
 		"customize": "Anpassen"
 	},
+	"colour": {
+		"title": "Farbe",
+		"exposure": "Belichtung",
+		"contrast": "Kontrast",
+		"saturation": "Sättigung",
+		"temperature": "Temperatur",
+		"tint": "Farbton"
+	},
 	"panes": {
 		"help": "Hilfe"
 	},

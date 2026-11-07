@@ -250,6 +250,14 @@
 		},
 		"customize": "Personalizar"
 	},
+	"colour": {
+		"title": "Cor",
+		"exposure": "Exposição",
+		"contrast": "Contraste",
+		"saturation": "Saturação",
+		"temperature": "Temperatura",
+		"tint": "Matiz"
+	},
 	"panes": {
 		"help": "Ajuda"
 	},

@@ -3257,6 +3257,55 @@ describe("buildSceneDescription.audioTracks", () => {
 
 // --- shaderEffects -------------------------------------------------------------
 
+describe("buildSceneDescription.colourGrade", () => {
+	it("emits nothing when the grade is neutral", () => {
+		const doc = makeDoc({
+			assets: [makeAsset({ id: "a", originalPath: "/a.mp4" })],
+			clips: [
+				makeClip({
+					id: "c1",
+					assetId: "a",
+					sourceStartSec: 0,
+					sourceEndSec: 10,
+					timelineStartSec: 0,
+					timelineEndSec: 10,
+				}),
+			],
+		});
+		expect(buildSceneDescription(doc).shaderEffects).toBeUndefined();
+	});
+
+	it("emits one grade fragment per visible clip, graded first", () => {
+		const asset = makeAsset({ id: "a", originalPath: "/a.mp4" });
+		const clip1 = makeClip({
+			id: "c1",
+			assetId: "a",
+			sourceStartSec: 0,
+			sourceEndSec: 4,
+			timelineStartSec: 0,
+			timelineEndSec: 4,
+		});
+		const clip2 = makeClip({
+			id: "c2",
+			assetId: "a",
+			sourceStartSec: 100,
+			sourceEndSec: 106,
+			timelineStartSec: 4,
+			timelineEndSec: 10,
+		});
+		const { shaderEffects } = buildSceneDescription(
+			makeDoc({
+				assets: [asset],
+				clips: [clip1, clip2],
+				legacyEditor: { colourExposure: 0.5, colourSaturation: 1.2 },
+			}),
+		);
+		expect(shaderEffects?.map((fragment) => fragment.clipIndex)).toEqual([0, 1]);
+		expect(shaderEffects?.[0]?.values).toMatchObject({ exposure: 0.5, saturation: 1.2 });
+		expect(shaderEffects?.[0]?.target).toBe("image");
+	});
+});
+
 describe("buildSceneDescription.shaderEffects", () => {
 	const code = "fn effect(uv: vec2<f32>) -> vec4<f32> { return frame(uv); }";
 	const effect = {

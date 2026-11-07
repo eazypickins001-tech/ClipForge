@@ -57,6 +57,7 @@ import {
 } from "@/components/video-editor/types";
 import { useI18n, useScopedT } from "@/contexts/I18nContext";
 import { resolveCaptionLane } from "@/lib/ai-edition/captions/settings";
+import { DEFAULT_COLOUR_GRADE } from "@/lib/ai-edition/colourGrade";
 import {
 	AUDIO_FADE_MAX_MS,
 	collapseTracksToPills,
@@ -2687,6 +2688,71 @@ export function VideoEffectsPane() {
 							setNativeParam("motionBlur", v / 100);
 						}
 					}}
+					onCommit={() => void commit()}
+				/>
+			</div>
+			{/* The global colour grade: one fixed WGSL effect over the whole frame, so it rides the
+			    shader-effect path and needs no scalar native param. Neutral emits nothing; each slider
+			    patches only its own axis. */}
+			<div className={styles.sectionLabel}>{ts("colour.title")}</div>
+			<div className={styles.sliderGrid}>
+				<SliderCell
+					label={ts("colour.exposure")}
+					value={settings.colourGrade.exposure}
+					min={-2}
+					max={2}
+					step={0.05}
+					decimals={2}
+					showValue
+					defaultValue={DEFAULT_COLOUR_GRADE.exposure}
+					disabled={!hasDocument}
+					onChange={(exposure) => setLive({ colourGrade: { exposure } })}
+					onCommit={() => void commit()}
+				/>
+				<SliderCell
+					label={ts("colour.contrast")}
+					value={settings.colourGrade.contrast}
+					min={0.5}
+					max={1.5}
+					step={0.05}
+					decimals={2}
+					showValue
+					defaultValue={DEFAULT_COLOUR_GRADE.contrast}
+					disabled={!hasDocument}
+					onChange={(contrast) => setLive({ colourGrade: { contrast } })}
+					onCommit={() => void commit()}
+				/>
+				<SliderCell
+					label={ts("colour.saturation")}
+					value={settings.colourGrade.saturation}
+					min={0}
+					max={2}
+					step={0.05}
+					decimals={2}
+					showValue
+					defaultValue={DEFAULT_COLOUR_GRADE.saturation}
+					disabled={!hasDocument}
+					onChange={(saturation) => setLive({ colourGrade: { saturation } })}
+					onCommit={() => void commit()}
+				/>
+				<SliderCell
+					label={ts("colour.temperature")}
+					value={settings.colourGrade.temperature}
+					min={-100}
+					max={100}
+					defaultValue={DEFAULT_COLOUR_GRADE.temperature}
+					disabled={!hasDocument}
+					onChange={(temperature) => setLive({ colourGrade: { temperature } })}
+					onCommit={() => void commit()}
+				/>
+				<SliderCell
+					label={ts("colour.tint")}
+					value={settings.colourGrade.tint}
+					min={-100}
+					max={100}
+					defaultValue={DEFAULT_COLOUR_GRADE.tint}
+					disabled={!hasDocument}
+					onChange={(tint) => setLive({ colourGrade: { tint } })}
 					onCommit={() => void commit()}
 				/>
 			</div>

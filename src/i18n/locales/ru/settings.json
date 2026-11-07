@@ -250,6 +250,14 @@
 		},
 		"customize": "Настроить"
 	},
+	"colour": {
+		"title": "Цвет",
+		"exposure": "Экспозиция",
+		"contrast": "Контраст",
+		"saturation": "Насыщенность",
+		"temperature": "Температура",
+		"tint": "Оттенок"
+	},
 	"panes": {
 		"help": "Справка"
 	},

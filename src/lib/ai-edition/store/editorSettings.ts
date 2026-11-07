@@ -36,6 +36,7 @@ import {
 	type WebcamMask,
 } from "@/lib/projectDefaults";
 import type { AspectRatio } from "@/utils/aspectRatioUtils";
+import { type ColourGrade, DEFAULT_COLOUR_GRADE } from "../colourGrade";
 import type { AxcutDocument } from "../schema";
 
 // ponytail: avoid dragging in lib/exporter full surface here — we only
@@ -107,6 +108,8 @@ export interface EditorSettingsSnapshot {
 	depthOfField: boolean;
 	borderRadius: number;
 	padding: number;
+	/** The global colour grade, applied to the whole programme as one fixed WGSL effect. */
+	colourGrade: ColourGrade;
 	cropRegion: CropRegion;
 	webcamLayoutPreset: WebcamLayoutPreset;
 	/** The camera's proportions. `circle` and `rounded` are read as a roundness: see `readWebcamMask`. */
@@ -145,6 +148,7 @@ export const DEFAULT_EDITOR_SETTINGS: EditorSettingsSnapshot = {
 	webcamCropPan: DEFAULT_CROP_PAN,
 	audioGainDb: 0,
 	formatFollowCursor: null,
+	colourGrade: DEFAULT_COLOUR_GRADE,
 };
 
 interface LegacyShape {
@@ -163,6 +167,11 @@ interface LegacyShape {
 	depthOfField?: boolean;
 	borderRadius?: number;
 	padding?: number;
+	colourExposure?: number;
+	colourContrast?: number;
+	colourSaturation?: number;
+	colourTemperature?: number;
+	colourTint?: number;
 	cropRegion?: CropRegion;
 	webcamLayoutPreset?: WebcamLayoutPreset;
 	webcamMaskShape?: WebcamMaskShape;
@@ -295,6 +304,29 @@ export function getEditorSettings(doc: AxcutDocument | null | undefined): Editor
 		depthOfField: bool(legacy?.depthOfField, DEFAULT_EDITOR_SETTINGS.depthOfField),
 		borderRadius: readBounded(legacy?.borderRadius, "borderRadius", defaults.borderRadius),
 		padding: readBounded(legacy?.padding, "padding", defaults.padding),
+		colourGrade: {
+			exposure: readBounded(
+				legacy?.colourExposure,
+				"colourExposure",
+				defaults.colourGrade.exposure,
+			),
+			contrast: readBounded(
+				legacy?.colourContrast,
+				"colourContrast",
+				defaults.colourGrade.contrast,
+			),
+			saturation: readBounded(
+				legacy?.colourSaturation,
+				"colourSaturation",
+				defaults.colourGrade.saturation,
+			),
+			temperature: readBounded(
+				legacy?.colourTemperature,
+				"colourTemperature",
+				defaults.colourGrade.temperature,
+			),
+			tint: readBounded(legacy?.colourTint, "colourTint", defaults.colourGrade.tint),
+		},
 		cropRegion: legacy?.cropRegion ?? DEFAULT_EDITOR_SETTINGS.cropRegion,
 		webcamLayoutPreset: legacy?.webcamLayoutPreset ?? DEFAULT_EDITOR_SETTINGS.webcamLayoutPreset,
 		webcamMaskShape: webcamMask.shape,
@@ -353,6 +385,7 @@ export interface EditorSettingsPatch {
 	depthOfField?: boolean;
 	borderRadius?: number;
 	padding?: number;
+	colourGrade?: Partial<ColourGrade>;
 	cropRegion?: CropRegion;
 	webcamLayoutPreset?: WebcamLayoutPreset;
 	webcamMaskShape?: WebcamMask;
@@ -381,11 +414,19 @@ function nextLegacy(current: LegacyShape | null, patch: EditorSettingsPatch): Le
 	// The Pick keeps what the 16 `if`s used to check: a patch key with no
 	// LegacyShape counterpart fails to compile instead of leaking into the
 	// persisted blob.
-	const { cursor: _cursor, ...rest } = patch;
+	const { cursor: _cursor, colourGrade, ...rest } = patch;
 	const defined = Object.fromEntries(
 		Object.entries(rest).filter(([, v]) => v !== undefined),
-	) as Partial<Pick<LegacyShape, keyof Omit<EditorSettingsPatch, "cursor">>>;
+	) as Partial<Pick<LegacyShape, keyof Omit<EditorSettingsPatch, "cursor" | "colourGrade">>>;
 	const next: LegacyShape = { ...base, ...defined };
+	if (colourGrade) {
+		// `colourGrade` is a nested object in the patch and five flat keys on disk, like `cursor`.
+		if (colourGrade.exposure !== undefined) next.colourExposure = colourGrade.exposure;
+		if (colourGrade.contrast !== undefined) next.colourContrast = colourGrade.contrast;
+		if (colourGrade.saturation !== undefined) next.colourSaturation = colourGrade.saturation;
+		if (colourGrade.temperature !== undefined) next.colourTemperature = colourGrade.temperature;
+		if (colourGrade.tint !== undefined) next.colourTint = colourGrade.tint;
+	}
 	if (patch.cursor) {
 		const c = patch.cursor;
 		if (c.size !== undefined) next.cursorSize = c.size;

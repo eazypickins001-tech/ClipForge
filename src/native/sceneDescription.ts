@@ -28,6 +28,7 @@ import {
 	getCaptionTranslations,
 } from "@/lib/ai-edition/captions";
 import { clickSoundForDocument } from "@/lib/ai-edition/clickSound";
+import { colourGradeEffect, isNeutralColourGrade } from "@/lib/ai-edition/colourGrade";
 import { takesByHeadFragment } from "@/lib/ai-edition/document/audioTracks";
 import { createId } from "@/lib/ai-edition/document/ids";
 import { legacyCameraRegions, materializeLayouts } from "@/lib/ai-edition/document/layout";
@@ -1329,29 +1330,64 @@ export function buildSceneDescription(
 		document.timeline.clips,
 		() => createId("fxr"),
 	);
-	const sceneShaderEffects: SceneShaderEffect[] = projectedShaderEffects.flatMap((region) => {
-		const effect = effectsById.get(region.effectId);
-		if (!effect) return [];
-		return [
-			{
-				startSec: region.startMs / 1000,
-				endSec: region.endMs / 1000,
-				clipIndex: region.clipIndex,
-				programmeStartSec: region.programmeStartSec ?? region.startMs / 1000,
-				programmeEndSec: region.programmeEndSec ?? region.endMs / 1000,
-				target: region.target,
-				contract: effect.contract,
-				code: effect.code,
-				params: effect.params.map(({ name, type }) => ({ name, type })),
-				values: Object.fromEntries(
-					effect.params.map((param) => [
-						param.name,
-						nativeShaderEffectValue(param, region.values[param.name]),
-					]),
-				),
-			},
-		];
-	});
+	// A global colour grade is just another shader effect — one fixed WGSL shader, graded FIRST so
+	// any agent effect runs on the graded picture. Neutral emits nothing, so a project that never
+	// touches colour keeps its payload and render exactly as before. One fragment per visible clip:
+	// a clip-indexed fragment survives `for_clip_window`, the same idiom the speed/zoom regions use.
+	const gradeFragments: SceneShaderEffect[] = [];
+	if (!isNeutralColourGrade(settings.colourGrade)) {
+		const grade = colourGradeEffect(settings.colourGrade);
+		if (grade) {
+			for (const [index, clip] of visibleClips.entries()) {
+				const sourceEndSec = resolveClipSourceEndSec(clip, assetById.get(clip.assetId));
+				gradeFragments.push({
+					startSec: clip.sourceStartSec,
+					endSec: sourceEndSec,
+					clipIndex: index,
+					// `ctx.region` is unused by the grade, so its whole-pill span is the clip's own.
+					programmeStartSec: clip.sourceStartSec,
+					programmeEndSec: sourceEndSec,
+					target: "image",
+					contract: grade.contract,
+					code: grade.code,
+					params: grade.params.map(({ name, type }) => ({ name, type })),
+					values: {
+						exposure: settings.colourGrade.exposure,
+						contrast: settings.colourGrade.contrast,
+						saturation: settings.colourGrade.saturation,
+						temperature: settings.colourGrade.temperature,
+						tint: settings.colourGrade.tint,
+					},
+				});
+			}
+		}
+	}
+	const sceneShaderEffects: SceneShaderEffect[] = [
+		...gradeFragments,
+		...projectedShaderEffects.flatMap((region) => {
+			const effect = effectsById.get(region.effectId);
+			if (!effect) return [];
+			return [
+				{
+					startSec: region.startMs / 1000,
+					endSec: region.endMs / 1000,
+					clipIndex: region.clipIndex,
+					programmeStartSec: region.programmeStartSec ?? region.startMs / 1000,
+					programmeEndSec: region.programmeEndSec ?? region.endMs / 1000,
+					target: region.target,
+					contract: effect.contract,
+					code: effect.code,
+					params: effect.params.map(({ name, type }) => ({ name, type })),
+					values: Object.fromEntries(
+						effect.params.map((param) => [
+							param.name,
+							nativeShaderEffectValue(param, region.values[param.name]),
+						]),
+					),
+				},
+			];
+		}),
+	];
 
 	// Webcam rect, single source of truth between preview & native :
 	// on résout le rect AVEC LA MÊME maths que `PreviewCanvas.computeCompositeLayout` et on

@@ -250,6 +250,14 @@
 		},
 		"customize": "Tùy chỉnh"
 	},
+	"colour": {
+		"title": "Màu sắc",
+		"exposure": "Phơi sáng",
+		"contrast": "Tương phản",
+		"saturation": "Độ bão hòa",
+		"temperature": "Nhiệt độ",
+		"tint": "Sắc độ"
+	},
 	"panes": {
 		"help": "Trợ giúp"
 	},

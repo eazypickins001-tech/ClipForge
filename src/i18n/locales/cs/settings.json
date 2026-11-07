@@ -250,6 +250,14 @@
 		},
 		"customize": "Upravit"
 	},
+	"colour": {
+		"title": "Barva",
+		"exposure": "Expozice",
+		"contrast": "Kontrast",
+		"saturation": "Sytost",
+		"temperature": "Teplota",
+		"tint": "Odstín"
+	},
 	"panes": {
 		"help": "Nápověda"
 	},
