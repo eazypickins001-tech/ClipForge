@@ -7,10 +7,14 @@ Continues `HANDOVER-2026-11-07-speed-ramps-programme-clock.md`. Same day, same t
 - `5441576` — **scene detection → split** (this file). The Windows installer build is **green**.
   Its CI run was cancelled by the `ci-${{ github.ref }}` concurrency group when this handover's
   commit landed; the handover's CI run — the same code tree plus this markdown — is **green**.
-- `e8e8bb5` — this handover.
+- `e8e8bb5`, `93635d7` — this handover and its status correction.
+- `7437576` — **`splitAtScenes` in the agent surface** (in-app agent, MCP, stdio). CI **green**. The
+  Windows installer build failed once on the packaged smoke step's known `transitions.spec.ts`
+  "the split never reached the saved project" flake and went **green on `gh run rerun --failed`**.
 
 Verified for `5441576` locally: app `tsc`, biome, the touched suites (147 tests) and i18n key
-parity (405 keys × 15 locales); the full suite is green on CI. **No detection ran against a real
+parity (405 keys × 15 locales); the full suite is green on CI. The agent surface (`7437576`) is
+covered by 326 targeted `service`/`agent-tools`/MCP tests. **No detection ran against a real
 file** — this checkout has no FFmpeg, no Rust toolchain and no native addon.
 
 ---
@@ -62,6 +66,24 @@ file** — this checkout has no FFmpeg, no Rust toolchain and no native addon.
 - Four i18n keys in `editor.json` × 15 locales: `inspector.detectScenes`,
   `detectScenesNone`, `detectScenesDone`, `detectScenesUnavailable`.
 
+**The agent tool** — `splitAtScenes` (in-app agent, MCP server, `openscreen mcp` over stdio):
+
+- One call, one clip: `{ clipId, threshold?, minSceneSec?, dryRun? }`. `runDocumentTool`'s async
+  pre-flight (`loadSceneCuts`) resolves the clip's asset, calls `runtime.detectScenes` with the
+  request's threshold/min-scene and the turn's abort signal, and filters the cuts to the clip's
+  own source window. The synchronous executor then applies
+  `splitClipAtTimes(document, clipId, cuts, "agent", "Scene change")` — one document, one undo.
+- `dryRun: true` returns the cuts and edits nothing. The pre-flight keeps the same three verdicts
+  as the UI/IPC: `ok`, `unavailable` (wired but failed / not wired) and `no-ffmpeg`; the executor
+  reports them separately so "could not look" is never passed off as "no shots".
+- Registered in `OPENSCREEN_TOOL_NAMES`, `MUTATING_TOOL_NAMES`, `TOOL_ARG_SCHEMAS` (same order) and
+  `TOOL_DESCRIPTIONS`. The runtime is wired in `handlers.ts` (the MCP deps **and** the in-app chat
+  runtime), `chat-service.ts`/`InvokeArgs`, and `McpToolDeps` in `openscreen-mcp-server.ts`; the
+  stdio CLI gets it through the same `mcpToolDeps`.
+- Tests: `service.test.ts` (detects + filters + splits in one document, dryRun edits nothing, a
+  detector that could not look, a missing FFmpeg), the `ARGS` fixture entry, the mutating-name
+  table, and the MCP tool list (derived from `OPENSCREEN_TOOL_NAMES`).
+
 **Tests**
 
 - `electron/media/sceneDetect.test.ts` (new): argument shape, `pts_time` parse, the min-gap
@@ -89,9 +111,12 @@ file** — this checkout has no FFmpeg, no Rust toolchain and no native addon.
   with a pre-roll.
 - **No progress or cancel button in the UI.** The IPC has `cancel-scene-detection`; the menu
   action just awaits. The pass is usually faster than a Whisper transcription, but it is not
-  instant on a long file.
-- **No agent tool.** The plan's Phase-3 shape (`detectScenes` pre-flight in `runDocumentTool`, then
-  `splitAtScenes`) is untouched. The pure `splitClipAtTimes` is ready for it.
+  instant on a long file. The agent tool has the same wait — its only progress is the chat's
+  running-tool indicator, and the abort signal is threaded so a cancelled turn kills the decode.
+- **The agent tool has no panel threshold control**; it takes `threshold`/`minSceneSec` from the
+  model. The UI action still uses the two constants.
+- **A `dryRun` call is still classed as mutating** (`MUTATING_TOOL_NAMES`), so it needs agent/MCP
+  edits enabled even though it writes nothing. That is deliberate: one tool, one consent rule.
 - **Threshold/min-scene are constants** (0.4 / 0.5) in the menu call, not a panel.
 - Inherited from `splitClip`: `wordRefs` stay on the left half; a modifier spanning a cut stays
   anchored to the left; anchored audio takes are handed over, not cut. Those are documented in
@@ -108,13 +133,11 @@ file** — this checkout has no FFmpeg, no Rust toolchain and no native addon.
 
 ## 4. Next, in the order I would take it
 
-1. **Agent tools for the engine**: `detectScenes` as an async pre-flight in `runDocumentTool`
-   (the transcribe/`TOOLS_READING_CURSOR` pattern), then a `splitAtScenes` executor; register in
-   the five places the 2026-11-06 handover lists and update the `ARGS` fixture/MCP tool list.
-2. **Sensitivity + progress**: a small panel (threshold, min scene) and `-progress pipe:1` with the
-   IPC cancel surfaced, so a long file does not look hung.
-3. **Scan window**: `-ss`/`-t` around the clip with a pre-roll.
-4. Then the remaining queue: `script-to-video`, Thumbnail Studio (F5, including the video
+1. **Sensitivity + progress**: a small panel (threshold, min scene) and `-progress pipe:1` with the
+   IPC cancel surfaced, so a long file does not look hung. The agent tool already takes the two
+   knobs; the UI action still hard-codes them.
+2. **Scan window**: `-ss`/`-t` around the clip with a pre-roll.
+3. Then the remaining queue: `script-to-video`, Thumbnail Studio (F5, including the video
    description recorded in `ROADMAP.md` F5 step 7), and the export overlap's remaining items
    (animated outgoing during a blend, `d`-length audio crossfade, preview programme clock).
 
@@ -130,3 +153,7 @@ file** — this checkout has no FFmpeg, no Rust toolchain and no native addon.
 
 **UI/i18n:** `src/components/ai-edition/v4/ClipMenu.tsx` (+ test) ·
 `src/components/ai-edition/NewEditorShell.tsx` · `src/i18n/locales/*/editor.json` (15)
+
+**Agent surface (`7437576`):** `electron/ai-edition/agent-tools.ts` (+ test) ·
+`electron/ai-edition/deep-agent/service.ts` (+ test) · `electron/ai-edition/chat-service.ts` ·
+`electron/ipc/handlers.ts` · `electron/mcp/openscreen-mcp-server.ts`
