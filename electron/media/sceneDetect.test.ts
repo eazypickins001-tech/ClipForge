@@ -6,7 +6,13 @@ import { spawn } from "node:child_process";
 import { EventEmitter } from "node:events";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { resolveFfmpeg } from "./audioPeaks";
-import { detectScenes, filterSceneCuts, parseSceneCuts, sceneDetectArgs } from "./sceneDetect";
+import {
+	detectScenes,
+	filterSceneCuts,
+	parseProgressMicros,
+	parseSceneCuts,
+	sceneDetectArgs,
+} from "./sceneDetect";
 
 vi.mock("node:child_process", () => ({ spawn: vi.fn() }));
 vi.mock("./audioPeaks", () => ({ resolveFfmpeg: vi.fn() }));
@@ -16,12 +22,14 @@ const resolveFfmpegMock = vi.mocked(resolveFfmpeg);
 
 interface FakeChild extends EventEmitter {
 	stderr: EventEmitter;
+	stdout: EventEmitter;
 	kill: ReturnType<typeof vi.fn>;
 }
 
 function fakeChild(): FakeChild {
 	const child = new EventEmitter() as FakeChild;
 	child.stderr = new EventEmitter();
+	child.stdout = new EventEmitter();
 	child.kill = vi.fn();
 	return child;
 }
@@ -39,8 +47,20 @@ describe("sceneDetectArgs", () => {
 		expect(args).toContain("select='gt(scene,0.4)',showinfo");
 		expect(args).toContain("-an");
 		expect(args).toContain("-sn");
-		// A null muxer decodes the file without writing one.
+		// A null muxer decodes the file without writing one, and `-progress pipe:1` feeds the bar.
 		expect(args.slice(-3)).toEqual(["-f", "null", "-"]);
+		expect(args[args.indexOf("-progress") + 1]).toBe("pipe:1");
+	});
+});
+
+describe("parseProgressMicros", () => {
+	it("reads the last reported output time", () => {
+		expect(parseProgressMicros("out_time_us=1500000\nprogress=continue\n")).toBe(1_500_000);
+		expect(parseProgressMicros("out_time_ms=2500000\nprogress=end\n")).toBe(2_500_000);
+	});
+
+	it("returns null when the chunk carries no time", () => {
+		expect(parseProgressMicros("progress=continue\n")).toBeNull();
 	});
 });
 
@@ -131,5 +151,26 @@ describe("detectScenes", () => {
 			message: "Scene detection was cancelled.",
 		});
 		expect(child.kill).toHaveBeenCalledWith("SIGKILL");
+	});
+
+	it("turns FFmpeg's progress lines into a fraction of the known duration", async () => {
+		const child = fakeChild();
+		resolveFfmpegMock.mockReturnValue("/ffmpeg");
+		spawnMock.mockReturnValue(child as never);
+		const seen: number[] = [];
+
+		const pending = detectScenes("/clip.mp4", {
+			durationSec: 10,
+			onProgress: (fraction) => seen.push(fraction),
+		});
+		child.stdout.emit("data", Buffer.from("out_time_us=2500000\nprogress=continue\n"));
+		child.stdout.emit("data", Buffer.from("out_time_us=7500000\nprogress=continue\n"));
+		child.emit("close", 0);
+		await pending;
+
+		// 2.5/10 then 7.5/10 from the decode, then 1 on a clean exit.
+		expect(seen[0]).toBeCloseTo(0.25, 6);
+		expect(seen.at(-2)).toBeCloseTo(0.75, 6);
+		expect(seen.at(-1)).toBe(1);
 	});
 });

@@ -4577,7 +4577,15 @@ export function registerIpcHandlers(
 			sceneDetectAborts.set(event.sender.id, controller);
 			try {
 				const request = options && typeof options === "object" ? options : {};
-				return await detectScenes(normalizedPath, { ...request, signal: controller.signal });
+				return await detectScenes(normalizedPath, {
+					...request,
+					signal: controller.signal,
+					onProgress: (fraction) => {
+						if (!event.sender.isDestroyed()) {
+							event.sender.send("scene-detect-progress", fraction);
+						}
+					},
+				});
 			} finally {
 				if (sceneDetectAborts.get(event.sender.id) === controller) {
 					sceneDetectAborts.delete(event.sender.id);

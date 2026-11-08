@@ -21,11 +21,15 @@ export interface SceneDetectRequest {
 	minSceneSec?: number;
 	/** Give up after this long. A wedged decode is not a detection. */
 	timeoutMs?: number;
+	/** The source's duration, used only to turn FFmpeg's progress into a fraction. */
+	durationSec?: number;
 }
 
-/** Main-process options: the request plus the cancellation signal (never crosses IPC). */
+/** Main-process options: the request plus the cancellation signal and progress (never cross IPC). */
 export interface SceneDetectOptions extends SceneDetectRequest {
 	signal?: AbortSignal;
+	/** 0..1 as the decode advances; also called with 1 on a clean exit. */
+	onProgress?: (fraction: number) => void;
 }
 
 export interface SceneDetectResult {
@@ -46,6 +50,8 @@ const DEFAULT_TIMEOUT_MS = 300_000;
 /** `showinfo` prints one line per selected frame; cap the buffer in case a threshold selects all. */
 const STDERR_CAP = 2 * 1024 * 1024;
 const PTS_TIME = /pts_time:\s*([0-9]+(?:\.[0-9]+)?)/g;
+/** FFmpeg's `-progress` writer reports microseconds; both spellings do (its `_ms` is a legacy name). */
+const PROGRESS_TIME = /^(?:out_time_us|out_time_ms)=(\d+)\s*$/;
 
 /** Pure: the argument vector, so the test pins the filter expression without spawning. */
 export function sceneDetectArgs(filePath: string, threshold: number): string[] {
@@ -61,10 +67,22 @@ export function sceneDetectArgs(filePath: string, threshold: number): string[] {
 		"-dn",
 		"-vf",
 		`select='gt(scene,${threshold})',showinfo`,
+		"-progress",
+		"pipe:1",
 		"-f",
 		"null",
 		"-",
 	];
+}
+
+/** Pure: the last `out_time_us`/`out_time_ms` in one `-progress` chunk, in microseconds. */
+export function parseProgressMicros(chunk: string): number | null {
+	let last: number | null = null;
+	for (const line of chunk.split("\n")) {
+		const match = PROGRESS_TIME.exec(line.trim());
+		if (match) last = Number(match[1]);
+	}
+	return last;
 }
 
 /**
@@ -132,14 +150,30 @@ export async function detectScenes(
 		let stderr = "";
 		const child = spawn(ffmpeg, sceneDetectArgs(filePath, threshold), {
 			windowsHide: true,
-			stdio: ["ignore", "ignore", "pipe"],
+			// stdout is `-progress pipe:1`; the scene lines are on stderr.
+			stdio: ["ignore", "pipe", "pipe"],
 		});
 		let timer: NodeJS.Timeout;
+		const durationSec = options.durationSec ?? 0;
+		let lastReported = -1;
+		let lastReportedAt = 0;
+		const reportProgress = (micros: number) => {
+			if (!(durationSec > 0) || !options.onProgress) return;
+			const fraction = Math.min(1, Math.max(0, micros / (durationSec * 1_000_000)));
+			const now = Date.now();
+			// At most ~4 updates a second, and at least a point each: a UI bar does not need
+			// every packet, and a value that does not move is not news.
+			if (fraction - lastReported < 0.01 && now - lastReportedAt < 250) return;
+			lastReported = fraction;
+			lastReportedAt = now;
+			options.onProgress(fraction);
+		};
 		const finish = (result: SceneDetectResult) => {
 			if (settled) return;
 			settled = true;
 			clearTimeout(timer);
 			signal?.removeEventListener("abort", onAbort);
+			if (result.success) options.onProgress?.(1);
 			resolve(result);
 		};
 		const onAbort = () => {
@@ -158,6 +192,10 @@ export async function detectScenes(
 
 		child.stderr?.on("data", (chunk: Buffer) => {
 			stderr = (stderr + chunk.toString()).slice(-STDERR_CAP);
+		});
+		child.stdout?.on("data", (chunk: Buffer) => {
+			const micros = parseProgressMicros(chunk.toString());
+			if (micros !== null) reportProgress(micros);
 		});
 		child.once("error", (error) => {
 			finish({ success: false, cutsSec: [], message: String(error) });

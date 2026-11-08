@@ -397,9 +397,20 @@ contextBridge.exposeInMainWorld("electronAPI", {
 	/** Scene changes over a source, read by FFmpeg. See electron/media/sceneDetect.ts. */
 	detectScenes: (
 		filePath: string,
-		options?: { threshold?: number; minSceneSec?: number; timeoutMs?: number },
+		options?: {
+			threshold?: number;
+			minSceneSec?: number;
+			timeoutMs?: number;
+			durationSec?: number;
+		},
 	) => {
 		return ipcRenderer.invoke("detect-scenes", filePath, options);
+	},
+	/** 0..1 while a detection runs; returns its own unsubscribe. */
+	onSceneDetectProgress: (callback: (fraction: number) => void) => {
+		const listener = (_event: unknown, fraction: number) => callback(fraction);
+		ipcRenderer.on("scene-detect-progress", listener);
+		return () => ipcRenderer.removeListener("scene-detect-progress", listener);
 	},
 	cancelSceneDetection: () => {
 		return ipcRenderer.invoke("cancel-scene-detection");

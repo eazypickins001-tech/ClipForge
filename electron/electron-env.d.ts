@@ -399,6 +399,7 @@ interface Window {
 			filePath: string,
 			options?: import("./media/sceneDetect").SceneDetectRequest,
 		) => Promise<import("./media/sceneDetect").SceneDetectResult>;
+		onSceneDetectProgress: (callback: (fraction: number) => void) => () => void;
 		cancelSceneDetection: () => Promise<boolean>;
 		readFileChunk: (
 			filePath: string,

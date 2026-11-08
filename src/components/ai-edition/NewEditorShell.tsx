@@ -82,6 +82,7 @@ import {
 } from "./Modals";
 import { Preview } from "./Preview";
 import { importPendingRecording, maybeSaveFreshRecordingAutoZooms } from "./recordingImport";
+import { SceneDetectModal } from "./SceneDetectModal";
 import { TransitionModal } from "./TransitionModal";
 import { AddAudioLayerDialog } from "./v4/AddAudioLayerDialog";
 import v4 from "./v4/EditorShellV4.module.css";
@@ -466,10 +467,15 @@ export function NewEditorShell() {
 		void tl.splitClipAt(target.id, playhead);
 	}, [clips, tl, te]);
 
-	// "Detect scenes": FFmpeg scores the source in the main process, and every cut it reports
-	// inside the clip under the playhead lands in ONE write. One undo step for the whole sweep —
-	// the same contract as Remove silences. A missing FFmpeg, a file with no cuts, or a clip whose
-	// asset has no path is a toast, not a thrown error.
+	// "Detect scenes": the menu resolves the clip under the playhead and opens the settings sheet;
+	// the sheet runs the FFmpeg pass with a live progress bar and a Cancel, then hands its cuts back
+	// here. All the cuts land in ONE write, so a sweep is one undo step — like Remove silences.
+	const [sceneDetectTarget, setSceneDetectTarget] = useState<{
+		clipId: string;
+		assetPath: string;
+		durationSec: number;
+	} | null>(null);
+
 	const handleDetectScenes = useCallback(() => {
 		const state = useProjectStore.getState();
 		const target = clipAtPlayhead(clips, state.currentTimeSec);
@@ -486,25 +492,25 @@ export function NewEditorShell() {
 			toast.error(te("inspector.detectScenesUnavailable"));
 			return;
 		}
-		void window.electronAPI
-			.detectScenes(asset.originalPath, { threshold: 0.4, minSceneSec: 0.5 })
-			.then(async (result) => {
-				if (!result.success) {
-					toast.error(
-						result.reason === "no-ffmpeg"
-							? te("inspector.detectScenesUnavailable")
-							: (result.message ?? te("inspector.detectScenesNone")),
-					);
-					return;
-				}
-				const pieces = await tl.splitClipAtTimesAt(target.id, result.cutsSec ?? [], "Scene change");
-				if (pieces > 0) toast.success(te("inspector.detectScenesDone"));
-				else toast.info(te("inspector.detectScenesNone"));
-			})
-			.catch((error: unknown) => {
-				toast.error(String(error));
-			});
-	}, [clips, tl, te]);
+		const sourceEnd =
+			target.sourceEndSec ??
+			target.sourceStartSec + (target.timelineEndSec - target.timelineStartSec);
+		setSceneDetectTarget({
+			clipId: target.id,
+			assetPath: asset.originalPath,
+			durationSec: asset.durationSec ?? Math.max(0, sourceEnd - target.sourceStartSec),
+		});
+	}, [clips, te]);
+
+	const applySceneCuts = useCallback(
+		async (clipId: string, cutsSec: number[]) => {
+			const pieces = await tl.splitClipAtTimesAt(clipId, cutsSec, "Scene change");
+			if (pieces > 0) toast.success(te("inspector.detectScenesDone"));
+			else toast.info(te("inspector.detectScenesNone"));
+			return pieces;
+		},
+		[tl, te],
+	);
 	const hasProject = Boolean(document);
 	const hasAsset = projectId !== null && (document?.assets.length ?? 0) > 0;
 	const project = document?.project
@@ -2065,6 +2071,14 @@ export function NewEditorShell() {
 					const clipId = clipAudioTarget.id;
 					void enqueueTimelineWrite(() => tl.updateClipAudio(clipId, patch));
 				}}
+			/>
+			<SceneDetectModal
+				open={sceneDetectTarget !== null}
+				onClose={() => setSceneDetectTarget(null)}
+				clipId={sceneDetectTarget?.clipId ?? null}
+				assetPath={sceneDetectTarget?.assetPath ?? null}
+				durationSec={sceneDetectTarget?.durationSec ?? 0}
+				onApply={applySceneCuts}
 			/>
 			<TransitionModal
 				open={transitionTarget !== null}
