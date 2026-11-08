@@ -227,6 +227,7 @@ describe("the mutating-tool table", () => {
 				"setTrim",
 				"setWordText",
 				"setZoom",
+				"splitAtScenes",
 				"setCaptionSettings",
 				"putCaptionTranslation",
 				"removeCaptionTranslation",

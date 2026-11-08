@@ -48,6 +48,7 @@ import {
 } from "../../../src/lib/ai-edition/timeline/zoom-scale";
 import { ZOOM_TRANSITION_LEGEND } from "../../../src/lib/ai-edition/timeline/zoom-transitions";
 import type { SegmentationSupport } from "../../../src/native/contracts";
+import type { SceneDetectOptions, SceneDetectResult } from "../../media/sceneDetect";
 import {
 	AGENT_EDITS_SETTING,
 	type AgentToolExecution,
@@ -80,6 +81,7 @@ import {
 	removeWordsArgs,
 	replaceTimelineArgs,
 	resolveCursorAssetId,
+	type SceneDetectLoad,
 	setAnnotationArgs,
 	setAspectRatioArgs,
 	setAudioArgs,
@@ -93,6 +95,7 @@ import {
 	setZoomArgs,
 	shaderEffectCheckLookup,
 	shaderEffectToCheck,
+	splitAtScenesArgs,
 } from "../agent-tools";
 import {
 	getCaptionsArgs,
@@ -267,6 +270,8 @@ export const TOOL_DESCRIPTIONS: Record<string, string> = {
 		"Set the shape of the exported video: 16:9 for X, YouTube or a slide, 9:16 for a vertical story or short, 1:1 or 4:5 for a square feed, auto to follow the recording, or one of the clips' own shapes (getCurrentDocument's settingsContext.originalAspectRatios). Annotations on the frame keep their place and shape. The same as setEditorSettings with aspectRatio alone.",
 	autoReframe:
 		"Reframe every clip for a different shape, the way you would for a vertical short: each clip is cropped to the part of its source that fills the target, centred on whatever the project already zooms on (so a clip the author framed stays framed), and the output format is set to match in the same edit. Give a fixed shape — 16:9, 9:16, 1:1, 4:5 — not auto, which has no shape to crop to. Refuses without changing anything when a clip's dimensions have not been probed yet, because reframing only some clips would leave the format changing mid-timeline. This does not read the cursor track: it follows the project's own zooms, not the action.",
+	splitAtScenes:
+		"Split ONE clip at the shot changes in its source, in a single edit (one undo): FFmpeg scores the source, any cuts closer than `minSceneSec` are dropped, and only cuts inside this clip's own window are applied. `clipId` comes from getCurrentDocument. `threshold` (0.01–1, default 0.4) trades sensitivity for fewer cuts; `minSceneSec` (default 0.5 s) stops a flash or a wipe becoming a stack of micro-clips. Pass `dryRun: true` to read the cut times without editing. This is the tool for 'split this into its shots' or 'cut at every scene change'; there is no other split tool, and the cuts cannot be made one at a time. It decodes the source, so it can take a while on a long recording. It needs FFmpeg in this install; without it the result says the clip could not be scanned, which is not the same as the footage having no shots.",
 	setEditorSettings:
 		'Change the project\'s look: pass only the settings to change, named as getCurrentDocument returns them under `settings`. Background: wallpaper (a bundled path from settingsContext.bundledWallpapers, a CSS colour or gradient, or a base64 PNG/JPEG data URL; never a file path or web URL; an embedded image reads back as a marker, leave the key out to keep it), wallpaperMotion (moves a gradient or image only), backgroundBlur 0–1. Frame: aspectRatio ("auto", a preset, or an originalAspectRatios token; a fixed format picked for the first time fills the frame with a window that follows the cursor, which formatFollowCursor turns off when settingsContext.formatFill is "available"), padding 0–100 %, borderRadius 0–64 px, shadowIntensity 0–1, frame (none, window, laptop, phone, monitor) and frameTheme (light, dark), motionBlurAmount 0–1, depthOfField (blurs 3D-tilted zooms only). Camera: webcamLayoutPreset, webcamMirrored, webcamReactiveZoom (shrinks on zoom), webcamMaskShape (square or rectangle, the camera\'s own proportions; an untouched roundness follows it), webcamRoundness 0–1, webcamSizePreset 15–60, webcamAnchor (a corner or an edge middle), webcamCropRegion (the framing: a square share of the picture, width = height ≥ 1/3) and webcamCropPan (where that window sits, 0–1 per axis, 0.5 centred), webcamBackgroundMode (none, transparent, blur, custom: needs settingsContext.cameraSegmentation ready), webcamBlurIntensity 0–1, webcamWallpaper (as wallpaper). Cursor, under `cursor`: show, autoHide, theme (settingsContext.cursorThemes), asArrow (the recorded cursor kinds drawn as the arrow instead), size 1.5–6, smoothing 0–1, motionBlur 0–1, clickBounce 0–2, clickImpact, clickSound (only heard when the take recorded clicks) and clickSoundGainDb −24–0, model3d. Also autoFocusAll (every zoom follows the cursor) and audioGainDb −12–12 dB, the master volume. A value out of range or a key not listed is refused with the reason, and nothing changes. The result lists what was applied, including what the editor changes with it, and `inactive` for any of those the current state leaves without effect.',
 	addEffect:
@@ -338,6 +343,9 @@ export interface ToolRuntime {
 	cameraSegmentation?: () => SegmentationSupport;
 	/** Asks the compositor to check an effect's WGSL. */
 	checkShaderEffect?: ShaderEffectChecker;
+	/** Runs the FFmpeg scene pass over a clip's source (`media/sceneDetect`). Absent where
+	 *  nothing can spawn it: `splitAtScenes` then reports that it could not look. */
+	detectScenes?: (filePath: string, options?: SceneDetectOptions) => Promise<SceneDetectResult>;
 }
 
 /**
@@ -446,6 +454,12 @@ export async function runDocumentTool(
 		: undefined;
 	const autoZooms =
 		name === "addAutoZooms" && editsAllowed ? await planAutoZooms(document, runtime) : undefined;
+	// The scene pass decodes the source with FFmpeg, which the synchronous executor cannot do.
+	// Only the write path asks: a refused edit must not pay for a decode it will not use.
+	const sceneDetect =
+		name === "splitAtScenes" && editsAllowed
+			? await loadSceneCuts(document, args, runtime)
+			: undefined;
 	// The compositor compiles an effect's code for real, off the main thread: asked here, before
 	// the synchronous executor reads the answer.
 	const effectSource =
@@ -466,7 +480,65 @@ export async function runDocumentTool(
 		cameraSegmentation: runtime.cameraSegmentation,
 		checkShaderEffect,
 		autoZooms,
+		sceneDetect,
 	});
+}
+
+/**
+ * Resolve the clip `splitAtScenes` names, scan its source and hand the executor the cuts that fall
+ * inside the clip's own window. The three verdicts mirror `CursorTelemetryLoad`: `ok` is a fact
+ * about the footage, `unavailable` and `no-ffmpeg` are facts about the machine, and the executor
+ * must be able to tell them apart.
+ */
+async function loadSceneCuts(
+	document: AxcutDocument,
+	args: unknown,
+	runtime: ToolRuntime,
+): Promise<SceneDetectLoad> {
+	const parsed = splitAtScenesArgs.safeParse(args);
+	if (!parsed.success) {
+		// The executor reports the schema error; there is nothing to scan.
+		return { status: "unavailable", clipId: "", note: parsed.error.message };
+	}
+	const { clipId, threshold, minSceneSec } = parsed.data;
+	const clip = document.timeline.clips.find((candidate) => candidate.id === clipId);
+	if (!clip) return { status: "unavailable", clipId, note: `Unknown clip: ${clipId}.` };
+	const asset = document.assets.find((candidate) => candidate.id === clip.assetId);
+	if (!asset?.originalPath) {
+		return {
+			status: "unavailable",
+			clipId,
+			note: `Clip ${clipId} draws on an asset with no media path, so it cannot be scanned.`,
+		};
+	}
+	if (!runtime.detectScenes) {
+		return {
+			status: "unavailable",
+			clipId,
+			note: "Scene detection is not available here, so this clip cannot be scanned.",
+		};
+	}
+	let result: SceneDetectResult;
+	try {
+		result = await runtime.detectScenes(asset.originalPath, {
+			threshold,
+			minSceneSec,
+			signal: runtime.signal,
+		});
+	} catch (error) {
+		return { status: "unavailable", clipId, note: String(error) };
+	}
+	if (!result.success) {
+		if (result.reason === "no-ffmpeg") return { status: "no-ffmpeg", clipId };
+		return { status: "unavailable", clipId, note: result.message ?? "Scene detection failed." };
+	}
+	const sourceEnd =
+		clip.sourceEndSec ?? clip.sourceStartSec + (clip.timelineEndSec - clip.timelineStartSec);
+	return {
+		status: "ok",
+		clipId,
+		cutsSec: result.cutsSec.filter((sec) => sec > clip.sourceStartSec && sec < sourceEnd),
+	};
 }
 
 /** The timeline wand's plan (`collectAutoZoomSuggestionsForDocument`), each recording's
@@ -564,6 +636,7 @@ export const TOOL_ARG_SCHEMAS: ReadonlyArray<readonly [string, z.ZodObject]> = [
 	["setTrim", setTrimArgs],
 	["setClipRange", setClipRangeArgs],
 	["autoReframe", autoReframeArgs],
+	["splitAtScenes", splitAtScenesArgs],
 	["moveClip", moveClipArgs],
 	["insertClip", insertClipArgs],
 	["duplicateClip", duplicateClipArgs],
@@ -638,6 +711,8 @@ export interface InvokeArgs {
 	cameraSegmentation?: () => SegmentationSupport;
 	/** Injected the same way: the compositor's check of an effect's WGSL. */
 	checkShaderEffect?: ShaderEffectChecker;
+	/** Injected the same way: FFmpeg's scene pass over a clip's source. */
+	detectScenes?: (filePath: string, options?: SceneDetectOptions) => Promise<SceneDetectResult>;
 }
 
 /** One cheap probe per asset, run before the tools are built so the very first
@@ -722,6 +797,7 @@ export async function invokeOpenScreenAgent(args: InvokeArgs): Promise<InvokeRes
 			availableByAssetId,
 			cameraSegmentation: args.cameraSegmentation,
 			checkShaderEffect: args.checkShaderEffect,
+			detectScenes: args.detectScenes,
 		});
 		const agent = createAgent({
 			signal,

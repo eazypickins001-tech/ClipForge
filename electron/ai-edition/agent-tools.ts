@@ -51,6 +51,7 @@ import {
 	replaceTimeline,
 	setClipCrop,
 	setClipSourceRange,
+	splitClipAtTimes,
 } from "../../src/lib/ai-edition/document/timeline";
 import { setDocumentWordText } from "../../src/lib/ai-edition/document/transcript";
 import {
@@ -785,6 +786,25 @@ export const autoReframeArgs = z.object({
 		.describe("Reframe only the clips using this asset. Omit to reframe every clip."),
 });
 
+/** One call, one clip: the detector scans its source, the executor splits it. */
+export const splitAtScenesArgs = z.object({
+	clipId: z.string().min(1).describe("The clip to cut into shots, from getCurrentDocument."),
+	threshold: z
+		.number()
+		.min(0.01)
+		.max(1)
+		.optional()
+		.describe("FFmpeg's scene score, 0.01–1. Higher means fewer, larger shots. Default 0.4."),
+	minSceneSec: z
+		.number()
+		.positive()
+		.optional()
+		.describe(
+			"Do not put two cuts closer than this, so a flash or a wipe cannot make micro-clips. Default 0.5 s.",
+		),
+	dryRun: z.boolean().optional().describe("Return the shot changes without editing the timeline."),
+});
+
 export const replaceTimelineArgs = z.object({
 	intervals: z.array(z.object({ startSec: secondsSchema, endSec: secondsSchema })).min(1),
 	reason: z.string().default(""),
@@ -1189,6 +1209,7 @@ export const OPENSCREEN_TOOL_NAMES = [
 	"setTrim",
 	"setClipRange",
 	"autoReframe",
+	"splitAtScenes",
 	"moveClip",
 	"insertClip",
 	"duplicateClip",
@@ -1274,6 +1295,7 @@ export const MUTATING_TOOL_NAMES: ReadonlySet<string> = new Set([
 	"setTrim",
 	"setClipRange",
 	"autoReframe",
+	"splitAtScenes",
 	"moveClip",
 	"insertClip",
 	"duplicateClip",
@@ -1872,7 +1894,23 @@ export interface AgentToolOptions {
 	/** `addAutoZooms`' plan, made by the async wrapper from the recorded clicks. Absent means
 	 *  no cursor reader is wired here, which the tool reports as "could not look". */
 	autoZooms?: AutoZoomPlan;
+	/** `splitAtScenes`' detected cuts, made by the async wrapper. Absent means no detector is
+	 *  wired here — reported as "could not look", never as "there are no scene changes". */
+	sceneDetect?: SceneDetectLoad;
 }
+
+/**
+ * What the runtime's scene pass found for `splitAtScenes`.
+ *
+ * The three states are the same distinction `CursorTelemetryLoad` keeps: "these are the cuts" is a
+ * fact about the footage, "this install has no FFmpeg" and "nothing here can look" are facts about
+ * the machine. Collapsing them would let the model tell a user their recording has no shots when
+ * what actually happened is that it could not be scanned.
+ */
+export type SceneDetectLoad =
+	| { status: "ok"; clipId: string; cutsSec: number[] }
+	| { status: "unavailable"; clipId: string; note?: string }
+	| { status: "no-ffmpeg"; clipId: string };
 
 /** What the timeline wand would add, and what each recording's cursor read gave. */
 export interface AutoZoomPlan {
@@ -2164,6 +2202,56 @@ export function executeAgentTool(
 
 		case "setEditorSettings":
 			return executeSetEditorSettings(document, args, options?.cameraSegmentation?.() ?? null);
+
+		case "splitAtScenes": {
+			const parsed = splitAtScenesArgs.safeParse(args);
+			if (!parsed.success) return failure(parsed.error.message);
+			const { clipId, dryRun } = parsed.data;
+			const clip = document.timeline.clips.find((candidate) => candidate.id === clipId);
+			if (!clip) return failure(`Unknown clip: ${clipId}. ${clipRoster(document)}`);
+			const scene = options?.sceneDetect;
+			if (!scene || scene.status === "unavailable") {
+				return failure(
+					scene?.note ?? "Scene detection is unavailable, so this clip cannot be scanned.",
+				);
+			}
+			if (scene.status === "no-ffmpeg") {
+				return failure(
+					"Scene detection needs FFmpeg, and this install does not carry it. Split the clip by hand instead.",
+				);
+			}
+			const cutsSec = scene.cutsSec;
+			if (dryRun) {
+				return {
+					ok: true,
+					resultJson: JSON.stringify({ clipId, cutsSec, split: 0, dryRun: true }),
+				};
+			}
+			if (cutsSec.length === 0) {
+				return {
+					ok: true,
+					resultJson: JSON.stringify({ clipId, cutsSec, split: 0 }),
+					summary: "found no scene changes to split",
+				};
+			}
+			// One document, one save: every cut lands together, and a cut that misses the clip's
+			// own MIN_SPLIT_SEC edges is skipped by `splitClip` inside the batch.
+			const next = splitClipAtTimes(document, clipId, cutsSec, "agent", "Scene change");
+			if (next === document) {
+				return {
+					ok: true,
+					resultJson: JSON.stringify({ clipId, cutsSec, split: 0 }),
+					summary: "found no splittable scene changes",
+				};
+			}
+			const pieces = next.timeline.clips.length - document.timeline.clips.length;
+			return {
+				ok: true,
+				document: next,
+				resultJson: JSON.stringify({ clipId, cutsSec, split: pieces }),
+				summary: `split ${clipId} at ${pieces} scene change${pieces === 1 ? "" : "s"}`,
+			};
+		}
 
 		case "getCurrentDocument": {
 			return {

@@ -83,6 +83,7 @@ import {
 	type ProjectSummary,
 	type ProjectVersion,
 } from "../ai-edition/document-service";
+import type { SceneDetectOptions, SceneDetectResult } from "../media/sceneDetect";
 import type { SttTranscribeRequest, SttTranscribeResponse } from "../stt/transcriptionContract";
 import { EFFECTS_CONTRACT, EFFECTS_CONTRACT_URI, EFFECTS_NOTE } from "./effects-contract";
 import type { MediaTools } from "./media-tools";
@@ -174,6 +175,8 @@ export interface McpToolDeps extends ImportMediaDeps {
 	cameraSegmentation?: () => SegmentationSupport;
 	/** The compositor's check of an agent-written effect's WGSL; absent where nothing can ask. */
 	checkShaderEffect?: ShaderEffectChecker;
+	/** FFmpeg's scene pass over a clip's source (`media/sceneDetect`); absent without a spawner. */
+	detectScenes?: (filePath: string, options?: SceneDetectOptions) => Promise<SceneDetectResult>;
 	/** The main process's on-device Whisper (`SttManager.transcribe`). Absent: no transcribe tool. */
 	transcribe?(request: SttTranscribeRequest): Promise<SttTranscribeResponse>;
 	version: string;
@@ -580,6 +583,7 @@ export function createToolRunner(deps: McpToolDeps): McpToolRunner {
 			availableByAssetId,
 			cameraSegmentation: deps.cameraSegmentation,
 			checkShaderEffect: deps.checkShaderEffect,
+			detectScenes: deps.detectScenes,
 		});
 	}
 

@@ -23,6 +23,7 @@ import type {
 	AiEditionToolCallSummary,
 	SegmentationSupport,
 } from "../../src/native/contracts";
+import type { SceneDetectOptions, SceneDetectResult } from "../media/sceneDetect";
 import {
 	applyCompaction,
 	budgetSnapshot,
@@ -322,6 +323,8 @@ export interface ChatRunEnv {
 	cameraSegmentation?: () => SegmentationSupport;
 	/** The compositor's check of an agent-written effect's WGSL. */
 	checkShaderEffect?: ShaderEffectChecker;
+	/** FFmpeg's scene pass over a clip's source, for `splitAtScenes`. */
+	detectScenes?: (filePath: string, options?: SceneDetectOptions) => Promise<SceneDetectResult>;
 	/** Runtime-only model retry override used by bounded measurement harnesses. */
 	maxRetries?: number;
 }
@@ -483,6 +486,7 @@ export async function runChat(
 		cursor: env.cursor,
 		cameraSegmentation: env.cameraSegmentation,
 		checkShaderEffect: env.checkShaderEffect,
+		detectScenes: env.detectScenes,
 	});
 
 	acceptingEvents = false;

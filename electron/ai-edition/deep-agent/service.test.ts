@@ -69,6 +69,8 @@ const ARGS: Record<string, unknown> = {
 	setTrim: { trimRangeId: "trim_1", startSec: 1, endSec: 2 },
 	setClipRange: { clipId: "clip_1", sourceStartSec: 0, sourceEndSec: 10 },
 	autoReframe: { targetAspect: "9:16" },
+	// No detector in these tests: the refusal that says it could not look.
+	splitAtScenes: { clipId: "clip_1", dryRun: true },
 	moveClip: { clipId: "clip_1", beforeClipId: null },
 	insertClip: { assetId: "asset_1", sourceStartSec: 2, sourceEndSec: 4 },
 	duplicateClip: { clipId: "clip_1" },
@@ -814,6 +816,68 @@ describe("addAutoZooms reads the clicks through the runtime's cursor reader", ()
 		const result = await runDocumentTool(fixtureDocument(), "addAutoZooms", {}, true, { cursor });
 		expect(result.ok).toBe(false);
 		expect(result.resultJson).toContain("could not be read");
+	});
+});
+
+describe("splitAtScenes scans the clip's source before the executor reads it", () => {
+	it("detects, filters to the clip and splits in one document", async () => {
+		const asked: Array<{ path: string }> = [];
+		const result = await runDocumentTool(
+			fixtureDocument(),
+			"splitAtScenes",
+			{ clipId: "clip_1" },
+			true,
+			{
+				detectScenes: async (filePath) => {
+					asked.push({ path: filePath });
+					return { success: true, cutsSec: [5, 15, 45] };
+				},
+			},
+		);
+		expect(asked).toEqual([{ path: "/tmp/rec.mp4" }]);
+		expect(result.ok).toBe(true);
+		// 45 s is outside the clip's 0–30 s window, so the wrapper drops it.
+		expect(JSON.parse(result.resultJson)).toMatchObject({ cutsSec: [5, 15], split: 2 });
+		expect(result.document?.timeline.clips).toHaveLength(3);
+	});
+
+	it("returns the cuts without editing on dryRun", async () => {
+		const result = await runDocumentTool(
+			fixtureDocument(),
+			"splitAtScenes",
+			{ clipId: "clip_1", dryRun: true },
+			true,
+			{ detectScenes: async () => ({ success: true, cutsSec: [5, 45] }) },
+		);
+		expect(result.ok).toBe(true);
+		expect(result.document).toBeUndefined();
+		expect(JSON.parse(result.resultJson)).toMatchObject({ cutsSec: [5], dryRun: true, split: 0 });
+	});
+
+	it("reports a detector that could not look as that, never as no cuts", async () => {
+		const result = await runDocumentTool(
+			fixtureDocument(),
+			"splitAtScenes",
+			{ clipId: "clip_1" },
+			true,
+			{
+				detectScenes: async () => ({ success: false, cutsSec: [], message: "FFmpeg is missing." }),
+			},
+		);
+		expect(result.ok).toBe(false);
+		expect(result.resultJson).toContain("FFmpeg is missing.");
+	});
+
+	it("reports a missing FFmpeg as its own verdict", async () => {
+		const result = await runDocumentTool(
+			fixtureDocument(),
+			"splitAtScenes",
+			{ clipId: "clip_1" },
+			true,
+			{ detectScenes: async () => ({ success: false, cutsSec: [], reason: "no-ffmpeg" }) },
+		);
+		expect(result.ok).toBe(false);
+		expect(result.resultJson).toContain("does not carry it");
 	});
 });
 
