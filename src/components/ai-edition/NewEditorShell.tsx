@@ -45,6 +45,7 @@ import { future as redoStack, past as undoStack } from "@/lib/ai-edition/store/u
 import { useChatPromptBus } from "@/lib/ai-edition/store/useChatPromptBus";
 import { useSequentialTimelineOps } from "@/lib/ai-edition/store/useSequentialTimelineOps";
 import { useTimeline } from "@/lib/ai-edition/store/useTimeline";
+import { readThumbnailStudio } from "@/lib/ai-edition/thumbnailStudio";
 import { isGeneratedAssetId } from "@/lib/ai-edition/timeline/clip-parts";
 import { clipAtPlayhead, transitionTargetClip } from "@/lib/ai-edition/timeline/clipTargets";
 import { mergeCloseCuts } from "@/lib/ai-edition/timeline/cut-breath";
@@ -83,6 +84,7 @@ import {
 import { Preview } from "./Preview";
 import { importPendingRecording, maybeSaveFreshRecordingAutoZooms } from "./recordingImport";
 import { SceneDetectModal } from "./SceneDetectModal";
+import { ThumbnailStudioModal } from "./ThumbnailStudioModal";
 import { TransitionModal } from "./TransitionModal";
 import { AddAudioLayerDialog } from "./v4/AddAudioLayerDialog";
 import v4 from "./v4/EditorShellV4.module.css";
@@ -475,6 +477,7 @@ export function NewEditorShell() {
 		assetPath: string;
 		durationSec: number;
 	} | null>(null);
+	const [thumbnailStudioOpen, setThumbnailStudioOpen] = useState(false);
 
 	const handleDetectScenes = useCallback(() => {
 		const state = useProjectStore.getState();
@@ -511,6 +514,17 @@ export function NewEditorShell() {
 		},
 		[tl, te],
 	);
+
+	// Thumbnail Studio's evidence: the project title is local; the transcript, when there is one,
+	// is the project's first non-empty transcript. Both are read at open time by the panel.
+	const studioTranscript = useMemo(() => {
+		const transcript =
+			document?.transcripts?.find((candidate) => candidate.segments.length > 0) ??
+			document?.transcript ??
+			null;
+		return transcript?.segments.map((segment) => segment.text).join(" ") ?? "";
+	}, [document]);
+	const savedStudio = useMemo(() => (document ? readThumbnailStudio(document) : null), [document]);
 	const hasProject = Boolean(document);
 	const hasAsset = projectId !== null && (document?.assets.length ?? 0) > 0;
 	const project = document?.project
@@ -1833,6 +1847,7 @@ export function NewEditorShell() {
 					// menu and the rail cannot disagree about what Split means.
 					split: splitAtPlayhead,
 					detectScenes: handleDetectScenes,
+					thumbnailStudio: () => setThumbnailStudioOpen(true),
 					extractAudio: () => {
 						const state = useProjectStore.getState();
 						const target = clipAtPlayhead(clips, state.currentTimeSec);
@@ -2079,6 +2094,14 @@ export function NewEditorShell() {
 				assetPath={sceneDetectTarget?.assetPath ?? null}
 				durationSec={sceneDetectTarget?.durationSec ?? 0}
 				onApply={applySceneCuts}
+			/>
+			<ThumbnailStudioModal
+				open={thumbnailStudioOpen}
+				onClose={() => setThumbnailStudioOpen(false)}
+				projectTitle={document?.project.title ?? ""}
+				transcriptText={studioTranscript}
+				saved={savedStudio}
+				onSave={(data) => tl.saveThumbnailStudio(data)}
 			/>
 			<TransitionModal
 				open={transitionTarget !== null}

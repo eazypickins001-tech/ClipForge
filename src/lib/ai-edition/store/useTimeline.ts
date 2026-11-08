@@ -65,6 +65,7 @@ import {
 	pruneUnusedShaderEffects,
 	storedShaderEffectValues,
 } from "../shaderEffects";
+import { type StoredThumbnailStudio, withThumbnailStudio } from "../thumbnailStudio";
 import { appendAutoZoomSuggestions } from "../timeline/apply-auto-zooms";
 import { hasAnyClipWithCamera } from "../timeline/camera";
 import { probeAudioDuration, probeVideoDimensions, probeVideoDuration } from "../timeline/duration";
@@ -1716,6 +1717,17 @@ export function useTimeline() {
 		[saveDocument],
 	);
 
+	// Thumbnail Studio's saved composition. One write, one undo step; the studio is data, never
+	// image bytes (it rides the same passthrough `legacyEditor` the speed regions use).
+	const saveThumbnailStudio = useCallback(
+		async (data: StoredThumbnailStudio) => {
+			const doc = useProjectStore.getState().document;
+			if (!doc) return false;
+			return saveDocument(withThumbnailStudio(doc, data), { history: true });
+		},
+		[saveDocument],
+	);
+
 	// Cut ONE audio take in two at the playhead — the audio lane's own razor. Split is lane-aware:
 	// a selected audio take means this, anything else means the picture (see the shell's
 	// `splitAtPlayhead`). `false` means the cut missed the take, so the caller can say so rather
@@ -2046,6 +2058,7 @@ export function useTimeline() {
 		removeClip,
 		splitClipAt,
 		splitClipAtTimesAt,
+		saveThumbnailStudio,
 		splitAudioTrackAt,
 		detachAudioAt,
 		selectClip,

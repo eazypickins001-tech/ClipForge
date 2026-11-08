@@ -336,6 +336,9 @@ const DECLARED: WritePath[] = [
 	// A scene pass lands every cut in ONE write, so the whole sweep is one undo step. A pass with
 	// no surviving cut returns the same document and the action skips the save.
 	w("src/lib/ai-edition/store/useTimeline.ts", "splitClipAtTimesAt", "save", "gesture"),
+	// Thumbnail Studio: one write per save, so the whole composition is one undo step. It rides
+	// the passthrough `legacyEditor`; no image bytes are ever part of it.
+	w("src/lib/ai-edition/store/useTimeline.ts", "saveThumbnailStudio", "save", "gesture"),
 	// The audio lane's own razor, the same contract as the picture's: one gesture, one cut, one
 	// undo step, and a cut that misses the take returns the same document so the action skips the
 	// save rather than leaving a step the user cannot see.

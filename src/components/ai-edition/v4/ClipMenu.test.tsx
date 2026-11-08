@@ -26,6 +26,7 @@ function makeActions(over: Partial<ClipMenuActions> = {}): ClipMenuActions {
 		hasBoundary: true,
 		split: vi.fn(),
 		detectScenes: vi.fn(),
+		thumbnailStudio: vi.fn(),
 		extractAudio: vi.fn(),
 		openClipAudio: vi.fn(),
 		openTransition: vi.fn(),
@@ -90,6 +91,7 @@ describe("Clip menu in the editor top bar", () => {
 		expect(rows.map((row) => row.textContent)).toEqual([
 			"Split",
 			"Detect scenes",
+			"Thumbnail Studio",
 			"Extract audio",
 			"Audio",
 			"Transition",
@@ -117,6 +119,16 @@ describe("Clip menu in the editor top bar", () => {
 		fireEvent.click(within(menu).getByRole("menuitem", { name: "Detect scenes" }));
 
 		expect(actions.detectScenes).toHaveBeenCalledTimes(1);
+	});
+
+	it("opens Thumbnail Studio from its row", async () => {
+		const actions = makeActions();
+		renderBar(actions);
+		const menu = await openMenu();
+
+		fireEvent.click(within(menu).getByRole("menuitem", { name: "Thumbnail Studio" }));
+
+		expect(actions.thumbnailStudio).toHaveBeenCalledTimes(1);
 	});
 
 	it("opens the transition sheet from its row", async () => {

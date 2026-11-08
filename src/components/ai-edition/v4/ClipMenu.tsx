@@ -27,6 +27,7 @@ export interface ClipMenuActions {
 	hasBoundary: boolean;
 	split: () => void;
 	detectScenes: () => void;
+	thumbnailStudio: () => void;
 	extractAudio: () => void;
 	openClipAudio: () => void;
 	openTransition: () => void;
@@ -54,6 +55,12 @@ export function ClipMenu({ actions }: { actions: ClipMenuActions }) {
 					label: te("inspector.detectScenes"),
 					disabled: !actions.hasClips,
 					onSelect: actions.detectScenes,
+				},
+				{
+					id: "thumbnail-studio",
+					label: te("inspector.thumbnailStudio"),
+					disabled: !actions.hasClips,
+					onSelect: actions.thumbnailStudio,
 				},
 				{
 					id: "extract-audio",

@@ -8,6 +8,7 @@ import { layoutRuns } from "../document/layout";
 import { type RegionKind, readSpeedRegions } from "../document/timeline";
 import type { AxcutDocument } from "../schema";
 import { axcutSchemaVersion, parseDocumentFile } from "../schema";
+import { buildThumbnailStudio, defaultStudioInputs, readThumbnailStudio } from "../thumbnailStudio";
 import { coalesceRegionsForRuler } from "../timeline/timelineMap";
 import { useProjectStore } from "./projectStore";
 import { clearHistory, redo, undo } from "./undo";
@@ -3014,5 +3015,34 @@ describe("splitClipAtTimesAt (scene detection's landing)", () => {
 		expect(pieces).toBe(0);
 		expect(bridgeMocks.save).not.toHaveBeenCalled();
 		expect(past).toHaveLength(0);
+	});
+});
+
+describe("saveThumbnailStudio", () => {
+	beforeEach(() => {
+		useProjectStore.getState().clear();
+		clearHistory();
+		bridgeMocks.save.mockReset();
+		bridgeMocks.save.mockImplementation(async (doc: AxcutDocument) => ({
+			success: true,
+			document: doc,
+		}));
+		useProjectStore.setState({ projectId: "proj_test", document: sampleDoc, currentTimeSec: 5 });
+	});
+	afterEach(() => {
+		useProjectStore.getState().clear();
+		clearHistory();
+	});
+
+	it("saves the whole composition in one write", async () => {
+		const { result } = renderTimeline();
+		const inputs = { ...defaultStudioInputs("Test"), brief: "A brief" };
+		const data = { inputs, result: buildThumbnailStudio(inputs) };
+		await act(async () => {
+			await result.current.saveThumbnailStudio(data);
+		});
+		expect(bridgeMocks.save).toHaveBeenCalledTimes(1);
+		const saved = useProjectStore.getState().document;
+		expect(saved ? readThumbnailStudio(saved) : null).toEqual(data);
 	});
 });
