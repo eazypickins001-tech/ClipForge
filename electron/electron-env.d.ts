@@ -401,6 +401,13 @@ interface Window {
 		) => Promise<import("./media/sceneDetect").SceneDetectResult>;
 		onSceneDetectProgress: (callback: (fraction: number) => void) => () => void;
 		cancelSceneDetection: () => Promise<boolean>;
+		generateThumbnailImage: (
+			request: import("./ai-edition/thumbnail-image").ThumbnailImageRequest,
+		) => Promise<import("./ai-edition/thumbnail-image").ThumbnailImageResult>;
+		saveThumbnailImage: (request: {
+			dataUrl: string;
+			suggestedName?: string;
+		}) => Promise<{ success: boolean; path?: string; canceled?: boolean; message?: string }>;
 		readFileChunk: (
 			filePath: string,
 			offset: number,

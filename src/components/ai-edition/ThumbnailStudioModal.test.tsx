@@ -11,12 +11,20 @@ import type { StoredThumbnailStudio } from "@/lib/ai-edition/thumbnailStudio";
 import { ThumbnailStudioModal } from "./ThumbnailStudioModal";
 
 const copyToClipboard = vi.fn();
+const generateThumbnailImage = vi.fn();
+const saveThumbnailImage = vi.fn();
 
 function setup(saved: StoredThumbnailStudio | null = null) {
 	localStorage.setItem(LOCALE_STORAGE_KEY, "en");
 	copyToClipboard.mockReset();
 	copyToClipboard.mockResolvedValue(undefined);
-	(window as unknown as { electronAPI: unknown }).electronAPI = { copyToClipboard };
+	generateThumbnailImage.mockReset();
+	saveThumbnailImage.mockReset();
+	(window as unknown as { electronAPI: unknown }).electronAPI = {
+		copyToClipboard,
+		generateThumbnailImage,
+		saveThumbnailImage,
+	};
 	const onSave = vi.fn().mockResolvedValue(true);
 	const onClose = vi.fn();
 	render(
@@ -90,6 +98,52 @@ describe("ThumbnailStudioModal", () => {
 		expect(payload.inputs).toMatchObject({ title: "Record Better Demos", brief: "A brief" });
 		expect(payload.result.concepts[1].prompt).toBe("the second prompt");
 		expect(await screen.findByText("Saved to project")).toBeInTheDocument();
+	});
+
+	it("generates an image with consent, reports the cost, saves the file and stores only metadata", async () => {
+		const { onSave } = setup();
+		generateThumbnailImage.mockResolvedValue({
+			success: true,
+			dataUrl: "data:image/png;base64,AAAA",
+			mediaType: "image/png",
+			model: "google/gemini-2.5-flash-image",
+			costUsd: 0.04,
+		});
+		saveThumbnailImage.mockResolvedValue({ success: true, path: "C:/thumbs/demo.png" });
+
+		fireEvent.click(screen.getByTestId("studio-generate"));
+		fireEvent.click(screen.getByTestId("studio-image-0"));
+		expect(screen.getByTestId("studio-image-confirm")).toBeInTheDocument();
+		fireEvent.click(screen.getByTestId("studio-image-confirm"));
+
+		await waitFor(() => expect(generateThumbnailImage).toHaveBeenCalledTimes(1));
+		expect(generateThumbnailImage).toHaveBeenCalledWith({
+			prompt: expect.stringContaining("Record Better Demos"),
+			model: "google/gemini-2.5-flash-image",
+		});
+		expect(await screen.findByTestId("studio-image-preview")).toBeInTheDocument();
+		expect(screen.getByText("Cost: $0.0400")).toBeInTheDocument();
+
+		fireEvent.click(screen.getByTestId("studio-image-save"));
+		await waitFor(() =>
+			expect(saveThumbnailImage).toHaveBeenCalledWith({
+				dataUrl: "data:image/png;base64,AAAA",
+				suggestedName: "Record Better Demos",
+			}),
+		);
+
+		fireEvent.click(screen.getByTestId("studio-save"));
+		await waitFor(() => expect(onSave).toHaveBeenCalledTimes(1));
+		const payload = onSave.mock.calls[0]?.[0] as {
+			image?: Record<string, unknown>;
+		};
+		expect(payload.image).toEqual({
+			model: "google/gemini-2.5-flash-image",
+			mediaType: "image/png",
+			costUsd: 0.04,
+			path: "C:/thumbs/demo.png",
+		});
+		expect(payload.image).not.toHaveProperty("dataUrl");
 	});
 
 	it("opens on the saved composition when the project has one", () => {

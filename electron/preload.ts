@@ -415,6 +415,13 @@ contextBridge.exposeInMainWorld("electronAPI", {
 	cancelSceneDetection: () => {
 		return ipcRenderer.invoke("cancel-scene-detection");
 	},
+	/** F5 step 4: generate a thumbnail image with OpenRouter's Image API. */
+	generateThumbnailImage: (request: { prompt: string; model?: string }) => {
+		return ipcRenderer.invoke("generate-thumbnail-image", request);
+	},
+	saveThumbnailImage: (request: { dataUrl: string; suggestedName?: string }) => {
+		return ipcRenderer.invoke("save-thumbnail-image", request);
+	},
 	readFileChunk: (filePath: string, offset: number, length: number) => {
 		return ipcRenderer.invoke("read-file-chunk", filePath, offset, length);
 	},

@@ -69,6 +69,11 @@ import type { CursorTelemetryReader } from "../ai-edition/deep-agent/service";
 import { DocumentService } from "../ai-edition/document-service";
 import { LlmConfigStore } from "../ai-edition/llm-config-store";
 import { StylePresetService } from "../ai-edition/style-preset-service";
+import {
+	generateThumbnailImage,
+	type ThumbnailImageRequest,
+	type ThumbnailImageResult,
+} from "../ai-edition/thumbnail-image";
 import { AppSettingsStore } from "../app-settings";
 import { createRunnerHost } from "../cli/runnerHost";
 import { hideCountdownOverlay } from "../countdownOverlay";
@@ -4599,6 +4604,97 @@ export function registerIpcHandlers(
 		controller.abort();
 		return true;
 	});
+
+	// F5 step 4: a thumbnail image from the Studio's prompt, through OpenRouter's Image API. One
+	// generation per window at a time (a rate limit, and what the UI's disabled button assumes).
+	// The key never crosses to the renderer; the result carries the preview and the ACTUAL cost.
+	const thumbnailImageInFlight = new Set<number>();
+	ipcMain.handle(
+		"generate-thumbnail-image",
+		async (event, request: ThumbnailImageRequest): Promise<ThumbnailImageResult> => {
+			if (thumbnailImageInFlight.has(event.sender.id)) {
+				return {
+					success: false,
+					reason: "busy",
+					message: "An image is already generating in this window.",
+				};
+			}
+			const prompt = typeof request?.prompt === "string" ? request.prompt.trim() : "";
+			if (!prompt) {
+				return { success: false, reason: "empty", message: "The prompt is empty." };
+			}
+			const credential = getAiEditionLlmConfig().getCredential("openrouter", [
+				"OPENROUTER_LLM_API_KEY",
+				"OPENROUTER_API_KEY",
+			]);
+			if (!credential) {
+				return {
+					success: false,
+					reason: "no-key",
+					message: "Connect OpenRouter in AI settings to generate images.",
+				};
+			}
+			thumbnailImageInFlight.add(event.sender.id);
+			try {
+				return await generateThumbnailImage(
+					{
+						prompt,
+						model: typeof request.model === "string" ? request.model : undefined,
+					},
+					{ apiKey: credential.value },
+				);
+			} finally {
+				thumbnailImageInFlight.delete(event.sender.id);
+			}
+		},
+	);
+
+	// Write the preview to a file the user picks. Image bytes never enter the project document; the
+	// Studio keeps the returned path (and the model/cost) instead.
+	ipcMain.handle(
+		"save-thumbnail-image",
+		async (event, request: { dataUrl?: unknown; suggestedName?: unknown }) => {
+			const dataUrl = typeof request?.dataUrl === "string" ? request.dataUrl : "";
+			const match = /^data:(image\/(?:png|jpeg|webp|svg\+xml));base64,([A-Za-z0-9+/=\s]+)$/.exec(
+				dataUrl,
+			);
+			if (!match) {
+				return { success: false, message: "The image is not a supported data URL." };
+			}
+			const bytes = Buffer.from(match[2], "base64");
+			if (bytes.length === 0 || bytes.length > 25 * 1024 * 1024) {
+				return { success: false, message: "The image is empty or too large." };
+			}
+			const ext =
+				match[1] === "image/jpeg"
+					? "jpg"
+					: match[1] === "image/webp"
+						? "webp"
+						: match[1] === "image/svg+xml"
+							? "svg"
+							: "png";
+			const baseName =
+				(typeof request.suggestedName === "string" ? request.suggestedName : "thumbnail")
+					.replace(/[^a-zA-Z0-9-_]/g, "_")
+					.slice(0, 60) || "thumbnail";
+			const parent = BrowserWindow.fromWebContents(event.sender);
+			const result = await showSaveDialogOver(parent, {
+				title: "Save thumbnail",
+				defaultPath: path.join(app.getPath("pictures"), `${baseName}.${ext}`),
+				filters: [{ name: "Image", extensions: [ext] }],
+				properties: ["createDirectory", "showOverwriteConfirmation"],
+			});
+			if (result.canceled || !result.filePath) {
+				return { success: false, canceled: true };
+			}
+			try {
+				await fs.writeFile(result.filePath, bytes);
+				return { success: true, path: result.filePath };
+			} catch (error) {
+				return { success: false, message: String(error) };
+			}
+		},
+	);
 
 	// Waveform peaks for a timeline clip, decoded natively (see media/audioPeaks).
 	// The renderer's own pipelines take ~12s on a 32-minute recording because they

@@ -1,15 +1,18 @@
-// Thumbnail Studio, prompt-only first: compose three thumbnail concepts and the publishing copy
-// beside them from the project's title, brief and transcript. Nothing here calls a provider and
-// nothing here makes an image — a creator copies the prompts into whichever image tool they use.
+// Thumbnail Studio: three prompt-only thumbnail concepts and the publishing copy beside them, plus
+// (F5 step 4) direct image generation through OpenRouter. Prompt-only mode still works with no
+// provider; generation is consent-gated and reports the ACTUAL cost OpenRouter charged.
 //
-// The composition SAVES as data in the project envelope (one write, one undo). Image generation,
-// the pixel editor and PNG export are the later F5 steps and are not pretended here.
+// The composition SAVES as data in the project envelope (one write, one undo). The generated image
+// is saved to a file the user picks; the document keeps only its path, model, media type and cost —
+// never the bytes. The pixel editor and PNG/JPEG export are the next F5 step and are not claimed.
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useScopedT } from "@/contexts/I18nContext";
 import {
 	buildThumbnailStudio,
+	DEFAULT_THUMBNAIL_IMAGE_MODEL,
 	defaultStudioInputs,
 	STUDIO_PLATFORMS,
+	type StoredThumbnailImage,
 	type StoredThumbnailStudio,
 	type StudioPlatform,
 	type ThumbnailStudioInputs,
@@ -54,6 +57,15 @@ export function ThumbnailStudioModal({
 	const [copied, setCopied] = useState<string | null>(null);
 	const [savedNow, setSavedNow] = useState(false);
 	const [saving, setSaving] = useState(false);
+	const [imageModel, setImageModel] = useState(
+		saved?.image?.model ?? DEFAULT_THUMBNAIL_IMAGE_MODEL,
+	);
+	const [image, setImage] = useState<StoredThumbnailImage | null>(saved?.image ?? null);
+	const [imagePreview, setImagePreview] = useState<string | null>(null);
+	const [imagePhase, setImagePhase] = useState<"idle" | "generating">("idle");
+	const [consentIndex, setConsentIndex] = useState<number | null>(null);
+	const [imageError, setImageError] = useState<string | null>(null);
+	const [imageSaved, setImageSaved] = useState(false);
 
 	// Opening the panel starts from this project's saved composition, or from the title alone. The
 	// panel stays mounted between opens, so this cannot be initial state only. Keyed on the OPEN
@@ -65,6 +77,13 @@ export function ThumbnailStudioModal({
 			setResult(saved?.result ?? null);
 			setCopied(null);
 			setSavedNow(false);
+			setImageModel(saved?.image?.model ?? DEFAULT_THUMBNAIL_IMAGE_MODEL);
+			setImage(saved?.image ?? null);
+			setImagePreview(null);
+			setImagePhase("idle");
+			setConsentIndex(null);
+			setImageError(null);
+			setImageSaved(false);
 		}
 		wasOpen.current = open;
 	}, [open, projectTitle, saved]);
@@ -112,13 +131,72 @@ export function ThumbnailStudioModal({
 		setSavedNow(false);
 	}, []);
 
+	// Consent first: the panel says what will be called and that it spends credits; the real cost
+	// comes back with the image. The button is disabled while one generation is in flight.
+	const generateImage = useCallback(
+		async (prompt: string) => {
+			const api = window.electronAPI;
+			if (!api?.generateThumbnailImage) {
+				setImageError(te("inspector.studioImageNoKey"));
+				return;
+			}
+			setConsentIndex(null);
+			setImagePhase("generating");
+			setImageError(null);
+			try {
+				const response = await api.generateThumbnailImage({ prompt, model: imageModel });
+				if (!response.success) {
+					setImagePhase("idle");
+					setImageError(
+						response.reason === "no-key"
+							? te("inspector.studioImageNoKey")
+							: (response.message ?? te("inspector.studioImageFailed")),
+					);
+					return;
+				}
+				setImage({
+					model: response.model ?? imageModel,
+					...(response.mediaType ? { mediaType: response.mediaType } : {}),
+					...(response.costUsd === undefined ? {} : { costUsd: response.costUsd }),
+					...(image?.path ? { path: image.path } : {}),
+				});
+				setImagePreview(response.dataUrl ?? null);
+				setImageSaved(false);
+				setSavedNow(false);
+			} catch (error) {
+				setImageError(String(error));
+			} finally {
+				setImagePhase("idle");
+			}
+		},
+		[image?.path, imageModel, te],
+	);
+
+	const saveImage = useCallback(async () => {
+		const api = window.electronAPI;
+		if (!imagePreview || !api?.saveThumbnailImage) return;
+		const response = await api.saveThumbnailImage({
+			dataUrl: imagePreview,
+			suggestedName: inputs.title || "thumbnail",
+		});
+		if (response.success && response.path) {
+			setImage((current) =>
+				current ? { ...current, path: response.path } : { model: imageModel, path: response.path },
+			);
+			setImageSaved(true);
+			setSavedNow(false);
+		} else if (response.message) {
+			setImageError(response.message);
+		}
+	}, [imageModel, imagePreview, inputs.title]);
+
 	const save = useCallback(async () => {
 		if (!result || saving) return;
 		setSaving(true);
-		const ok = await onSave({ inputs, result });
+		const ok = await onSave({ inputs, result, ...(image ? { image } : {}) });
 		setSaving(false);
 		if (ok) setSavedNow(true);
-	}, [inputs, onSave, result, saving]);
+	}, [image, inputs, onSave, result, saving]);
 
 	const evidenceLine = useMemo(
 		() =>
@@ -130,6 +208,7 @@ export function ThumbnailStudioModal({
 
 	const copyLabel = (key: string) =>
 		copied === key ? te("inspector.studioCopied") : te("inspector.studioCopy");
+	const imageBusy = imagePhase === "generating";
 
 	return (
 		<ModalShell
@@ -222,10 +301,19 @@ export function ThumbnailStudioModal({
 						onChange={(event) => patchInputs({ exclusions: event.target.value })}
 					/>
 				</label>
-				<div>
+				<div style={{ display: "flex", alignItems: "flex-end", gap: 10 }}>
 					<button type="button" onClick={generate} data-testid="studio-generate">
 						{te("inspector.studioGenerate")}
 					</button>
+					<label style={{ ...fieldStyle, flex: 1 }}>
+						<span style={labelStyle}>{te("inspector.studioImageModel")}</span>
+						<input
+							data-testid="studio-image-model"
+							style={inputStyle}
+							value={imageModel}
+							onChange={(event) => setImageModel(event.target.value)}
+						/>
+					</label>
 				</div>
 
 				{result ? (
@@ -253,12 +341,22 @@ export function ThumbnailStudioModal({
 											<strong style={{ font: "600 13px/1.3 var(--font-body)" }}>
 												{concept.hook}
 											</strong>
-											<button
-												type="button"
-												onClick={() => void copy(`concept-${index}`, concept.prompt)}
-											>
-												{copyLabel(`concept-${index}`)}
-											</button>
+											<div style={{ display: "flex", gap: 6 }}>
+												<button
+													type="button"
+													onClick={() => void copy(`concept-${index}`, concept.prompt)}
+												>
+													{copyLabel(`concept-${index}`)}
+												</button>
+												<button
+													type="button"
+													disabled={imageBusy}
+													data-testid={`studio-image-${index}`}
+													onClick={() => setConsentIndex(index)}
+												>
+													{te("inspector.studioGenerateImage")}
+												</button>
+											</div>
 										</div>
 										<span style={{ font: "400 12px/1.3 var(--font-body)", color: "var(--fg-2)" }}>
 											{concept.rationale}
@@ -273,10 +371,92 @@ export function ThumbnailStudioModal({
 										<span style={{ font: "400 12px/1.3 var(--font-body)", color: "var(--fg-2)" }}>
 											{concept.thumbnailText} · {concept.focalPoint}
 										</span>
+										{consentIndex === index ? (
+											<div
+												style={{
+													border: "1px solid var(--border-soft)",
+													borderRadius: 6,
+													padding: 8,
+													display: "flex",
+													alignItems: "center",
+													gap: 8,
+													flexWrap: "wrap",
+												}}
+											>
+												<span style={{ flex: 1, font: "400 12px/1.3 var(--font-body)" }}>
+													{te("inspector.studioImageConsent")} ({imageModel})
+												</span>
+												<button
+													type="button"
+													onClick={() => setConsentIndex(null)}
+													data-testid="studio-image-consent-cancel"
+												>
+													{tc("actions.cancel")}
+												</button>
+												<button
+													type="button"
+													onClick={() => void generateImage(concept.prompt)}
+													data-testid="studio-image-confirm"
+												>
+													{te("inspector.studioImageConfirm")}
+												</button>
+											</div>
+										) : null}
 									</div>
 								))}
 							</div>
 						</section>
+
+						{imageBusy ? (
+							<p role="status" style={{ margin: 0 }}>
+								{te("inspector.studioImageGenerating")}
+							</p>
+						) : null}
+						{imageError ? (
+							<p role="alert" style={{ margin: 0 }}>
+								{imageError}
+							</p>
+						) : null}
+						{imagePreview ? (
+							<section>
+								<h3 style={{ margin: "0 0 8px", font: "600 13px/1.3 var(--font-body)" }}>
+									{te("inspector.studioGenerateImage")}
+								</h3>
+								<img
+									src={imagePreview}
+									alt={te("inspector.studioImageAlt")}
+									data-testid="studio-image-preview"
+									style={{ width: "100%", borderRadius: 8, border: "1px solid var(--border-soft)" }}
+								/>
+								<div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 6 }}>
+									<span style={{ flex: 1, font: "400 12px/1.3 var(--font-body)" }}>
+										{image?.costUsd === undefined
+											? ""
+											: te("inspector.studioImageCost", {
+													cost: image.costUsd.toFixed(4),
+												})}
+									</span>
+									<button
+										type="button"
+										onClick={() => void saveImage()}
+										data-testid="studio-image-save"
+									>
+										{imageSaved
+											? te("inspector.studioImageSaved")
+											: te("inspector.studioImageSave")}
+									</button>
+								</div>
+								{image?.path ? (
+									<span style={{ font: "400 11px/1.3 var(--font-body)", color: "var(--fg-2)" }}>
+										{image.path}
+									</span>
+								) : null}
+							</section>
+						) : image?.path ? (
+							<span style={{ font: "400 12px/1.3 var(--font-body)", color: "var(--fg-2)" }}>
+								{te("inspector.studioImageSaved")}: {image.path}
+							</span>
+						) : null}
 
 						<section>
 							<h3 style={{ margin: "0 0 8px", font: "600 13px/1.3 var(--font-body)" }}>

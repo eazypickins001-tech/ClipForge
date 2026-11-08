@@ -16,6 +16,9 @@ import type { AxcutDocument } from "./schema";
 export const STUDIO_PLATFORMS = ["youtube", "tiktok", "instagram", "x", "linkedin"] as const;
 export type StudioPlatform = (typeof STUDIO_PLATFORMS)[number];
 
+/** The OpenRouter image model the Studio offers by default; the panel lets the creator change it. */
+export const DEFAULT_THUMBNAIL_IMAGE_MODEL = "google/gemini-2.5-flash-image";
+
 export const STUDIO_EVIDENCE = [
 	"title",
 	"title+brief",
@@ -63,9 +66,20 @@ export interface ThumbnailStudioResult {
 	};
 }
 
+export interface StoredThumbnailImage {
+	model: string;
+	/** Where the user saved the file. The bytes never live in the composition. */
+	path?: string;
+	mediaType?: string;
+	/** What OpenRouter reported for the generation, in USD. */
+	costUsd?: number;
+}
+
 export interface StoredThumbnailStudio {
 	inputs: ThumbnailStudioInputs;
 	result: ThumbnailStudioResult;
+	/** The generated image's metadata, not its bytes. Absent until the creator generates one. */
+	image?: StoredThumbnailImage;
 }
 
 const PLATFORM_LIMITS: Record<StudioPlatform, { title: number; tags: number; hashtags: boolean }> =
@@ -322,6 +336,14 @@ export const thumbnailStudioSchema = z.object({
 			transcriptExcerpt: z.string().optional(),
 		}),
 	}),
+	image: z
+		.object({
+			model: z.string(),
+			path: z.string().optional(),
+			mediaType: z.string().optional(),
+			costUsd: z.number().optional(),
+		})
+		.optional(),
 });
 
 /** The saved studio for this project, or null when it has none / the stored value is malformed. */
