@@ -11,10 +11,11 @@ files left:
 | `7c7f5fa` | **`scriptToVideo`** — one atomic composition over `insertClip` / `addAnnotation` / `addZoom`. |
 | `f90e7c9` | **Thumbnail Studio (prompt-only)** + **publishing copy** (title / body / tags), local and honest about its evidence basis. |
 | `df69a5a` | **Thumbnail image generation** through OpenRouter (consent, actual cost, one at a time, save outside project JSON). |
+| `01f21b2` | **1280×720 composer** (headline/outline/alignment/colours, logo, background zoom) + **PNG/JPEG export**; compositions are versioned v1. |
 
-**State: `df69a5a`, CI green, Windows build green, artifact verified on disk at
-`%LOCALAPPDATA%\cf-df69a5a`.** Its `app.asar` contains the SHA stamp and the feature markers
-`generate-thumbnail-image`, `save-thumbnail-image`, `studioImageModel`, `scriptToVideo`. Working tree clean.
+**State: `01f21b2`, CI green, Windows build green, artifact verified on disk at
+`C:\Users\Apple\AppData\Local\cf-01f21b2`.** Its `app.asar` contains the SHA stamp and the feature
+markers `studioComposer`, `studioExportPng`, `studioCanvas`, `generate-thumbnail-image`. Working tree clean.
 
 Colour grade (`7b9e853`) and the earlier scene-detection slices (`5441576`, `7437576`) are already in
 this build too.
@@ -41,8 +42,11 @@ this build too.
   undo). Each concept also has **Generate image**: it asks for consent, calls OpenRouter with the
   stored OpenRouter key (the model is editable, default `google/gemini-2.5-flash-image`), shows the
   preview and the **actual cost** OpenRouter reports, and **Save image** writes the file. The
-  document stores the path/model/cost, never the bytes. The pixel editor and 1280×720 PNG/JPEG
-  composition are still open.
+  document stores the path/model/cost, never the bytes. Below it the **1280×720 composer** paints
+  the generated image (or a solid background) with a wrapped headline, outline, alignment and
+  colours and an uploaded logo in a corner; **Export PNG / Export JPEG** save the composed frame
+  through the same file dialog. The composition is stored as versioned data (`version: 1`), never
+  the pixels.
 - **Export blend overlap:** no menu item. Put a dissolve/wipe/slide on a clip junction (`+`/`◑` on
   the seam), then export; the file is shorter by the transition duration. The live preview
   deliberately stays on the raw ruler and does not shorten.
@@ -85,17 +89,23 @@ this build too.
   writes the chosen bytes to a file the user picks (PNG/JPEG/WebP/SVG, 25 MB cap).
 - `ThumbnailStudioModal.tsx` + a Clip menu row; prompts/publishing are editable and copy through
   `window.electronAPI.copyToClipboard`. 30 new i18n keys × 15 locales across the two commits.
+- `ThumbnailComposer.tsx` (F5 step 5) is a real 1280×720 canvas: cover-fit/zoomed background,
+  three-line wrapped headline with an outline, alignment/colours, and a logo from a file the
+  creator picks, placed in a corner at a chosen size. Export is `canvas.toDataURL` → the same
+  `save-thumbnail-image` IPC. Settings ride in `legacyEditor.thumbnailStudio.editor`; the logo's
+  bytes are never stored (its path is), so a reopened project asks for the logo file again.
 
 ## 3. Verification, honestly
 
 - Root `tsc --noEmit` and biome are clean on every touched file; `tsc -p tsconfig.test.json` remains
   red on the **pre-existing** audio-track `detached` / `useTimeline` `transition` fixtures (the new
   tests add no errors). `npm run i18n:check` is still broken at the `appx` block; key parity was
-  checked directly (430 keys × 15 `editor.json`).
+  checked directly (457 keys × 15 `editor.json`).
 - Targeted suites: scene detector + modal (17), shell + Clip menu (33), agent tools + deep-agent +
   MCP (346), thumbnail generator + modal + store + audit + Clip menu (136), image request/response
-  (135 with the studio/store suites) — all green.
-- **CI and the Windows installer build are green for `df69a5a`.** The build was downloaded and its
+  (135 with the studio/store suites), composer/editor (139 with the studio/store suites) — all
+  green.
+- **CI and the Windows installer build are green for `01f21b2`.** The build was downloaded and its
   `app.asar` checked for the SHA and the feature markers above.
 - **Not run:** scene detection against a real media file (this checkout has no FFmpeg/Rust/addon),
   a real OpenRouter image call (no key in this checkout; the request/response is unit-tested), and
@@ -106,10 +116,14 @@ this build too.
 
 This session finished **the queue the 2026-11-07 handovers listed**, not the whole product backlog.
 
-1. **F5 steps 5–6:** the composition editor (text/font/alignment/outline, logo, crop, 1280×720) and
-   PNG/JPEG export of the composed frame. Step 4's direct generation, step 7's publishing copy and
-   the prompt-only studio are done.
-2. **Transitions:** `side: "out"` is modelled/emitted but nothing in the UI writes one.
+1. **F5 is done** (steps 1–7 as far as the request goes): prompt-only concepts, publishing copy,
+   image generation via OpenRouter, the 1280×720 composer and PNG/JPEG export, versioned
+   composition data, no image bytes in the project. Two limits worth knowing: the composition's
+   background is the generated image or a solid colour (no video-frame picker), and a reopened
+   project shows the saved logo path but needs the logo file re-picked (its bytes are deliberately
+   not stored).
+2. **Next code-completable:** `side:"out"` transitions (UI only; the model and emitter already
+   honour it) and core hardening H1–H4.
 3. **Export overlap leftovers (Phase B):** the outgoing frame is still a freeze, not advanced per
    frame during the blend; the audio boundary is still the 240-sample crossfade (not `d`); the live
    preview/ruler deliberately does not shorten.
