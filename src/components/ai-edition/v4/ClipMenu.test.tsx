@@ -25,6 +25,7 @@ function makeActions(over: Partial<ClipMenuActions> = {}): ClipMenuActions {
 		hasClips: true,
 		hasBoundary: true,
 		split: vi.fn(),
+		detectScenes: vi.fn(),
 		extractAudio: vi.fn(),
 		openClipAudio: vi.fn(),
 		openTransition: vi.fn(),
@@ -88,6 +89,7 @@ describe("Clip menu in the editor top bar", () => {
 		const rows = within(menu).getAllByRole("menuitem");
 		expect(rows.map((row) => row.textContent)).toEqual([
 			"Split",
+			"Detect scenes",
 			"Extract audio",
 			"Audio",
 			"Transition",
@@ -105,6 +107,16 @@ describe("Clip menu in the editor top bar", () => {
 		expect(actions.split).toHaveBeenCalledTimes(1);
 		// The dialog a row opens should not have the popover still standing over it.
 		await waitFor(() => expect(screen.queryByRole("menu")).not.toBeInTheDocument());
+	});
+
+	it("runs scene detection from its row", async () => {
+		const actions = makeActions();
+		renderBar(actions);
+		const menu = await openMenu();
+
+		fireEvent.click(within(menu).getByRole("menuitem", { name: "Detect scenes" }));
+
+		expect(actions.detectScenes).toHaveBeenCalledTimes(1);
 	});
 
 	it("opens the transition sheet from its row", async () => {

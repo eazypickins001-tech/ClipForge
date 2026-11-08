@@ -395,6 +395,11 @@ interface Window {
 			filePath: string,
 			durationSec: number,
 		) => Promise<import("./media/audioPeaks").AudioPeaksResult>;
+		detectScenes: (
+			filePath: string,
+			options?: import("./media/sceneDetect").SceneDetectRequest,
+		) => Promise<import("./media/sceneDetect").SceneDetectResult>;
+		cancelSceneDetection: () => Promise<boolean>;
 		readFileChunk: (
 			filePath: string,
 			offset: number,

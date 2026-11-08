@@ -26,6 +26,7 @@ export interface ClipMenuActions {
 	/** At least two clips: there is a boundary for a transition to sit on. */
 	hasBoundary: boolean;
 	split: () => void;
+	detectScenes: () => void;
 	extractAudio: () => void;
 	openClipAudio: () => void;
 	openTransition: () => void;
@@ -47,6 +48,12 @@ export function ClipMenu({ actions }: { actions: ClipMenuActions }) {
 					label: te("inspector.splitClip"),
 					disabled: !actions.hasClips,
 					onSelect: actions.split,
+				},
+				{
+					id: "detect-scenes",
+					label: te("inspector.detectScenes"),
+					disabled: !actions.hasClips,
+					onSelect: actions.detectScenes,
 				},
 				{
 					id: "extract-audio",

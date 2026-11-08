@@ -49,6 +49,7 @@ import {
 	resequenceClips,
 	setClipAudio,
 	setClipSourceRange,
+	splitClipAtTimes as splitClipAtTimesInDocument,
 	splitClip as splitClipInDocument,
 } from "../document/timeline";
 import type {
@@ -1683,6 +1684,38 @@ export function useTimeline() {
 		[document, saveDocument],
 	);
 
+	// Split one clip at many SOURCE seconds in ONE write — the landing site for a scene-detection
+	// pass. The detector reports source time (the media clock), so no ruler mapping is needed; cuts
+	// outside this clip are dropped here, and `splitClip` itself skips the ones inside its
+	// MIN_SPLIT_SEC edges. Returns the number of pieces added; 0 means nothing was saved.
+	const splitClipAtTimesAt = useCallback(
+		async (
+			clipId: string,
+			sourceTimes: readonly number[],
+			reason = "Scene change",
+		): Promise<number> => {
+			// Read the document at CALL time, not from the render closure: detection is async, and
+			// an edit made while it ran must not be overwritten by a document captured at click.
+			const doc = useProjectStore.getState().document;
+			if (!doc) return 0;
+			const clip = doc.timeline.clips.find((c) => c.id === clipId);
+			if (!clip) return 0;
+			const sourceEnd =
+				clip.sourceEndSec ?? clip.sourceStartSec + (clip.timelineEndSec - clip.timelineStartSec);
+			const within = sourceTimes.filter(
+				(sec) => Number.isFinite(sec) && sec > clip.sourceStartSec && sec < sourceEnd,
+			);
+			if (within.length === 0) return 0;
+			const before = doc.timeline.clips.length;
+			const next = splitClipAtTimesInDocument(doc, clipId, within, "user", reason);
+			// Every cut missed (too close to an edge, or to another cut): no undo step.
+			if (next === doc) return 0;
+			if (!(await saveDocument(next, { history: true }))) return 0;
+			return next.timeline.clips.length - before;
+		},
+		[saveDocument],
+	);
+
 	// Cut ONE audio take in two at the playhead — the audio lane's own razor. Split is lane-aware:
 	// a selected audio take means this, anything else means the picture (see the shell's
 	// `splitAtPlayhead`). `false` means the cut missed the take, so the caller can say so rather
@@ -2012,6 +2045,7 @@ export function useTimeline() {
 		duplicateClip,
 		removeClip,
 		splitClipAt,
+		splitClipAtTimesAt,
 		splitAudioTrackAt,
 		detachAudioAt,
 		selectClip,

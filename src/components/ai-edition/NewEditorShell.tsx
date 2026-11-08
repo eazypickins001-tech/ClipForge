@@ -465,6 +465,46 @@ export function NewEditorShell() {
 		}
 		void tl.splitClipAt(target.id, playhead);
 	}, [clips, tl, te]);
+
+	// "Detect scenes": FFmpeg scores the source in the main process, and every cut it reports
+	// inside the clip under the playhead lands in ONE write. One undo step for the whole sweep —
+	// the same contract as Remove silences. A missing FFmpeg, a file with no cuts, or a clip whose
+	// asset has no path is a toast, not a thrown error.
+	const handleDetectScenes = useCallback(() => {
+		const state = useProjectStore.getState();
+		const target = clipAtPlayhead(clips, state.currentTimeSec);
+		if (!target) {
+			toast.info(te("inspector.splitClipHint"));
+			return;
+		}
+		const asset = state.document?.assets.find((candidate) => candidate.id === target.assetId);
+		if (!asset?.originalPath) {
+			toast.error(te("errors.unableToDetermineSourcePath"));
+			return;
+		}
+		if (!window.electronAPI?.detectScenes) {
+			toast.error(te("inspector.detectScenesUnavailable"));
+			return;
+		}
+		void window.electronAPI
+			.detectScenes(asset.originalPath, { threshold: 0.4, minSceneSec: 0.5 })
+			.then(async (result) => {
+				if (!result.success) {
+					toast.error(
+						result.reason === "no-ffmpeg"
+							? te("inspector.detectScenesUnavailable")
+							: (result.message ?? te("inspector.detectScenesNone")),
+					);
+					return;
+				}
+				const pieces = await tl.splitClipAtTimesAt(target.id, result.cutsSec ?? [], "Scene change");
+				if (pieces > 0) toast.success(te("inspector.detectScenesDone"));
+				else toast.info(te("inspector.detectScenesNone"));
+			})
+			.catch((error: unknown) => {
+				toast.error(String(error));
+			});
+	}, [clips, tl, te]);
 	const hasProject = Boolean(document);
 	const hasAsset = projectId !== null && (document?.assets.length ?? 0) > 0;
 	const project = document?.project
@@ -1786,6 +1826,7 @@ export function NewEditorShell() {
 					// Lane-aware, exactly as the rail's own Split button is: one implementation, so the
 					// menu and the rail cannot disagree about what Split means.
 					split: splitAtPlayhead,
+					detectScenes: handleDetectScenes,
 					extractAudio: () => {
 						const state = useProjectStore.getState();
 						const target = clipAtPlayhead(clips, state.currentTimeSec);

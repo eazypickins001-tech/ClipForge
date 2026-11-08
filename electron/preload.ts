@@ -394,6 +394,16 @@ contextBridge.exposeInMainWorld("electronAPI", {
 	getAudioPeaks: (filePath: string, durationSec: number) => {
 		return ipcRenderer.invoke("get-audio-peaks", filePath, durationSec);
 	},
+	/** Scene changes over a source, read by FFmpeg. See electron/media/sceneDetect.ts. */
+	detectScenes: (
+		filePath: string,
+		options?: { threshold?: number; minSceneSec?: number; timeoutMs?: number },
+	) => {
+		return ipcRenderer.invoke("detect-scenes", filePath, options);
+	},
+	cancelSceneDetection: () => {
+		return ipcRenderer.invoke("cancel-scene-detection");
+	},
 	readFileChunk: (filePath: string, offset: number, length: number) => {
 		return ipcRenderer.invoke("read-file-chunk", filePath, offset, length);
 	},

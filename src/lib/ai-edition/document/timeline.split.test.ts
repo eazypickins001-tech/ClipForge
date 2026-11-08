@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { type AxcutDocument, axcutSchemaVersion, clipSchema } from "../schema";
-import { splitClip } from "./timeline";
+import { splitClip, splitClipAtTimes } from "./timeline";
 
 // A minimal one-clip document: ten seconds of one asset, laid end to end, matching what the
 // app writes for a freshly imported recording.
@@ -140,5 +140,31 @@ describe("splitClip", () => {
 		expect(after.timeline.clips[0]).toEqual(doc.timeline.clips[0]);
 		expect(after.timeline.clips[1].sourceEndSec).toBe(15);
 		expect(after.timeline.clips[2].sourceStartSec).toBe(15);
+	});
+});
+
+describe("splitClipAtTimes", () => {
+	it("cuts once per source second, in one document", () => {
+		const doc = splitClipAtTimes(makeDoc(), "clip_1", [2, 6, 9]);
+		expect(doc.timeline.clips.map((clip) => [clip.sourceStartSec, clip.sourceEndSec])).toEqual([
+			[0, 2],
+			[2, 6],
+			[6, 9],
+			[9, 10],
+		]);
+		// The left half keeps the original id; every later piece is a detached right half.
+		expect(doc.timeline.clips[0].id).toBe("clip_1");
+		expect(doc.timeline.clips.slice(1).every((clip) => clip.detached === true)).toBe(true);
+	});
+
+	it("dedupes repeated cuts and ignores the ones that miss the clip", () => {
+		const doc = splitClipAtTimes(makeDoc(), "clip_1", [4, 4, 4, 0, 10, 99]);
+		expect(doc.timeline.clips).toHaveLength(2);
+	});
+
+	it("is the identity when every cut misses", () => {
+		const doc = makeDoc();
+		// Identity, not equality: a sweep that found nothing must not create an undo step.
+		expect(splitClipAtTimes(doc, "clip_1", [0, 0.01, 9.99, 10, 99])).toBe(doc);
 	});
 });

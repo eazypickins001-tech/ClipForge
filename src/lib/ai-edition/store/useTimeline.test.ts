@@ -2970,3 +2970,49 @@ describe("useTimeline.addZoomsBulk reads the document at write time", () => {
 		expect(bridgeMocks.save).not.toHaveBeenCalled();
 	});
 });
+
+describe("splitClipAtTimesAt (scene detection's landing)", () => {
+	beforeEach(() => {
+		useProjectStore.getState().clear();
+		clearHistory();
+		bridgeMocks.save.mockReset();
+		bridgeMocks.save.mockImplementation(async (doc: AxcutDocument) => ({
+			success: true,
+			document: doc,
+		}));
+		useProjectStore.setState({ projectId: "proj_test", document: sampleDoc, currentTimeSec: 5 });
+	});
+	afterEach(() => {
+		useProjectStore.getState().clear();
+		clearHistory();
+	});
+
+	it("lands every cut inside the clip in ONE save", async () => {
+		const { result } = renderTimeline();
+		let pieces = 0;
+		await act(async () => {
+			pieces = await result.current.splitClipAtTimesAt("clip_a", [2, 6, 9, 99, 0]);
+		});
+		expect(pieces).toBe(3);
+		expect(bridgeMocks.save).toHaveBeenCalledTimes(1);
+		expect(past).toHaveLength(1);
+		const clips = useProjectStore.getState().document?.timeline.clips ?? [];
+		expect(clips.map((clip) => [clip.sourceStartSec, clip.sourceEndSec])).toEqual([
+			[0, 2],
+			[2, 6],
+			[6, 9],
+			[9, 10],
+		]);
+	});
+
+	it("saves nothing when every cut misses the clip", async () => {
+		const { result } = renderTimeline();
+		let pieces = -1;
+		await act(async () => {
+			pieces = await result.current.splitClipAtTimesAt("clip_a", [0, 10, 99]);
+		});
+		expect(pieces).toBe(0);
+		expect(bridgeMocks.save).not.toHaveBeenCalled();
+		expect(past).toHaveLength(0);
+	});
+});

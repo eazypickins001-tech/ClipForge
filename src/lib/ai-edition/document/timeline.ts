@@ -1311,6 +1311,31 @@ export function splitClip(
 }
 
 /**
+ * Cut one clip at every source second in `times`, in ONE document — the batch behind scene
+ * detection, and any future "split at markers".
+ *
+ * Applied DESCENDING on purpose. `splitClip` keeps the original id on the LEFT half and shrinks
+ * its `sourceEndSec` to the cut, so a later (lower) cut still addresses the same clip; ascending
+ * cuts would fall outside the already-shortened half and no-op. Duplicates and cuts closer than
+ * `MIN_SPLIT_SEC` to an edge are handled by `splitClip` itself, which returns the same document
+ * when a cut misses. Pure.
+ */
+export function splitClipAtTimes(
+	document: AxcutDocument,
+	clipId: string,
+	times: readonly number[],
+	origin: "system" | "agent" | "user" = "user",
+	reason: string = "",
+): AxcutDocument {
+	const ordered = [...new Set(times.filter((sec) => Number.isFinite(sec)))].sort((a, b) => b - a);
+	let next = document;
+	for (const atSec of ordered) {
+		next = splitClip(next, clipId, atSec, origin, reason);
+	}
+	return next;
+}
+
+/**
  * "Extract audio" — the gesture CapCut puts on a clip's right-click menu: the clip's own sound
  * becomes an independent track under the video, and the clip is silenced so nothing plays twice.
  *

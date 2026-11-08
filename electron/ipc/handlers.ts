@@ -97,6 +97,11 @@ import {
 } from "../media/cursorSidecar";
 import { findMediaLinksByFingerprint, registerMediaLinks } from "../media/mediaLinksRegistry";
 import { relinkProjectMedia } from "../media/projectMediaRelinker";
+import {
+	detectScenes,
+	type SceneDetectRequest,
+	type SceneDetectResult,
+} from "../media/sceneDetect";
 import { showOpenDialogOver, showSaveDialogOver } from "../messageBox";
 import {
 	type LinuxCaptureSourceKind,
@@ -4553,6 +4558,38 @@ export function registerIpcHandlers(
 				error: String(error),
 			};
 		}
+	});
+
+	// Scene changes over a source file: FFmpeg's own `scene` score, decoded in the main process
+	// (see media/sceneDetect). The renderer receives source seconds only and turns them into
+	// splits; this handler knows nothing about the document. A second request from the same window
+	// aborts the first, and `cancel-scene-detection` is its explicit form.
+	const sceneDetectAborts = new Map<number, AbortController>();
+	ipcMain.handle(
+		"detect-scenes",
+		async (event, filePath: string, options?: SceneDetectRequest): Promise<SceneDetectResult> => {
+			const normalizedPath = readableApprovedPath(filePath);
+			if (!normalizedPath) {
+				return { success: false, cutsSec: [], message: "File path is not approved" };
+			}
+			const controller = new AbortController();
+			sceneDetectAborts.get(event.sender.id)?.abort();
+			sceneDetectAborts.set(event.sender.id, controller);
+			try {
+				const request = options && typeof options === "object" ? options : {};
+				return await detectScenes(normalizedPath, { ...request, signal: controller.signal });
+			} finally {
+				if (sceneDetectAborts.get(event.sender.id) === controller) {
+					sceneDetectAborts.delete(event.sender.id);
+				}
+			}
+		},
+	);
+	ipcMain.handle("cancel-scene-detection", (event): boolean => {
+		const controller = sceneDetectAborts.get(event.sender.id);
+		if (!controller) return false;
+		controller.abort();
+		return true;
 	});
 
 	// Waveform peaks for a timeline clip, decoded natively (see media/audioPeaks).
