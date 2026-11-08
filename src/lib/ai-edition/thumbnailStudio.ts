@@ -75,11 +75,57 @@ export interface StoredThumbnailImage {
 	costUsd?: number;
 }
 
+/** The 1280×720 composition's settings. The pixels are rendered from these; no image is stored. */
+export type ThumbnailAlignment = "left" | "center" | "right";
+export type ThumbnailCorner = "top-left" | "top-right" | "bottom-left" | "bottom-right";
+
+export interface ThumbnailComposition {
+	headline: string;
+	/** Pixels on the 1280×720 canvas. */
+	fontSize: number;
+	textColor: string;
+	outlineColor: string;
+	outlineWidth: number;
+	alignment: ThumbnailAlignment;
+	/** 1 = the image just covers the frame; above crops further in. */
+	backgroundZoom: number;
+	logoCorner: ThumbnailCorner;
+	/** Fraction of the canvas width. */
+	logoSize: number;
+	/** The logo file the creator picked; the document never holds its bytes. */
+	logoPath?: string;
+}
+
+export const DEFAULT_THUMBNAIL_COMPOSITION: ThumbnailComposition = {
+	headline: "YOUR HEADLINE",
+	fontSize: 84,
+	textColor: "#ffffff",
+	outlineColor: "#000000",
+	outlineWidth: 5,
+	alignment: "left",
+	backgroundZoom: 1,
+	logoCorner: "top-right",
+	logoSize: 0.14,
+};
+
+export function defaultThumbnailComposition(
+	result?: ThumbnailStudioResult | null,
+): ThumbnailComposition {
+	return {
+		...DEFAULT_THUMBNAIL_COMPOSITION,
+		headline: result?.concepts[0]?.thumbnailText || DEFAULT_THUMBNAIL_COMPOSITION.headline,
+	};
+}
+
 export interface StoredThumbnailStudio {
+	/** The composition's data version. Bump when the stored shape changes incompatibly. */
+	version: 1;
 	inputs: ThumbnailStudioInputs;
 	result: ThumbnailStudioResult;
 	/** The generated image's metadata, not its bytes. Absent until the creator generates one. */
 	image?: StoredThumbnailImage;
+	/** The 1280×720 composition's settings. Absent until the creator edits it. */
+	editor?: ThumbnailComposition;
 }
 
 const PLATFORM_LIMITS: Record<StudioPlatform, { title: number; tags: number; hashtags: boolean }> =
@@ -322,6 +368,7 @@ const conceptSchema = z.object({
 	evidence: evidenceSchema,
 });
 export const thumbnailStudioSchema = z.object({
+	version: z.literal(1).default(1),
 	inputs: inputsSchema,
 	result: z.object({
 		concepts: z.array(conceptSchema).length(3),
@@ -342,6 +389,20 @@ export const thumbnailStudioSchema = z.object({
 			path: z.string().optional(),
 			mediaType: z.string().optional(),
 			costUsd: z.number().optional(),
+		})
+		.optional(),
+	editor: z
+		.object({
+			headline: z.string(),
+			fontSize: z.number().min(8).max(240),
+			textColor: z.string(),
+			outlineColor: z.string(),
+			outlineWidth: z.number().min(0).max(24),
+			alignment: z.enum(["left", "center", "right"]),
+			backgroundZoom: z.number().min(1).max(3),
+			logoCorner: z.enum(["top-left", "top-right", "bottom-left", "bottom-right"]),
+			logoSize: z.number().min(0.03).max(0.4),
+			logoPath: z.string().optional(),
 		})
 		.optional(),
 });

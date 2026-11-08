@@ -5,7 +5,9 @@ import { describe, expect, it } from "vitest";
 import { createEmptyDocument } from "./schema";
 import {
 	buildThumbnailStudio,
+	DEFAULT_THUMBNAIL_COMPOSITION,
 	defaultStudioInputs,
+	defaultThumbnailComposition,
 	readThumbnailStudio,
 	thumbnailStudioSchema,
 	withThumbnailStudio,
@@ -69,13 +71,33 @@ describe("buildThumbnailStudio", () => {
 });
 
 describe("the stored composition", () => {
-	it("round-trips through the project envelope", () => {
-		const studio = { inputs, result: buildThumbnailStudio(inputs) };
+	it("starts the editor on the first concept's thumbnail text", () => {
+		const result = buildThumbnailStudio(inputs);
+		expect(defaultThumbnailComposition(result).headline).toBe(result.concepts[0]?.thumbnailText);
+		expect(defaultThumbnailComposition(null)).toEqual(DEFAULT_THUMBNAIL_COMPOSITION);
+	});
+
+	it("round-trips the project composition", () => {
+		const studio = { version: 1 as const, inputs, result: buildThumbnailStudio(inputs) };
 		const document = withThumbnailStudio(
 			createEmptyDocument({ title: "T", projectId: "p" }),
 			studio,
 		);
 		expect(readThumbnailStudio(document)).toEqual(studio);
+	});
+
+	it("round-trips the 1280x720 editor settings too", () => {
+		const editor = {
+			...DEFAULT_THUMBNAIL_COMPOSITION,
+			headline: "Hello",
+			alignment: "center" as const,
+		};
+		const studio = { version: 1 as const, inputs, result: buildThumbnailStudio(inputs), editor };
+		const document = withThumbnailStudio(
+			createEmptyDocument({ title: "T", projectId: "p" }),
+			studio,
+		);
+		expect(readThumbnailStudio(document)?.editor).toEqual(editor);
 	});
 
 	it("ignores a malformed stored value instead of throwing", () => {

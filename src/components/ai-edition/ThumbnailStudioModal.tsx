@@ -11,14 +11,17 @@ import {
 	buildThumbnailStudio,
 	DEFAULT_THUMBNAIL_IMAGE_MODEL,
 	defaultStudioInputs,
+	defaultThumbnailComposition,
 	STUDIO_PLATFORMS,
 	type StoredThumbnailImage,
 	type StoredThumbnailStudio,
 	type StudioPlatform,
+	type ThumbnailComposition,
 	type ThumbnailStudioInputs,
 	type ThumbnailStudioResult,
 } from "@/lib/ai-edition/thumbnailStudio";
 import { ModalShell } from "./Modals";
+import { ThumbnailComposer } from "./ThumbnailComposer";
 
 const fieldStyle = { display: "flex", flexDirection: "column", gap: 4 } as const;
 const labelStyle = { font: "500 12px/1.3 var(--font-body)", color: "var(--fg-2)" } as const;
@@ -66,6 +69,10 @@ export function ThumbnailStudioModal({
 	const [consentIndex, setConsentIndex] = useState<number | null>(null);
 	const [imageError, setImageError] = useState<string | null>(null);
 	const [imageSaved, setImageSaved] = useState(false);
+	const [editor, setEditor] = useState<ThumbnailComposition>(() =>
+		defaultThumbnailComposition(saved?.result ?? null),
+	);
+	const [exported, setExported] = useState(false);
 
 	// Opening the panel starts from this project's saved composition, or from the title alone. The
 	// panel stays mounted between opens, so this cannot be initial state only. Keyed on the OPEN
@@ -84,6 +91,8 @@ export function ThumbnailStudioModal({
 			setConsentIndex(null);
 			setImageError(null);
 			setImageSaved(false);
+			setEditor(saved?.editor ?? defaultThumbnailComposition(saved?.result ?? null));
+			setExported(false);
 		}
 		wasOpen.current = open;
 	}, [open, projectTitle, saved]);
@@ -94,7 +103,13 @@ export function ThumbnailStudioModal({
 	}, []);
 
 	const generate = useCallback(() => {
-		setResult(buildThumbnailStudio(inputs, transcriptText));
+		const next = buildThumbnailStudio(inputs, transcriptText);
+		setResult(next);
+		setEditor((current) =>
+			current.headline.trim() === "" || current.headline === "YOUR HEADLINE"
+				? { ...current, headline: next.concepts[0]?.thumbnailText ?? current.headline }
+				: current,
+		);
 		setSavedNow(false);
 	}, [inputs, transcriptText]);
 
@@ -193,10 +208,30 @@ export function ThumbnailStudioModal({
 	const save = useCallback(async () => {
 		if (!result || saving) return;
 		setSaving(true);
-		const ok = await onSave({ inputs, result, ...(image ? { image } : {}) });
+		const ok = await onSave({ version: 1, inputs, result, editor, ...(image ? { image } : {}) });
 		setSaving(false);
 		if (ok) setSavedNow(true);
-	}, [image, inputs, onSave, result, saving]);
+	}, [editor, image, inputs, onSave, result, saving]);
+
+	// The composed 1280×720 frame goes through the same save IPC as a generated image; only the
+	// file is written, and the composition settings are what the project stores.
+	const exportComposed = useCallback(
+		async (dataUrl: string, format: "png" | "jpeg") => {
+			const api = window.electronAPI;
+			if (!api?.saveThumbnailImage) return;
+			const response = await api.saveThumbnailImage({
+				dataUrl,
+				suggestedName: `${inputs.title || "thumbnail"}-${format}`,
+			});
+			if (response.success) {
+				setExported(true);
+				setSavedNow(false);
+			} else if (response.message) {
+				setImageError(response.message);
+			}
+		},
+		[inputs.title],
+	);
 
 	const evidenceLine = useMemo(
 		() =>
@@ -456,6 +491,22 @@ export function ThumbnailStudioModal({
 							<span style={{ font: "400 12px/1.3 var(--font-body)", color: "var(--fg-2)" }}>
 								{te("inspector.studioImageSaved")}: {image.path}
 							</span>
+						) : null}
+
+						<ThumbnailComposer
+							backgroundDataUrl={imagePreview}
+							value={editor}
+							onChange={(next) => {
+								setEditor(next);
+								setSavedNow(false);
+								setExported(false);
+							}}
+							onExport={(dataUrl, format) => void exportComposed(dataUrl, format)}
+						/>
+						{exported ? (
+							<p role="status" style={{ margin: 0 }}>
+								{te("inspector.studioExported")}
+							</p>
 						) : null}
 
 						<section>

@@ -3037,7 +3037,7 @@ describe("saveThumbnailStudio", () => {
 	it("saves the whole composition in one write", async () => {
 		const { result } = renderTimeline();
 		const inputs = { ...defaultStudioInputs("Test"), brief: "A brief" };
-		const data = { inputs, result: buildThumbnailStudio(inputs) };
+		const data = { version: 1 as const, inputs, result: buildThumbnailStudio(inputs) };
 		await act(async () => {
 			await result.current.saveThumbnailStudio(data);
 		});

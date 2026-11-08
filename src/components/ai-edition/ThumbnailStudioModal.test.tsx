@@ -156,6 +156,7 @@ describe("ThumbnailStudioModal", () => {
 			exclusions: "",
 		};
 		setup({
+			version: 1,
 			inputs,
 			result: {
 				concepts: [
