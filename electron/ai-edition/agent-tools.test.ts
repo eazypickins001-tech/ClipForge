@@ -214,6 +214,7 @@ describe("the mutating-tool table", () => {
 				"removeTrim",
 				"removeWords",
 				"replaceTimeline",
+				"scriptToVideo",
 				"setAnnotation",
 				"setAspectRatio",
 				"setAudio",
@@ -1745,6 +1746,105 @@ describe("replaceTimeline refuses what it would destroy", () => {
 		const payload = JSON.parse(result.resultJson) as { preservedClipIds: string[] };
 		expect(payload.preservedClipIds).toEqual(["clip_1", "clip_2"]);
 		expect(result.document?.timeline.trimRanges.map((t) => t.id)).toEqual(["trim_1"]);
+	});
+});
+
+describe("scriptToVideo composes the scenes in one document", () => {
+	function scriptDoc(): AxcutDocument {
+		const base = createEmptyDocument({
+			title: "Script",
+			projectId: "proj_script",
+			createdAt: FIXTURE_CREATED_AT,
+		});
+		return documentSchema.parse({
+			...base,
+			project: { ...base.project, primaryAssetId: "asset_1" },
+			assets: [
+				{
+					id: "asset_1",
+					kind: "video",
+					label: "Screen",
+					originalPath: "C:/videos/screen.mp4",
+					durationSec: 60,
+				},
+				{
+					id: "asset_2",
+					kind: "video",
+					label: "B-roll",
+					originalPath: "C:/videos/broll.mp4",
+					durationSec: 20,
+				},
+			],
+			timeline: {
+				...base.timeline,
+				clips: [
+					{
+						id: "old",
+						assetId: "asset_1",
+						sourceStartSec: 0,
+						sourceEndSec: 60,
+						timelineStartSec: 0,
+						timelineEndSec: 60,
+						wordRefs: [],
+						origin: "user",
+						reason: "",
+					},
+				],
+			},
+		});
+	}
+
+	it("places every scene as its own clip and anchors its caption and zoom to that span", () => {
+		const result = executeAgentTool(
+			scriptDoc(),
+			"scriptToVideo",
+			JSON.stringify({
+				replace: true,
+				scenes: [
+					{ assetId: "asset_1", sourceStartSec: 0, sourceEndSec: 6, caption: "Intro" },
+					{ assetId: "asset_2", sourceStartSec: 2, sourceEndSec: 8, zoom: { depth: 2 } },
+				],
+			}),
+		);
+		expect(result.ok).toBe(true);
+		const doc = result.document;
+		expect(doc?.timeline.clips).toHaveLength(2);
+		// Every scene is its own clip, never fused with a neighbour.
+		expect(doc?.timeline.clips.every((clip) => clip.detached === true)).toBe(true);
+		expect(doc?.annotations).toHaveLength(1);
+		expect(doc?.annotations[0]?.startMs).toBe(0);
+		expect(doc?.annotations[0]?.endMs).toBe(6000);
+		expect(doc?.zoomRanges).toHaveLength(1);
+		expect(doc?.zoomRanges[0]?.startMs).toBe(6000);
+		expect(doc?.zoomRanges[0]?.endMs).toBe(12_000);
+	});
+
+	it("is all-or-nothing: a scene that cannot be placed leaves the original document", () => {
+		const original = scriptDoc();
+		const result = executeAgentTool(
+			original,
+			"scriptToVideo",
+			JSON.stringify({
+				replace: true,
+				scenes: [
+					{ assetId: "asset_1", sourceStartSec: 0, sourceEndSec: 5 },
+					{ assetId: "missing", sourceStartSec: 0, sourceEndSec: 5 },
+				],
+			}),
+		);
+		expect(result.ok).toBe(false);
+		expect(result.document).toBeUndefined();
+		expect(result.resultJson).toContain("Scene 2");
+	});
+
+	it("appends after the existing clips when replace is omitted", () => {
+		const result = executeAgentTool(
+			scriptDoc(),
+			"scriptToVideo",
+			JSON.stringify({ scenes: [{ assetId: "asset_2", sourceStartSec: 0, sourceEndSec: 4 }] }),
+		);
+		expect(result.ok).toBe(true);
+		expect(result.document?.timeline.clips).toHaveLength(2);
 	});
 });
 

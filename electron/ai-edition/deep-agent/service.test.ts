@@ -75,6 +75,10 @@ const ARGS: Record<string, unknown> = {
 	insertClip: { assetId: "asset_1", sourceStartSec: 2, sourceEndSec: 4 },
 	duplicateClip: { clipId: "clip_1" },
 	replaceTimeline: { intervals: [{ startSec: 0, endSec: 10 }] },
+	scriptToVideo: {
+		scenes: [{ assetId: "asset_1", sourceStartSec: 0, sourceEndSec: 5, caption: "Intro" }],
+		replace: true,
+	},
 	addZoom: { startSec: 1, endSec: 2 },
 	addZooms: { regions: [{ startSec: 1, endSec: 2 }] },
 	// No cursor reader in these tests: the refusal that says it could not look.

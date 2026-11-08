@@ -41,6 +41,7 @@ import {
 import { resolveAspectRatioValue } from "../../src/lib/ai-edition/document/outputFormat";
 import { parseAspectRatioToken, planReframe } from "../../src/lib/ai-edition/document/reframe";
 import {
+	clearTimeline,
 	duplicateClip,
 	insertAssetClip,
 	moveClip,
@@ -950,6 +951,48 @@ export const addZoomsArgs = z.object({
 	regions: z.array(z.union([addZoomArgs, z.unknown()])).min(1),
 });
 
+/**
+ * One scene of a script: a stretch of footage, an optional caption over exactly its span, and an
+ * optional push-in over the same span. The model decides the scenes; this only composes them.
+ */
+export const scriptSceneSchema = z.object({
+	assetId: z.string().min(1),
+	sourceStartSec: secondsSchema.default(0),
+	/** End of the stretch in the asset's source seconds. Omit to take the rest of the asset. */
+	sourceEndSec: secondsSchema.optional(),
+	caption: z
+		.string()
+		.min(1)
+		.optional()
+		.describe("Text drawn over this scene's whole span. Omit for a silent scene."),
+	zoom: z
+		.object({
+			depth: depthSchema.optional(),
+			focus: focusSchema.optional(),
+			customScale: customScaleSchema.optional(),
+		})
+		.optional()
+		.describe("A push-in over this scene's whole span. Omit for no zoom."),
+});
+
+/**
+ * Build a timeline from a script in ONE edit — the tool the model reaches for after it has decided
+ * what the scenes are. `replace: true` starts from a clean timeline (the assets and transcript
+ * stay); without it the scenes are appended. Every scene is placed as its own clip (never fused
+ * with a neighbour), and its caption/zoom span is the clip's own span, which is what keeps the
+ * shape consistent. Any scene that fails refuses the WHOLE script: no partial film.
+ */
+export const scriptToVideoArgs = z.object({
+	scenes: z.array(scriptSceneSchema).min(1).max(60),
+	replace: z
+		.boolean()
+		.optional()
+		.describe(
+			"Start from a clean timeline (assets and transcript stay). Omit to append after the existing clips.",
+		),
+	aspectRatio: z.string().optional().describe("Optional output shape, as setAspectRatio takes it."),
+});
+
 export const setZoomArgs = z.object({
 	zoomId: z.string().min(1),
 	startSec: secondsSchema.optional(),
@@ -1214,6 +1257,7 @@ export const OPENSCREEN_TOOL_NAMES = [
 	"insertClip",
 	"duplicateClip",
 	"replaceTimeline",
+	"scriptToVideo",
 	"addZoom",
 	"addZooms",
 	"addAutoZooms",
@@ -1300,6 +1344,7 @@ export const MUTATING_TOOL_NAMES: ReadonlySet<string> = new Set([
 	"insertClip",
 	"duplicateClip",
 	"replaceTimeline",
+	"scriptToVideo",
 	"addZoom",
 	"addAutoZooms",
 	"setZoom",
@@ -2197,6 +2242,133 @@ export function executeAgentTool(
 					note: 'Each clip now shows the part of its source that fills the new format. A crop centred on "centre" had no zoom on that clip to follow — this does not read the cursor track.',
 				}),
 				summary: `reframed ${plan.entries.length} clip${plan.entries.length === 1 ? "" : "s"} for ${targetAspect}`,
+			};
+		}
+
+		case "scriptToVideo": {
+			const parsed = scriptToVideoArgs.safeParse(args);
+			if (!parsed.success) return failure(parsed.error.message);
+			let next = parsed.data.replace === true ? clearTimeline(document) : document;
+			const built: Array<{
+				clipId: string;
+				timelineStartSec: number;
+				timelineEndSec: number;
+			}> = [];
+			let annotations = 0;
+			let zooms = 0;
+			const footage = next.assets.filter(
+				(asset) => asset.kind === "video" && !isGeneratedAssetId(asset.id),
+			);
+			const roster = footage.length
+				? ` Footage in this project: ${footage.map((asset) => `${asset.id} (${asset.label})`).join(", ")}.`
+				: " This project has no footage to place.";
+			for (const [index, scene] of parsed.data.scenes.entries()) {
+				const label = `Scene ${index + 1}`;
+				const asset = next.assets.find((candidate) => candidate.id === scene.assetId);
+				if (!asset) return failure(`${label}: unknown asset ${scene.assetId}.${roster}`);
+				if (asset.kind === "audio") {
+					return failure(`${label}: ${scene.assetId} is audio, not footage.`);
+				}
+				if (isGeneratedAssetId(scene.assetId)) {
+					return failure(`${label}: ${scene.assetId} is generated media, not footage.${roster}`);
+				}
+				const sourceEndSec = scene.sourceEndSec ?? asset.durationSec;
+				if (sourceEndSec === undefined) {
+					return failure(
+						`${label}: the length of ${scene.assetId} is not known yet; pass sourceEndSec.`,
+					);
+				}
+				if (!(sourceEndSec > scene.sourceStartSec)) {
+					return failure(
+						`${label} is empty: ${formatSec(scene.sourceStartSec)} – ${formatSec(sourceEndSec)} of ${scene.assetId}.`,
+					);
+				}
+				// Its own clip, never fused with the scene before it: the script said "scene", not
+				// "continuation", and the caption/zoom below are anchored to THIS span.
+				const clipId = createId("clip");
+				next = insertAssetClip(next, next.timeline.clips.length, {
+					id: clipId,
+					assetId: scene.assetId,
+					sourceStartSec: scene.sourceStartSec,
+					sourceEndSec,
+					detached: true,
+					origin: "agent",
+					reason: scene.caption ?? "",
+				});
+				const placed = next.timeline.clips.find((clip) => clip.id === clipId);
+				if (!placed) return failure(`${label} could not be placed.`);
+				built.push({
+					clipId,
+					timelineStartSec: placed.timelineStartSec,
+					timelineEndSec: placed.timelineEndSec,
+				});
+				if (scene.caption) {
+					const annotation = executeAgentTool(
+						next,
+						"addAnnotation",
+						JSON.stringify({
+							startSec: placed.timelineStartSec,
+							endSec: placed.timelineEndSec,
+							text: scene.caption,
+						}),
+						options,
+					);
+					if (!annotation.ok || !annotation.document) {
+						return failure(`${label}'s caption: ${annotation.resultJson}`);
+					}
+					next = annotation.document;
+					annotations += 1;
+				}
+				if (scene.zoom) {
+					const zoom = executeAgentTool(
+						next,
+						"addZoom",
+						JSON.stringify({
+							startSec: placed.timelineStartSec,
+							endSec: placed.timelineEndSec,
+							...(scene.zoom.depth === undefined ? {} : { depth: scene.zoom.depth }),
+							...(scene.zoom.focus === undefined ? {} : { focus: scene.zoom.focus }),
+							...(scene.zoom.customScale === undefined
+								? {}
+								: { customScale: scene.zoom.customScale }),
+						}),
+						options,
+					);
+					if (!zoom.ok || !zoom.document) {
+						return failure(`${label}'s zoom: ${zoom.resultJson}`);
+					}
+					next = zoom.document;
+					zooms += 1;
+				}
+			}
+			if (parsed.data.aspectRatio !== undefined) {
+				const formatted = executeAgentTool(
+					next,
+					"setAspectRatio",
+					JSON.stringify({ aspectRatio: parsed.data.aspectRatio }),
+					options,
+				);
+				if (!formatted.ok || !formatted.document) {
+					return failure(`The output shape: ${formatted.resultJson}`);
+				}
+				next = formatted.document;
+			}
+			return {
+				ok: true,
+				document: next,
+				resultJson: JSON.stringify({
+					scenes: built.length,
+					replace: parsed.data.replace === true,
+					clips: built,
+					annotations,
+					zooms,
+					...(parsed.data.aspectRatio === undefined
+						? {}
+						: { aspectRatio: parsed.data.aspectRatio }),
+				}),
+				summary: `${parsed.data.replace === true ? "built" : "added"} ${built.length} scene${
+					built.length === 1 ? "" : "s"
+				}`,
 			};
 		}
 

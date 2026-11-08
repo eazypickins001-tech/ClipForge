@@ -82,6 +82,7 @@ import {
 	replaceTimelineArgs,
 	resolveCursorAssetId,
 	type SceneDetectLoad,
+	scriptToVideoArgs,
 	setAnnotationArgs,
 	setAspectRatioArgs,
 	setAudioArgs,
@@ -253,6 +254,8 @@ export const TOOL_DESCRIPTIONS: Record<string, string> = {
 		"Copy a clip, placed right after it: the same footage, crop and source range, with its own copy of the clip's trims and of the zooms, speed regions, annotations and camera-fullscreen regions on it. Edits to one no longer touch the other. Returns the copy's clipId; moveClip puts it somewhere else.",
 	replaceTimeline:
 		"Replace the whole timeline with the given kept intervals of the primary asset's source time. Everything outside the intervals becomes a trim. The intervals are SORTED, so this can never reorder clips — use moveClip for that. DO NOT use this for 'cut silences' or 'remove pauses' — the user has likely placed clips on the timeline that you'd be discarding. Use this ONLY when the user explicitly asks you to rebuild the timeline from scratch (e.g. 'start over with the kept intervals from the transcript'). To place another asset's footage, use insertClip. It is refused when it would merge away, shorten or drop an existing clip; the refusal names them and the tool to use instead.",
+	scriptToVideo:
+		"Build a whole timeline from a script in ONE edit: `scenes` is a list of { assetId, sourceStartSec, sourceEndSec, caption?, zoom? }. Every scene is placed as its OWN clip (adjacent scenes never fuse), and its caption/zoom is anchored to exactly that scene's span, so the shape stays consistent without you knowing the placed clip's timeline position. `replace: true` starts from a clean timeline (the assets and transcript stay); omit it to append after the existing clips. `aspectRatio` optionally sets the output shape. All-or-nothing: a scene that cannot be placed, captioned or zoomed refuses the whole script and the document is untouched. Use this after you have decided what the scenes are — it is the one call for 'make a video from this script'; do not compose it from insertClip + addAnnotation + addZoom yourself.",
 	addZoom: `Add a zoom-in over a span of the edited timeline (virtual seconds). depth is an ORDINAL 1–6, not a factor: it selects a magnification from a fixed table (${ZOOM_DEPTH_LEGEND}), so the default depth 3 renders at 1.80×. The result reports renderedScale — quote that, never the depth, when telling the user how strong the zoom is. focus is the zoom centre in 0–1 fractions of the frame (default centre). When the recording's pointer telemetry can be read for the footage under the span, the result also carries \`cursorAnchor\`: \`focus\` echoes the value this call used (including the default, if you left it out), \`cursor\` is where the pointer ACTUALLY was over the span the zoom landed on — the median of the recorded samples, \`spread\` being how far the farthest one strays from it — and \`offset\` is the distance between the two, in frame fractions. It is a measurement, not a correction: nothing is moved and no call is refused over it, and a zoom framing a slide, a face, or a region the pointer never enters is a legitimate choice. \`available:false\` names what it found instead (\`no-samples\`, \`trimmed-out\`). Its ABSENCE means no telemetry was read for that footage — never that the recording has none; assets[].hasCursorTelemetry and getCursorTrack are what answer that. Use for 'zoom in on …' and the smart-zoom pass. ${ZOOM_BEHAVIOUR_NOTE} ${ZOOM_CAMERA_NOTE} ${ZOOM_TRANSITIONS_NOTE} ${CUT_TRANSITIONS_RESULT}`,
 	addZooms: `Add MANY zooms in one call: \`regions\` is a list, each entry taking exactly the fields addZoom takes (same depth table, ${ZOOM_DEPTH_LEGEND}). Use this for the smart-zoom pass, where you have decided every zoom before emitting the first one — sending them one at a time costs one round trip each. Each region stands or falls ALONE: one that covers no clip is refused by itself and listed in \`refused\` with its index and the reason, while the others are still applied. The result leads with requested / appliedCount / refusedCount, and each applied entry carries its renderedScale — quote that, never the depth — plus the same \`cursorAnchor\` addZoom reports, whenever the footage under that region has readable pointer telemetry, and the same \`cutTransitions\` warning. ${ZOOM_TRANSITIONS_NOTE}`,
 	addAutoZooms:
@@ -641,6 +644,7 @@ export const TOOL_ARG_SCHEMAS: ReadonlyArray<readonly [string, z.ZodObject]> = [
 	["insertClip", insertClipArgs],
 	["duplicateClip", duplicateClipArgs],
 	["replaceTimeline", replaceTimelineArgs],
+	["scriptToVideo", scriptToVideoArgs],
 	["addZoom", addZoomArgs],
 	["addZooms", addZoomsArgs],
 	["addAutoZooms", addAutoZoomsArgs],

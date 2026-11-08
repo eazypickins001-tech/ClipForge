@@ -1382,6 +1382,44 @@ export function detachAudio(document: AxcutDocument, clipId: string, label: stri
 }
 
 /**
+ * Remove every clip AND the ranges that were anchored to them — trims, modifiers, transitions,
+ * layout runs, shader-effect rows, audio takes, and the legacy speed/camera-fullscreen envelopes —
+ * while keeping the assets, the transcript and the project's look. This is the clean slate a
+ * `scriptToVideo` composition starts from, not a new project. `withClipsChanged` alone cannot do
+ * this: it deliberately leaves the region collections alone when the clip list is empty (its
+ * `rederiveRegionMs` guard), and its absorbed-clip path has nothing to absorb here. Pure.
+ */
+export function clearTimeline(document: AxcutDocument): AxcutDocument {
+	const legacy = document.legacyEditor as Record<string, unknown> | null | undefined;
+	let clearedLegacy = document.legacyEditor;
+	if (legacy) {
+		const copy = { ...legacy };
+		delete copy.speedRegions;
+		delete copy.cameraFullscreenRegions;
+		clearedLegacy = copy as AxcutDocument["legacyEditor"];
+	}
+	return {
+		...document,
+		timeline: {
+			...document.timeline,
+			clips: [],
+			gaps: [],
+			trimRanges: [],
+			muteRanges: [],
+			speedRanges: [],
+			captionRanges: [],
+		},
+		annotations: [],
+		zoomRanges: [],
+		audioTracks: [],
+		transitions: [],
+		layoutRegions: [],
+		shaderEffectRanges: [],
+		legacyEditor: clearedLegacy,
+	};
+}
+
+/**
  * The single mutator for "place a clip of this asset at this position": the media panel's drop
  * onto the timeline and the agent's `insertClip`. `index` counts the clips before it (0 first,
  * `clips.length` last) and is clamped. The new clip goes through `withClipsChanged` like every
@@ -1392,6 +1430,9 @@ export function insertAssetClip(
 	index: number,
 	clip: Pick<AxcutClip, "id" | "assetId" | "sourceStartSec" | "origin" | "reason"> & {
 		sourceEndSec: number;
+		/** Keep this clip its own even when its media meets a neighbour's — a script scene is a
+		 *  scene, not an accidental continuation. The media panel and `insertClip` leave it off. */
+		detached?: boolean;
 	},
 ): AxcutDocument {
 	const length = clip.sourceEndSec - clip.sourceStartSec;

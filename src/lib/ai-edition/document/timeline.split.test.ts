@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { type AxcutDocument, axcutSchemaVersion, clipSchema } from "../schema";
-import { splitClip, splitClipAtTimes } from "./timeline";
+import { clearTimeline, splitClip, splitClipAtTimes } from "./timeline";
 
 // A minimal one-clip document: ten seconds of one asset, laid end to end, matching what the
 // app writes for a freshly imported recording.
@@ -140,6 +140,24 @@ describe("splitClip", () => {
 		expect(after.timeline.clips[0]).toEqual(doc.timeline.clips[0]);
 		expect(after.timeline.clips[1].sourceEndSec).toBe(15);
 		expect(after.timeline.clips[2].sourceStartSec).toBe(15);
+	});
+});
+
+describe("clearTimeline", () => {
+	it("removes every clip and the trims anchored to them, keeping the assets", () => {
+		const doc = makeDoc();
+		doc.timeline.trimRanges.push({
+			id: "trim_1",
+			assetId: "asset_1",
+			startSec: 2,
+			endSec: 4,
+			origin: "user",
+			reason: "",
+		});
+		const cleared = clearTimeline(doc);
+		expect(cleared.timeline.clips).toEqual([]);
+		expect(cleared.timeline.trimRanges).toEqual([]);
+		expect(cleared.assets).toHaveLength(1);
 	});
 });
 
