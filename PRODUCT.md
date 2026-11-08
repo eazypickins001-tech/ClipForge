@@ -24,9 +24,9 @@ Desktop Electron application for Windows, macOS and Linux, rendered as web UI. P
 
 ## Capabilities and Constraints
 
-Confirmed product constraint: the core is local and offline-capable, and AI is optional (BYOK). Implemented in the repository: screen and webcam recording; non-destructive timeline editing (trim/split, audio, transitions, speed ramps, zoom, layout, colour grade); a native Rust compositor for preview and export; local Whisper captions; an AI assistant and agent tools; scene detection and split; script-to-video composition; a Thumbnail Studio with prompt-only concepts, OpenRouter image generation, publishing copy, and a 1280×720 PNG/JPEG composer.
+Confirmed product constraint: the core is local and offline-capable, and AI is optional (BYOK). **The product is not freemium and never adds a paywall, premium tier, feature gate or upsell**: the core stays free and fully usable without an account, and the revenue model is deliberately undecided until the build is complete. Implemented in the repository: screen and webcam recording; non-destructive timeline editing (trim/split, audio, transitions, speed ramps, zoom, layout, colour grade); a native Rust compositor for preview and export; local Whisper captions; an AI assistant and agent tools; scene detection and split; script-to-video composition; a Thumbnail Studio with prompt-only concepts, OpenRouter image generation, publishing copy, and a 1280×720 PNG/JPEG composer.
 
-Open decisions: pricing, licensing and distribution are not recorded here. Do not invent them, nor any customer, benchmark or deployment claim.
+Open decisions: licensing, distribution and the eventual revenue model (deliberately deferred until the build is complete) are not recorded here. Do not invent them, nor any customer, benchmark or deployment claim.
 
 ## Evidence on Hand
 
@@ -38,3 +38,4 @@ Working Electron/React code, a Rust compositor, unit and packaged end-to-end tes
 - **AI assists, never gates** — no core capability may require a provider key or a cloud round trip.
 - **The creator stays in control** — edits are non-destructive and one gesture is one undo step.
 - **Honest output** — the preview and the export agree, and generated copy is derived from declared evidence rather than invented claims.
+- **Free core, no gating** — never put a paywall, premium tier or upsell in front of a core craft feature; decide the revenue model after the build, not by degrading the product.
