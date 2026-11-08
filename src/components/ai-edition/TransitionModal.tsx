@@ -36,6 +36,8 @@ export type TransitionSpec = {
  *  compositor draws a blend today; elsewhere the kind is accepted and the boundary stays a hard cut,
  *  the same half-port the dip family has. */
 const TILES = ["dip-black", "dip-white", "dip-color", "dissolve", "wipe", "slide"] as const;
+/** The programme's end has no incoming clip, so only the dip family is meaningful there. */
+const DIP_TILES = ["dip-black", "dip-white", "dip-color"] as const;
 
 type Tile = (typeof TILES)[number];
 type Edge = "left" | "right" | "top" | "bottom";
@@ -60,10 +62,13 @@ export function TransitionModal({
 	transition,
 	onChange,
 	onRemove,
+	side = "in",
 }: {
 	open: boolean;
 	onClose: () => void;
-	/** The dip already on this clip's left edge, or null while the boundary is still a hard cut. */
+	/** The edge this sheet edits: a cut's left edge, or the programme's end. */
+	side?: "in" | "out";
+	/** The dip already on this clip's edge, or null while the boundary is still a hard cut. */
 	transition: AxcutTransition | null;
 	onChange: (spec: TransitionSpec) => void;
 	onRemove: () => void;
@@ -100,6 +105,7 @@ export function TransitionModal({
 	};
 	const active = tileOf(kind);
 	const edge = edgeOf(kind);
+	const tiles = side === "out" ? DIP_TILES : TILES;
 	// The stored kind for a tile: a family keeps the direction the panel is already showing, so
 	// switching Wipe -> Slide slides from the same edge rather than silently resetting it.
 	const kindFor = (tile: Tile): AxcutTransition["kind"] =>
@@ -130,7 +136,7 @@ export function TransitionModal({
 				aria-label={t("transition.title")}
 				style={{ display: "flex", gap: 6, flexWrap: "wrap" }}
 			>
-				{TILES.map((tile) => (
+				{tiles.map((tile) => (
 					<button
 						key={tile}
 						type="button"

@@ -243,6 +243,7 @@
 		"splitAudioHint": "Setzen Sie die Abspielposition in die Audiospur, um sie zu teilen.",
 		"splitClip": "Split",
 		"extractAudio": "Extract audio",
+		"fadeOutEnding": "Ende ausblenden",
 		"detectScenes": "Szenen erkennen",
 		"detectScenesNone": "Keine Szenenwechsel gefunden",
 		"detectScenesDone": "Szenen aufgeteilt",

@@ -439,25 +439,28 @@ export function useTimeline() {
 		[document, saveDocument],
 	);
 
-	/** Put a dip on a clip's left edge, or replace the one already there with this spec.
+	/** Put a dip on a clip's left edge (`side: "in"`) or a fade at the programme's end
+	 *  (`side: "out"` on the last clip), or replace the one already there with this spec.
 	 *
 	 * One action rather than an add plus an update: the panel always knows the whole dip it wants
-	 * (kind, duration, colour), and "the dip on this clip" is one row either way — so a change is
-	 * the same write as a first placement, and each is one undo step.
+	 * (kind, duration, colour), and "the dip on this edge" is one row either way — so a change is
+	 * the same write as a first placement, and each is one undo step. A blend on the end is
+	 * meaningless (there is no incoming clip), so the caller only offers dip kinds there.
 	 */
 	const setTransition = useCallback(
 		async (
 			clipId: string,
 			spec: { kind: AxcutTransition["kind"]; durationMs: number; color?: string },
+			side: "in" | "out" = "in",
 		) => {
 			if (!document) return;
 			const existing = (document.transitions ?? []).find(
-				(transition) => transition.clipId === clipId && transition.side === "in",
+				(transition) => transition.clipId === clipId && transition.side === side,
 			);
 			const entry: AxcutTransition = {
 				id: existing?.id ?? createId("trans"),
 				clipId,
-				side: "in",
+				side,
 				kind: spec.kind,
 				durationMs: spec.durationMs,
 				...(spec.color ? { color: spec.color } : {}),

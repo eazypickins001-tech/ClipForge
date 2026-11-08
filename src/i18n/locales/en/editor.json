@@ -243,6 +243,7 @@
 		"splitAudioHint": "Put the playhead inside the audio take to split it.",
 		"splitClip": "Split",
 		"extractAudio": "Extract audio",
+		"fadeOutEnding": "Fade out ending",
 		"detectScenes": "Detect scenes",
 		"detectScenesNone": "No scene changes found",
 		"detectScenesDone": "Scenes split",

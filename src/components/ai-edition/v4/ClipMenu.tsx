@@ -31,6 +31,7 @@ export interface ClipMenuActions {
 	extractAudio: () => void;
 	openClipAudio: () => void;
 	openTransition: () => void;
+	endFade: () => void;
 	openEditClip: () => void;
 }
 
@@ -79,6 +80,12 @@ export function ClipMenu({ actions }: { actions: ClipMenuActions }) {
 					label: ts("transition.title"),
 					disabled: !actions.hasBoundary,
 					onSelect: actions.openTransition,
+				},
+				{
+					id: "end-fade",
+					label: te("inspector.fadeOutEnding"),
+					disabled: !actions.hasClips,
+					onSelect: actions.endFade,
 				},
 				{
 					id: "edit-clip",

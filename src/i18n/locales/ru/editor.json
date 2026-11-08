@@ -243,6 +243,7 @@
 		"splitAudioHint": "Чтобы разделить звуковую дорожку, поместите курсор воспроизведения внутрь неё.",
 		"splitClip": "Split",
 		"extractAudio": "Extract audio",
+		"fadeOutEnding": "Затухание в конце",
 		"detectScenes": "Определить сцены",
 		"detectScenesNone": "Изменения сцен не найдены",
 		"detectScenesDone": "Сцены разделены",

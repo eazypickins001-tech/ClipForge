@@ -243,6 +243,7 @@
 		"splitAudioHint": "將播放頭放在音訊片段內即可分割。",
 		"splitClip": "Split",
 		"extractAudio": "Extract audio",
+		"fadeOutEnding": "結尾淡出",
 		"detectScenes": "偵測場景",
 		"detectScenesNone": "找不到場景變化",
 		"detectScenesDone": "場景已分割",

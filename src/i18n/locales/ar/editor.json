@@ -243,6 +243,7 @@
 		"splitAudioHint": "ضع مؤشر التشغيل داخل المقطع الصوتي لتقسيمه.",
 		"splitClip": "Split",
 		"extractAudio": "Extract audio",
+		"fadeOutEnding": "تلاشي النهاية",
 		"detectScenes": "اكتشاف المشاهد",
 		"detectScenesNone": "لم يتم العثور على تغييرات في المشاهد",
 		"detectScenesDone": "تم تقسيم المشاهد",

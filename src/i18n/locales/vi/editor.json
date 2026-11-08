@@ -243,6 +243,7 @@
 		"splitAudioHint": "Đặt con trỏ phát vào trong đoạn âm thanh để cắt.",
 		"splitClip": "Split",
 		"extractAudio": "Extract audio",
+		"fadeOutEnding": "Mờ dần khi kết thúc",
 		"detectScenes": "Phát hiện cảnh",
 		"detectScenesNone": "Không tìm thấy thay đổi cảnh nào",
 		"detectScenesDone": "Đã tách cảnh",

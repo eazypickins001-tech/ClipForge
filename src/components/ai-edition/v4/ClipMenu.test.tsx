@@ -30,6 +30,7 @@ function makeActions(over: Partial<ClipMenuActions> = {}): ClipMenuActions {
 		extractAudio: vi.fn(),
 		openClipAudio: vi.fn(),
 		openTransition: vi.fn(),
+		endFade: vi.fn(),
 		openEditClip: vi.fn(),
 		...over,
 	};
@@ -95,6 +96,7 @@ describe("Clip menu in the editor top bar", () => {
 			"Extract audio",
 			"Audio",
 			"Transition",
+			"Fade out ending",
 			"Edit clip",
 		]);
 	});
@@ -139,6 +141,16 @@ describe("Clip menu in the editor top bar", () => {
 		fireEvent.click(within(menu).getByRole("menuitem", { name: "Transition" }));
 
 		expect(actions.openTransition).toHaveBeenCalledTimes(1);
+	});
+
+	it("opens the programme-end fade from its row", async () => {
+		const actions = makeActions();
+		renderBar(actions);
+		const menu = await openMenu();
+
+		fireEvent.click(within(menu).getByRole("menuitem", { name: "Fade out ending" }));
+
+		expect(actions.endFade).toHaveBeenCalledTimes(1);
 	});
 
 	it("disables every row when there is no clip to act on", async () => {

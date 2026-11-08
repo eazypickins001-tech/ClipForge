@@ -3046,3 +3046,45 @@ describe("saveThumbnailStudio", () => {
 		expect(saved ? readThumbnailStudio(saved) : null).toEqual(data);
 	});
 });
+
+describe("setTransition on the programme's end", () => {
+	beforeEach(() => {
+		useProjectStore.getState().clear();
+		clearHistory();
+		bridgeMocks.save.mockReset();
+		bridgeMocks.save.mockImplementation(async (doc: AxcutDocument) => ({
+			success: true,
+			document: doc,
+		}));
+		useProjectStore.setState({ projectId: "proj_test", document: sampleDoc, currentTimeSec: 5 });
+	});
+	afterEach(() => {
+		useProjectStore.getState().clear();
+		clearHistory();
+	});
+
+	it("writes one side-out row and updates that row on the next change", async () => {
+		const { result } = renderTimeline();
+		await act(async () => {
+			await result.current.setTransition("clip_a", { kind: "dip-black", durationMs: 500 }, "out");
+		});
+		let doc = useProjectStore.getState().document;
+		expect(doc?.transitions).toEqual([
+			expect.objectContaining({ clipId: "clip_a", side: "out", kind: "dip-black" }),
+		]);
+		expect(bridgeMocks.save).toHaveBeenCalledTimes(1);
+
+		await act(async () => {
+			await result.current.setTransition("clip_a", { kind: "dip-white", durationMs: 800 }, "out");
+		});
+		doc = useProjectStore.getState().document;
+		expect(doc?.transitions).toHaveLength(1);
+		expect(doc?.transitions?.[0]).toMatchObject({
+			clipId: "clip_a",
+			side: "out",
+			kind: "dip-white",
+			durationMs: 800,
+		});
+		expect(bridgeMocks.save).toHaveBeenCalledTimes(2);
+	});
+});

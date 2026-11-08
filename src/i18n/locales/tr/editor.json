@@ -243,6 +243,7 @@
 		"splitAudioHint": "Sesi bölmek için oynatma imlecini ses parçasının içine getirin.",
 		"splitClip": "Split",
 		"extractAudio": "Extract audio",
+		"fadeOutEnding": "Sonda kararma",
 		"detectScenes": "Sahneleri algıla",
 		"detectScenesNone": "Sahne değişikliği bulunamadı",
 		"detectScenesDone": "Sahneler bölündü",

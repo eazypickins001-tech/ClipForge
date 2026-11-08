@@ -243,6 +243,7 @@
 		"splitAudioHint": "Coloque o cursor de reprodução dentro do áudio para dividi-lo.",
 		"splitClip": "Split",
 		"extractAudio": "Extract audio",
+		"fadeOutEnding": "Fade out do final",
 		"detectScenes": "Detectar cenas",
 		"detectScenesNone": "Nenhuma mudança de cena encontrada",
 		"detectScenesDone": "Cenas divididas",

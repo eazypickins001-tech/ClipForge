@@ -243,6 +243,7 @@
 		"splitAudioHint": "分割するには再生ヘッドを音声クリップの内側に置いてください。",
 		"splitClip": "Split",
 		"extractAudio": "Extract audio",
+		"fadeOutEnding": "エンディングをフェードアウト",
 		"detectScenes": "シーンを検出",
 		"detectScenesNone": "シーンの変化が見つかりませんでした",
 		"detectScenesDone": "シーンを分割しました",

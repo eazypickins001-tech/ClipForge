@@ -243,6 +243,7 @@
 		"splitAudioHint": "Placez la tête de lecture dans la piste audio pour la diviser.",
 		"splitClip": "Split",
 		"extractAudio": "Extract audio",
+		"fadeOutEnding": "Fondu de fin",
 		"detectScenes": "Détecter les scènes",
 		"detectScenesNone": "Aucun changement de scène trouvé",
 		"detectScenesDone": "Scènes découpées",

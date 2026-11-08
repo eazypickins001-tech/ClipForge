@@ -305,7 +305,10 @@ export function NewEditorShell() {
 	// The boundary dip sheet — CapCut's transition panel. It names the clip whose LEFT edge the dip
 	// sits on (a boundary belongs to the clip that follows it), so the state is an id rather than a
 	// clip object: the row itself lives in the document and arrives back through the store.
-	const [transitionTarget, setTransitionTarget] = useState<string | null>(null);
+	const [transitionTarget, setTransitionTarget] = useState<{
+		clipId: string;
+		side: "in" | "out";
+	} | null>(null);
 	const [exportOpen, setExportOpen] = useState(false);
 	const [unsavedPrompt, setUnsavedPrompt] = useState<{
 		action: "close" | "new" | "open" | "record";
@@ -1873,7 +1876,15 @@ export function NewEditorShell() {
 						// for the type, not for a reachable state.
 						const target = transitionTargetClip(clips, useProjectStore.getState().currentTimeSec);
 						if (!target) return;
-						setTransitionTarget(target.id);
+						setTransitionTarget({ clipId: target.id, side: "in" });
+					},
+					endFade: () => {
+						const last = clips.at(-1);
+						if (!last) {
+							toast.info(te("inspector.splitClipHint"));
+							return;
+						}
+						setTransitionTarget({ clipId: last.id, side: "out" });
 					},
 					openEditClip: () => {
 						const target = clipAtPlayhead(clips, useProjectStore.getState().currentTimeSec);
@@ -2055,7 +2066,7 @@ export function NewEditorShell() {
 						onTogglePlay={togglePlay}
 						onAddVoiceover={openVoiceoverFlow}
 						onEditClip={setEditClipTarget}
-						onEditTransition={setTransitionTarget}
+						onEditTransition={(clipId) => setTransitionTarget({ clipId, side: "in" })}
 					/>
 				</div>
 			) : null}
@@ -2106,23 +2117,28 @@ export function NewEditorShell() {
 			<TransitionModal
 				open={transitionTarget !== null}
 				onClose={() => setTransitionTarget(null)}
+				side={transitionTarget?.side ?? "in"}
 				transition={
 					transitionTarget
 						? (tl.transitions.find(
-								(transition) => transition.clipId === transitionTarget && transition.side === "in",
+								(transition) =>
+									transition.clipId === transitionTarget.clipId &&
+									transition.side === transitionTarget.side,
 							) ?? null)
 						: null
 				}
 				// One gesture, one write, one undo step: the panel commits on release.
 				onChange={(spec) => {
 					if (!transitionTarget) return;
-					const clipId = transitionTarget;
-					void enqueueTimelineWrite(() => tl.setTransition(clipId, spec));
+					const { clipId, side } = transitionTarget;
+					void enqueueTimelineWrite(() => tl.setTransition(clipId, spec, side));
 				}}
 				onRemove={() => {
 					if (!transitionTarget) return;
 					const existing = tl.transitions.find(
-						(transition) => transition.clipId === transitionTarget && transition.side === "in",
+						(transition) =>
+							transition.clipId === transitionTarget.clipId &&
+							transition.side === transitionTarget.side,
 					);
 					if (!existing) return;
 					const id = existing.id;

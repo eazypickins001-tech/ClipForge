@@ -243,6 +243,7 @@
 		"splitAudioHint": "Chcete-li zvukovou stopu rozdělit, umístěte kurzor přehrávání do ní.",
 		"splitClip": "Split",
 		"extractAudio": "Extract audio",
+		"fadeOutEnding": "Vyblednutí konce",
 		"detectScenes": "Detekovat scény",
 		"detectScenesNone": "Nebyly nalezeny žádné změny scén",
 		"detectScenesDone": "Scény rozděleny",
