@@ -12,10 +12,11 @@ files left:
 | `f90e7c9` | **Thumbnail Studio (prompt-only)** + **publishing copy** (title / body / tags), local and honest about its evidence basis. |
 | `df69a5a` | **Thumbnail image generation** through OpenRouter (consent, actual cost, one at a time, save outside project JSON). |
 | `01f21b2` | **1280×720 composer** (headline/outline/alignment/colours, logo, background zoom) + **PNG/JPEG export**; compositions are versioned v1. |
+| `bbce83d` | **`side: "out"` transitions UI** — Clip → Fade out ending opens the sheet on the last clip's right edge, dip family only. |
 
-**State: `01f21b2`, CI green, Windows build green, artifact verified on disk at
-`C:\Users\Apple\AppData\Local\cf-01f21b2`.** Its `app.asar` contains the SHA stamp and the feature
-markers `studioComposer`, `studioExportPng`, `studioCanvas`, `generate-thumbnail-image`. Working tree clean.
+**State: `bbce83d`, CI green, Windows build green, artifact verified on disk at
+`C:\Users\Apple\AppData\Local\cf-bbce83d`.** Its `app.asar` contains the SHA stamp and the feature
+markers `fadeOutEnding`, `studioComposer`, `generate-thumbnail-image`. Working tree clean.
 
 Colour grade (`7b9e853`) and the earlier scene-detection slices (`5441576`, `7437576`) are already in
 this build too.
@@ -50,6 +51,8 @@ this build too.
 - **Export blend overlap:** no menu item. Put a dissolve/wipe/slide on a clip junction (`+`/`◑` on
   the seam), then export; the file is shorter by the transition duration. The live preview
   deliberately stays on the raw ruler and does not shorten.
+- **Programme-end fade:** **Clip → Fade out ending** opens the transition sheet on the last clip's
+  right edge. Only the dip family is offered (no incoming picture to blend); one write, one undo.
 
 ## 2. What shipped, in one line each
 
@@ -95,6 +98,12 @@ this build too.
   `save-thumbnail-image` IPC. Settings ride in `legacyEditor.thumbnailStudio.editor`; the logo's
   bytes are never stored (its path is), so a reopened project asks for the logo file again.
 
+**Programme-end transitions (`bbce83d`)**
+- `setTransition` takes an explicit `side` and finds/updates that edge's own row, so a cut's dip and
+  the end fade cannot overwrite each other. `TransitionModal` narrows its tiles to the dip family
+  for `side: "out"`; the Clip menu row opens it on the last clip. The emitter already honoured
+  `side: "out"`; this commit only makes it reachable. 1 new i18n key × 15 locales.
+
 ## 3. Verification, honestly
 
 - Root `tsc --noEmit` and biome are clean on every touched file; `tsc -p tsconfig.test.json` remains
@@ -105,7 +114,7 @@ this build too.
   MCP (346), thumbnail generator + modal + store + audit + Clip menu (136), image request/response
   (135 with the studio/store suites), composer/editor (139 with the studio/store suites) — all
   green.
-- **CI and the Windows installer build are green for `01f21b2`.** The build was downloaded and its
+- **CI and the Windows installer build are green for `bbce83d`.** The build was downloaded and its
   `app.asar` checked for the SHA and the feature markers above.
 - **Not run:** scene detection against a real media file (this checkout has no FFmpeg/Rust/addon),
   a real OpenRouter image call (no key in this checkout; the request/response is unit-tested), and
@@ -122,8 +131,9 @@ This session finished **the queue the 2026-11-07 handovers listed**, not the who
    background is the generated image or a solid colour (no video-frame picker), and a reopened
    project shows the saved logo path but needs the logo file re-picked (its bytes are deliberately
    not stored).
-2. **Next code-completable:** `side:"out"` transitions (UI only; the model and emitter already
-   honour it) and core hardening H1–H4.
+2. **Next code-completable:** core hardening H1–H4 (GIF cancel, missing-media verification, the
+   compositor-addon note, split e2e). `side:"out"` transitions are now reachable from the Clip menu
+   (`bbce83d`), closing the last unclaimed transition gap.
 3. **Export overlap leftovers (Phase B):** the outgoing frame is still a freeze, not advanced per
    frame during the blend; the audio boundary is still the 240-sample crossfade (not `d`); the live
    preview/ruler deliberately does not shorten.
@@ -143,3 +153,8 @@ This session finished **the queue the 2026-11-07 handovers listed**, not the who
 - `biome check --write` reformats test files mid-edit; re-read before a second edit.
 - The i18n insertion script is still broken; this session used a parse-and-re-insert Node script
   that only adds lines after a known anchor and re-parses the file.
+
+**Uncommitted at handover:** `PRODUCT.md`, `DESIGN.md` and `.impeccable/design.json` from the
+Impeccable `init`/`document` run (commit them together; `.impeccable/config.local.json` is
+machine-local and must stay out). The five restored `docs/HANDOVER-2026-11-03/04/06/07*.md` are
+tracked and unchanged.
