@@ -4,11 +4,13 @@ Continues `HANDOVER-2026-11-07-speed-ramps-programme-clock.md`. Same day, same t
 
 - `edd2b3c` — **the blend overlap is wired on the export side** (that handover's §4 is now a
   WIRED section). CI and the Windows installer build are green for it.
-- `5441576` — **scene detection → split** (this file). Pushed; CI and the Windows build were
-  started for it.
+- `5441576` — **scene detection → split** (this file). The Windows installer build is **green**.
+  Its CI run was cancelled by the `ci-${{ github.ref }}` concurrency group when this handover's
+  commit landed; the handover's CI run — the same code tree plus this markdown — is **green**.
+- `e8e8bb5` — this handover.
 
 Verified for `5441576` locally: app `tsc`, biome, the touched suites (147 tests) and i18n key
-parity (405 keys × 15 locales). **No Windows build was watched and no detection ran against a real
+parity (405 keys × 15 locales); the full suite is green on CI. **No detection ran against a real
 file** — this checkout has no FFmpeg, no Rust toolchain and no native addon.
 
 ---
@@ -101,7 +103,8 @@ file** — this checkout has no FFmpeg, no Rust toolchain and no native addon.
   `tsc --noEmit` is clean.
 - The full unit suite was attempted after this slice and **timed out on this machine at 20 min**
   after the same `LeftPanel.copyMessage` failure seen before (it passes in isolation; known flake).
-  The previous full run was 5278 passed / 1 flaky. CI is the reliable full-suite signal.
+  The previous local full run was 5278 passed / 1 flaky. **CI ran the full suite for `e8e8bb5` and
+  is green**, which is the reliable signal.
 
 ## 4. Next, in the order I would take it
 
