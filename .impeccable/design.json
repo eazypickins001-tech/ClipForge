@@ -1,0 +1,359 @@
+{
+	"schemaVersion": 2,
+	"generatedAt": "2026-11-08T00:00:00.000Z",
+	"title": "Design System: ClipForge",
+	"extensions": {
+		"colorMeta": {
+			"signal-mint": {
+				"role": "primary",
+				"displayName": "Signal Mint",
+				"canonical": "#10b981",
+				"tonalRamp": [
+					"oklch(22% 0.06 162)",
+					"oklch(32% 0.09 162)",
+					"oklch(45% 0.12 162)",
+					"oklch(56% 0.14 162)",
+					"oklch(66% 0.16 162)",
+					"oklch(76% 0.14 162)",
+					"oklch(86% 0.08 162)",
+					"oklch(94% 0.03 162)"
+				]
+			},
+			"cool-slate": {
+				"role": "neutral",
+				"displayName": "Cool Slate",
+				"canonical": "#eaeef3",
+				"tonalRamp": [
+					"oklch(18% 0.02 240)",
+					"oklch(28% 0.02 240)",
+					"oklch(42% 0.015 240)",
+					"oklch(56% 0.012 240)",
+					"oklch(70% 0.008 240)",
+					"oklch(82% 0.006 240)",
+					"oklch(91% 0.005 240)",
+					"oklch(96% 0.004 240)"
+				]
+			},
+			"ink": {
+				"role": "neutral",
+				"displayName": "Slate Ink",
+				"canonical": "#0f172a",
+				"tonalRamp": [
+					"oklch(15% 0.03 260)",
+					"oklch(22% 0.03 260)",
+					"oklch(32% 0.025 260)",
+					"oklch(45% 0.02 260)",
+					"oklch(58% 0.015 260)",
+					"oklch(72% 0.01 260)",
+					"oklch(85% 0.008 260)",
+					"oklch(95% 0.005 260)"
+				]
+			},
+			"playhead-violet": {
+				"role": "secondary",
+				"displayName": "Scrub Violet",
+				"canonical": "#6c55ff",
+				"tonalRamp": [
+					"oklch(20% 0.08 285)",
+					"oklch(30% 0.12 285)",
+					"oklch(42% 0.18 285)",
+					"oklch(52% 0.21 285)",
+					"oklch(62% 0.22 285)",
+					"oklch(74% 0.16 285)",
+					"oklch(85% 0.09 285)",
+					"oklch(94% 0.03 285)"
+				]
+			},
+			"record-red": {
+				"role": "secondary",
+				"displayName": "Record Red",
+				"canonical": "#ef4444",
+				"tonalRamp": [
+					"oklch(20% 0.07 25)",
+					"oklch(32% 0.12 25)",
+					"oklch(45% 0.17 25)",
+					"oklch(55% 0.20 25)",
+					"oklch(63% 0.21 25)",
+					"oklch(76% 0.15 25)",
+					"oklch(86% 0.08 25)",
+					"oklch(94% 0.03 25)"
+				]
+			},
+			"zoom-blue": {
+				"role": "tertiary",
+				"displayName": "Zoom Blue",
+				"canonical": "#3b82f6",
+				"tonalRamp": [
+					"oklch(20% 0.06 255)",
+					"oklch(30% 0.10 255)",
+					"oklch(42% 0.15 255)",
+					"oklch(52% 0.18 255)",
+					"oklch(62% 0.19 255)",
+					"oklch(74% 0.13 255)",
+					"oklch(85% 0.07 255)",
+					"oklch(94% 0.03 255)"
+				]
+			},
+			"annotation-amber": {
+				"role": "tertiary",
+				"displayName": "Annotation Amber",
+				"canonical": "#eab308",
+				"tonalRamp": [
+					"oklch(20% 0.05 85)",
+					"oklch(32% 0.09 85)",
+					"oklch(44% 0.13 85)",
+					"oklch(56% 0.16 85)",
+					"oklch(68% 0.17 85)",
+					"oklch(80% 0.13 85)",
+					"oklch(88% 0.08 85)",
+					"oklch(95% 0.03 85)"
+				]
+			},
+			"speed-orange": {
+				"role": "tertiary",
+				"displayName": "Speed Orange",
+				"canonical": "#f97316",
+				"tonalRamp": [
+					"oklch(20% 0.06 45)",
+					"oklch(32% 0.11 45)",
+					"oklch(44% 0.16 45)",
+					"oklch(55% 0.19 45)",
+					"oklch(66% 0.20 45)",
+					"oklch(78% 0.14 45)",
+					"oklch(87% 0.08 45)",
+					"oklch(95% 0.03 45)"
+				]
+			},
+			"dark-canvas": {
+				"role": "neutral",
+				"displayName": "Graphite Canvas",
+				"canonical": "#0a0d12",
+				"tonalRamp": [
+					"oklch(13% 0.008 250)",
+					"oklch(18% 0.01 250)",
+					"oklch(24% 0.012 250)",
+					"oklch(31% 0.012 250)",
+					"oklch(40% 0.01 250)",
+					"oklch(55% 0.008 250)",
+					"oklch(72% 0.006 250)",
+					"oklch(88% 0.004 250)"
+				]
+			}
+		},
+		"typographyMeta": {
+			"display": {
+				"displayName": "Display",
+				"purpose": "Rare first-run or dialog-scale statements; not dense editor chrome."
+			},
+			"headline": { "displayName": "Headline", "purpose": "Dialog titles and major pane headers." },
+			"title": {
+				"displayName": "Title",
+				"purpose": "Product name, project name and section anchors."
+			},
+			"body": {
+				"displayName": "Body",
+				"purpose": "The editor's working size for controls, rows and descriptions."
+			},
+			"label": {
+				"displayName": "Label",
+				"purpose": "Field and slider labels; section labels step up to 600."
+			},
+			"mono": {
+				"displayName": "Mono",
+				"purpose": "Timecodes, levels and changing numeric readouts."
+			}
+		},
+		"shadows": [
+			{
+				"name": "card",
+				"value": "0 1px 2px rgba(15, 23, 42, 0.03), 0 2px 8px -2px rgba(15, 23, 42, 0.05)",
+				"purpose": "The default lift for cards and raised controls."
+			},
+			{
+				"name": "card-soft",
+				"value": "0 1px 2px rgba(15, 23, 42, 0.03)",
+				"purpose": "The quietest raised surface, inside another panel."
+			},
+			{
+				"name": "popover",
+				"value": "0 8px 24px -8px rgba(15, 23, 42, 0.10), 0 2px 4px rgba(15, 23, 42, 0.04)",
+				"purpose": "Menus, popovers and top-bar dropdowns."
+			},
+			{
+				"name": "dialog",
+				"value": "0 24px 60px rgba(22, 23, 29, 0.5)",
+				"purpose": "The modal card over the blurred backdrop."
+			},
+			{
+				"name": "focus",
+				"value": "0 0 0 3px rgba(16, 185, 129, 0.18)",
+				"purpose": "The mint-tinted focus ring."
+			}
+		],
+		"motion": [
+			{
+				"name": "motion-fast",
+				"value": "120ms",
+				"purpose": "Control hover, border and background state changes."
+			},
+			{
+				"name": "motion-base",
+				"value": "180ms",
+				"purpose": "Panel and surface-level transitions."
+			},
+			{
+				"name": "ease",
+				"value": "cubic-bezier(0.2, 0, 0, 1)",
+				"purpose": "The house easing for every state transition."
+			},
+			{
+				"name": "record-pulse",
+				"value": "1.5s ease-in-out infinite",
+				"purpose": "The recording indicator's ambient pulse."
+			}
+		],
+		"breakpoints": [
+			{ "name": "lg", "value": "1240px" },
+			{ "name": "md", "value": "1080px" },
+			{ "name": "sm", "value": "960px" },
+			{ "name": "sm-narrow", "value": "850px" },
+			{ "name": "xs", "value": "760px" }
+		]
+	},
+	"components": [
+		{
+			"name": "Primary Button",
+			"kind": "button",
+			"refersTo": "button-primary",
+			"description": "The one mint action on a surface: export, save, apply.",
+			"html": "<button class=\"ds-btn-primary\">Export video</button>",
+			"css": ".ds-btn-primary { height: 34px; padding: 0 14px; border-radius: 10px; border: 1px solid var(--accent, #10b981); background: var(--accent, #10b981); color: var(--accent-on, #04221a); font-family: var(--font-body, system-ui); font-size: 13px; font-weight: 500; line-height: 1; display: inline-flex; align-items: center; justify-content: center; gap: 6px; cursor: pointer; transition: background 120ms cubic-bezier(0.2, 0, 0, 1); } .ds-btn-primary:hover { background: var(--brand-lo, #059669); } .ds-btn-primary:focus-visible { outline: 2px solid var(--accent, #10b981); outline-offset: 2px; } .ds-btn-primary:disabled { background: var(--surface-2, #e2e8f0); border-color: var(--border, #e2e8f0); color: var(--muted, #64748b); cursor: not-allowed; }"
+		},
+		{
+			"name": "Secondary Button",
+			"kind": "button",
+			"refersTo": "button-secondary",
+			"description": "The quiet filled sibling: cancel, back, a non-primary dialog action.",
+			"html": "<button class=\"ds-btn-secondary\">Cancel</button>",
+			"css": ".ds-btn-secondary { height: 34px; padding: 0 14px; border-radius: 10px; border: 1px solid transparent; background: color-mix(in oklab, var(--fg, #0f172a) 8%, transparent); color: var(--fg, #0f172a); font-family: var(--font-body, system-ui); font-size: 13px; font-weight: 500; display: inline-flex; align-items: center; justify-content: center; gap: 6px; cursor: pointer; transition: background 120ms cubic-bezier(0.2, 0, 0, 1); } .ds-btn-secondary:hover:not(:disabled) { background: color-mix(in oklab, var(--fg, #0f172a) 13%, transparent); } .ds-btn-secondary:focus-visible { outline: 2px solid var(--accent, #10b981); outline-offset: 2px; } .ds-btn-secondary:disabled { opacity: 0.5; cursor: not-allowed; }"
+		},
+		{
+			"name": "Ghost Button",
+			"kind": "button",
+			"refersTo": "button-ghost",
+			"description": "Top-bar and toolbar actions that only need a hover plate.",
+			"html": "<button class=\"ds-btn-ghost\">Undo</button>",
+			"css": ".ds-btn-ghost { height: 30px; padding: 0 10px; border-radius: 8px; border: 1px solid transparent; background: transparent; color: var(--fg-2, #334155); font-family: var(--font-body, system-ui); font-size: 13px; font-weight: 500; display: inline-flex; align-items: center; gap: 7px; cursor: pointer; transition: background 120ms cubic-bezier(0.2, 0, 0, 1), border-color 120ms cubic-bezier(0.2, 0, 0, 1); } .ds-btn-ghost:hover:not(:disabled) { background: var(--surface-1, #f1f5f9); border-color: var(--border, #e2e8f0); } .ds-btn-ghost:focus-visible { outline: 2px solid var(--accent, #10b981); outline-offset: 2px; } .ds-btn-ghost:disabled { opacity: 0.45; cursor: not-allowed; }"
+		},
+		{
+			"name": "Icon Button",
+			"kind": "button",
+			"refersTo": "icon-button",
+			"description": "A 32px square for the top bar and panes; a toggled state uses the mint wash.",
+			"html": "<button class=\"ds-icon-btn\" aria-label=\"Add\"><svg aria-hidden=\"true\" width=\"16\" height=\"16\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2.25\" stroke-linecap=\"round\"><path d=\"M12 5v14M5 12h14\"/></svg></button>",
+			"css": ".ds-icon-btn { width: 32px; height: 32px; display: grid; place-items: center; border-radius: 8px; border: 0; background: transparent; color: var(--muted, #64748b); cursor: pointer; transition: background 120ms cubic-bezier(0.2, 0, 0, 1), color 120ms cubic-bezier(0.2, 0, 0, 1); } .ds-icon-btn:hover { background: var(--surface-2, #e2e8f0); color: var(--fg, #0f172a); } .ds-icon-btn:focus-visible { outline: 2px solid var(--accent, #10b981); outline-offset: 2px; } .ds-icon-btn:disabled { opacity: 0.45; cursor: not-allowed; }"
+		},
+		{
+			"name": "Text Field",
+			"kind": "input",
+			"refersTo": "text-field",
+			"description": "The one filled field: 34px, no outline until focus.",
+			"html": "<label class=\"ds-field\"><span class=\"ds-field-label\">Project name</span><input class=\"ds-input\" value=\"My demo\" /></label>",
+			"css": ".ds-field { display: flex; flex-direction: column; gap: 4px; } .ds-field-label { font-family: var(--font-body, system-ui); font-size: 13px; font-weight: 500; color: var(--fg-2, #334155); } .ds-input { height: 34px; padding: 0 10px; border-radius: 10px; border: 1px solid transparent; background: color-mix(in oklab, var(--fg, #0f172a) 7%, var(--surface-1, #f1f5f9)); color: var(--fg, #0f172a); font-family: var(--font-body, system-ui); font-size: 13px; outline: none; transition: border-color 120ms cubic-bezier(0.2, 0, 0, 1); } .ds-input:focus { border-color: var(--accent, #10b981); } .ds-input:disabled { opacity: 0.5; cursor: not-allowed; }"
+		},
+		{
+			"name": "Chat Chip",
+			"kind": "chip",
+			"refersTo": "chat-chip",
+			"description": "A soft mint pill for a live or saved state.",
+			"html": "<span class=\"ds-chip\"><span class=\"ds-chip-dot\"></span>Saved</span>",
+			"css": ".ds-chip { display: inline-flex; align-items: center; gap: 4px; padding: 5px 10px; border-radius: 9999px; background: var(--success-soft, rgba(16, 185, 129, 0.10)); color: var(--success, #10b981); font-family: var(--font-body, system-ui); font-size: 12px; font-weight: 500; } .ds-chip-dot { width: 5px; height: 5px; border-radius: 50%; background: currentColor; }"
+		},
+		{
+			"name": "Panel",
+			"kind": "card",
+			"refersTo": "panel",
+			"description": "A shell panel or dialog card: flat at rest, faint lift.",
+			"html": "<section class=\"ds-panel\"><h3 class=\"ds-panel-title\">Timeline</h3><p class=\"ds-panel-copy\">12 clips · 1:42</p></section>",
+			"css": ".ds-panel { padding: 20px 24px; border-radius: 16px; border: 1px solid var(--border, #e2e8f0); background: var(--surface, #ffffff); color: var(--fg, #0f172a); box-shadow: var(--elev-card, 0 1px 2px rgba(15, 23, 42, 0.03), 0 2px 8px -2px rgba(15, 23, 42, 0.05)); font-family: var(--font-body, system-ui); } .ds-panel-title { margin: 0; font-family: var(--font-display, system-ui); font-size: 15px; font-weight: 600; letter-spacing: -0.015em; } .ds-panel-copy { margin: 6px 0 0; font-size: 13px; line-height: 1.5; color: var(--muted, #64748b); font-variant-numeric: tabular-nums; }"
+		},
+		{
+			"name": "Mode Switch",
+			"kind": "nav",
+			"refersTo": "button-ghost",
+			"description": "The three-way Media / Edit / Rec control in the top bar.",
+			"html": "<div class=\"ds-modes\" role=\"tablist\"><button class=\"ds-mode\" aria-selected=\"true\">Edit</button><button class=\"ds-mode\">Media</button><button class=\"ds-mode\">Rec</button></div>",
+			"css": ".ds-modes { display: inline-grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 2px; padding: 3px; border-radius: 12px; border: 1px solid var(--border, #e2e8f0); background: var(--surface-1, #f1f5f9); } .ds-mode { padding: 5px 16px; border: 0; border-radius: 9px; background: transparent; color: var(--muted, #64748b); font-family: var(--font-body, system-ui); font-size: 13px; font-weight: 500; cursor: pointer; } .ds-mode[aria-selected=\"true\"] { background: var(--surface-3, #cbd5e1); color: var(--fg-emphasis, #020617); font-weight: 600; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25); } .ds-mode:focus-visible { outline: 2px solid var(--accent, #10b981); outline-offset: 2px; }"
+		}
+	],
+	"narrative": {
+		"northStar": "The Calm Cutting Room",
+		"overview": "ClipForge should feel like a quiet, precise cutting room: a settled desktop instrument where the footage and the timeline are the work, and the chrome stays out of the way. The layout is cool and orderly, the type is compact and exact, and mint appears as a single live signal on the action that matters. Restraint is the point.\n\nThe system is calm, precise and quietly confident. It is not warm and tactile, and it is not a dense technical console: there is air around the panels, but density stays high enough for real editing. Light is a cool slate daylight desk; dark is the graphitic hero look. Both are the same token set swapped.",
+		"keyCharacteristics": [
+			"Mint as one live signal, not a decorative wash.",
+			"Cool slate neutrals; white surfaces on light, graphite surfaces on dark.",
+			"Geist for the interface; Geist Mono for numbers and technical readouts.",
+			"34px controls, 10px radii, 13px body: compact, exact, mouse-sized.",
+			"Flat at rest, with a faint lift only for cards, popovers and dialogs.",
+			"The timeline is the signature object: mint clips, colour-coded effect pills, a violet scrub line."
+		],
+		"rules": [
+			{
+				"name": "The One Signal Rule",
+				"body": "Signal Mint is used on <=10% of any screen: the primary action, the selected state, the active clip. Its rarity is what makes it read as a signal.",
+				"section": "colors"
+			},
+			{
+				"name": "The Take Rule",
+				"body": "Red is reserved for REC, cuts, skips, trims, transcript highlights and destructive actions. It is never decoration, never a generic highlight, and never a second accent.",
+				"section": "colors"
+			},
+			{
+				"name": "The Playhead Rule",
+				"body": "The scrub cursor is Violet #6c55ff in both themes. Do not recolour it mint when the clip underneath is mint.",
+				"section": "colors"
+			},
+			{
+				"name": "The Token Swap Rule",
+				"body": "Components read the --* custom properties in src/styles/design-tokens.css; dark is a token swap on :root[data-theme=\"dark\"], not a second palette. Never hardcode a hue that a token already owns.",
+				"section": "colors"
+			},
+			{
+				"name": "The Geist Rule",
+				"body": "The interface speaks Geist and nothing else; Geist Mono is a data voice, not a second UI face.",
+				"section": "typography"
+			},
+			{
+				"name": "The Tabular Rule",
+				"body": "Numeric values that update (timecodes, percentages, levels) use font-variant-numeric: tabular-nums so the layout does not twitch.",
+				"section": "typography"
+			},
+			{
+				"name": "The Flat-At-Rest Rule",
+				"body": "A row is flat. Do not add a shadow to a row, a field or a pane section; reserve lift for cards, popovers and dialogs.",
+				"section": "elevation"
+			},
+			{
+				"name": "The Soft Corner Rule",
+				"body": "Radius rises with surface: 4px mark -> 10px control -> 16px dialog -> 18px shell panel. Do not put a 16px corner on a 34px control.",
+				"section": "shapes"
+			}
+		],
+		"dos": [
+			"Do use the --* tokens from src/styles/design-tokens.css and let :root[data-theme=\"dark\"] do the theme swap.",
+			"Do keep Signal Mint rare: the primary action, the selected state, the active clip.",
+			"Do use 34px controls, 10px radii and 13px body text for editor chrome.",
+			"Do use Geist Mono with tabular numerals for timecodes and changing values.",
+			"Do keep the scrub playhead violet in both themes.",
+			"Do keep rows flat; save the soft lift for cards, popovers and dialogs."
+		],
+		"donts": [
+			"Don't use mint for small text on the light theme; use Muted for values and meta copy.",
+			"Don't use red for decoration or a second highlight; it means REC, a cut or an error.",
+			"Don't recolour the playhead mint when the clip under it is mint.",
+			"Don't add shadows to fields, rows or pane sections.",
+			"Don't introduce a second accent hue for chrome; the timeline pill hues are data annotations, not a second brand.",
+			"Don't hardcode a hex that a token already owns, and don't bypass the token layer for a dark-theme fix."
+		]
+	}
+}
