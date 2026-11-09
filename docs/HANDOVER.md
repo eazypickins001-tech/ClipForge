@@ -1,9 +1,8 @@
 # ClipForge — Handover
 
-**Updated:** 2026-11-09 (evening)
-**Current commit:** `49405b0` (code; this note is the docs commit on top)
-**Verified artifact:** `C:\Users\Apple\AppData\Local\cf-1f1f135\release\0.1.0\win-unpacked\ClipForge.exe`
-(**does not** include `49405b0` — that Build is blocked, see §2)
+**Updated:** 2026-11-09 (night)
+**Current commit:** `2ea450d` (code; this note is the docs commit on top)
+**Verified artifact:** `C:\Users\Apple\AppData\Local\cf-2ea450d\release\0.1.0\win-unpacked\ClipForge.exe`
 **Repo:** `C:\Users\Apple\Downloads\Telegram Desktop\UoK\ClipForge` · `github.com/eazypickins001-tech/ClipForge` · branch `main`
 
 This is the only handover note. The earlier dated notes were folded into it and removed; they remain
@@ -22,24 +21,19 @@ core editing works offline; AI is BYOK; the app is pre-1.x and not production-gr
 
 ## 2. Current state
 
-**Green and verified:** CI and the Windows installer build for `1f1f135` are green, and the packaged
-smoke test passed (export, trim/save/reopen, clip edits, transitions, transcription).
+**Green and verified:** CI and the Windows installer build for `2ea450d` are green, and the
+packaged smoke test passed (export, trim/save/reopen, clip edits, transitions, transcription).
 
-- `49405b0` (the UI fixes below) is **CI-green**, but its Windows Build is **blocked by an upstream
-  GitHub Releases outage**: every attempt dies on a `504 Gateway Time-out` inside a download —
-  `fetch:ffmpeg`, Electron's `install.js`, then electron-builder's NSIS fetch. The job got as far as
-  "Package NSIS installer" on the last retry, so the code itself compiled and the renderer built.
-  Rerun with `gh run rerun 42567489963 --failed` once the outage clears.
-
-- Latest CI: `42561207218` — success. Latest build: `42561207113` — success; artifact downloaded
-  and verified as `cf-1f1f135`.
-- The artifact's `app.asar` carries `1f1f135` and the new `audioSourceEndSec` emit. Its packaged
-  tree carries `resources/mediapipe/selfie_segmentation/selfie_segmentation_landscape.onnx` and
-  `resources/electron/native/bin/win32-x64/onnxruntime.dll` — now asserted by a Build step, because
-  a miss hides the camera-background control silently.
+- Latest CI: `42667288769` — success. Latest build: `42667288702` — success; artifact downloaded
+  and verified as `cf-2ea450d`.
+- The artifact's `app.asar` carries `2ea450d`, `backgroundTarget` and `webcamBackgroundTarget`;
+  the packaged tree carries the mediapipe model and `onnxruntime.dll`.
+- The Build was blocked for a while by a sustained GitHub Releases `504`; it cleared, and the
+  final run above is green. The earlier UI-only commit `49405b0` compiled and its renderer built
+  on a retry, but its installer never completed; `2ea450d` contains it.
 - Packaged CLI checks were made against `cf-21f0fc7`: `--help` lists `openscreen batch`; an empty
   manifest exits 2; a missing-project job exits 1 and the child `CliExportRunner` actually starts.
-  Not re-run against `cf-1f1f135`.
+  Not re-run against `cf-2ea450d`.
 
 ### Shipped and closed
 
@@ -54,18 +48,17 @@ smoke test passed (export, trim/save/reopen, clip edits, transitions, transcript
 | Editor features | Scene detect/split, `scriptToVideo`, transitions including programme-end fade, export blend overlap, colour grade, speed ramps, 1280×720 composer. |
 | Blend audio crossfade | A boundary now dissolves over the transition's `d`, not the legacy 240 samples: the outgoing clip's untrimmed tail is decoded for audio and the plan overlaps + equal-power fades it (`4a29754`). Unit-tested; **not listened to**. |
 | F4 packaged runtime | The Build asserts the mediapipe model and `onnxruntime.dll` are in the installer tree (`1f1f135`); a miss used to hide the control silently. |
-| Topbar / Studio UI | Export no longer slides under the Windows caption buttons: the five menu triggers drop their words below 1500px and Export is right-aligned inside the titlebar-area reserve (`49405b0`). Thumbnail Studio enables with an open project (not a clip) and has a project-menu entry. Verified locally in the built renderer at 1440/1280/1100/1000/900/800 and by 87 unit tests. |
+| Topbar / Studio UI | Export no longer slides under the Windows caption buttons: the five menu triggers drop their words below 1500px and Export is right-aligned inside the titlebar-area reserve (`49405b0`). Thumbnail Studio enables with an open project (not a clip) and has a project-menu entry; its **Generate prompts** action now sits in the footer beside Save (styled), so Save is never a disabled button with no visible way to produce its result. |
+| F4 primary video (Windows) | `SceneWebcamEffect.target` (`"webcam"` default, `"screen"` for the primary video), editor setting + UI, and the flat screen path draws the same mask/effect (`2ea450d`). macOS/Linux ignore `"screen"`; tilted screen and trail are not covered. **Picture not watched.** |
 
 ## 3. Remaining roadmap
 
-1. **F4 — background removal for the primary video.** Step 2 (the model is found in the packaged
-   build) is now asserted by the Build. Step 1 remains: the effect is a single scene-global
-   `webcamEffect` (`scene.rs::SceneWebcamEffect`) read only by the webcam draw; `SceneClip` has no
-   effect field and there is no `target`. On Windows the **flat** screen draw (the mode-0 `else`
-   branch in `compositor_windows.rs`) can take the same `t3` + `fx.z` treatment; the **tilted**
-   screen (mode 8) and the trail are different shader modes and need new shader work. macOS/Linux
-   must be taught to ignore a `target: "screen"` until their passes are mirrored. `pump_segmentation`
-   would need both SRV pairs and the scene's target to choose what to capture.
+1. **F4 — background removal for the primary video.** The Windows **flat screen** path is done
+   (`2ea450d`): `target: "screen"` on the scene, `webcamBackgroundTarget` in the editor,
+   `pump_segmentation` choosing the layer, and the flat screen draw applying `t3`/`fx.z`. Still
+   open: the **macOS/Linux** mirror (today they ignore `"screen"` and do not run the model for it);
+   the **tilted screen (mode 8)** and the **trail**, which are different shader modes; and a human
+   viewing — the picture was never watched.
 2. **Phase-B blend leftovers.** The **audio** half is done (`4a29754`). The outgoing frame is still
    a freeze during the overlap, and the live preview/ruler deliberately does not shorten. The freeze
    needs a walk restructure — both decoders advancing per output frame, or a pre-rendered outgoing
