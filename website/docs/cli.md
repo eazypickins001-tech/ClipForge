@@ -200,6 +200,38 @@ openscreen info demo.openscreen --json
 
 It exits with 1 when the referenced screen video is missing.
 
+### `openscreen batch`
+
+Renders a list of projects without opening the editor. Each job runs through the same headless
+export path as `openscreen export`, one at a time, with its own renderer session.
+
+```bash
+openscreen batch jobs.json --json
+```
+
+```json
+{
+  "jobs": [
+    { "project": "demo.openscreen", "out": "out/demo.mp4", "quality": "source", "fps": 60 },
+    { "project": "vertical.openscreen", "out": "out/vertical.mp4", "format": "mp4" }
+  ],
+  "failFast": false
+}
+```
+
+- `project` is required. `out`, `format`, `quality`, `fps`, `gifFps`, `gifSize`, `gifLoop`,
+  `autoZoom`, `audio`, `audioMode` and `audioOffset` match the corresponding [`export`](#openscreen-export)
+  options.
+- `project`, `out` and `audio` are resolved relative to the manifest file, not the current
+  directory.
+- Jobs run in order. A failed job does not stop the rest unless the manifest sets `"failFast": true`
+  or you pass `--fail-fast`.
+- Exit codes: `0` all attempted jobs succeeded, `1` at least one failed, `2` the manifest or an
+  argument is invalid.
+- `--json` writes one object per line: `batch-start`, `job-start`, `job-done` (with `success`,
+  `code` and `error` when present) and a final `done` with `succeeded`, `failed`, `skipped` and the
+  per-job `results`.
+
 ## Machine-readable output
 
 With `--json`, stdout carries one JSON object per line. stderr carries diagnostics only, including the app's own log lines.

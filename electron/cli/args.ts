@@ -37,11 +37,20 @@ export interface CliMcpCommand {
 	kind: "mcp";
 }
 
+/** Render a JSON manifest of projects through the existing export CLI, one at a time. */
+export interface CliBatchCommand {
+	kind: "batch";
+	manifestPath: string;
+	/** Stop after the first failed job instead of attempting the rest. */
+	failFast: boolean;
+}
+
 export type CliCommand = (
 	| CliRequest
 	| CliInfoCommand
 	| CliPackCommand
 	| CliMcpCommand
+	| CliBatchCommand
 	| CliHelpCommand
 	| CliErrorCommand
 ) & {
@@ -76,6 +85,7 @@ const SUBCOMMANDS = new Set([
 	"pack",
 	"captions",
 	"info",
+	"batch",
 	"mcp",
 	"help",
 	"--help",
@@ -92,6 +102,8 @@ Usage:
   openscreen captions <project.openscreen>           Transcribe (on-device Whisper) and turn captions on
                      [--min-words <1-12>] [--max-words <1-12>]
   openscreen info <project.openscreen> [--json]      Inspect a project file
+  openscreen batch <manifest.json> [--json] [--fail-fast]
+                                                     Render every job in a JSON manifest, one at a time
   openscreen mcp                                     Serve the agent tools over MCP on stdio
   openscreen help                                    Show this help
 
@@ -194,10 +206,32 @@ export function parseCliArgs(
 			if (args.length > 1) throw new Error(`Unexpected argument for mcp: ${args[1]}`);
 			return { kind: "mcp" };
 		}
+		if (sub === "batch") return parseBatch(args.slice(1), cwd);
 		return parseInfo(args.slice(1), cwd);
 	} catch (error) {
 		return { kind: "error", message: error instanceof Error ? error.message : String(error) };
 	}
+}
+
+function parseBatch(args: string[], cwd: string): CliCommand {
+	let manifestPath: string | null = null;
+	let json = false;
+	let failFast = false;
+	for (const arg of args) {
+		if (arg === "--json") {
+			json = true;
+			continue;
+		}
+		if (arg === "--fail-fast") {
+			failFast = true;
+			continue;
+		}
+		if (arg.startsWith("-")) throw new Error(`Unknown batch option: ${arg}`);
+		if (manifestPath) throw new Error(`Unexpected argument for batch: ${arg}`);
+		manifestPath = resolvePath(arg, cwd);
+	}
+	if (!manifestPath) throw new Error("batch requires a manifest path");
+	return { kind: "batch", manifestPath, json, failFast };
 }
 
 function parseExport(args: string[], cwd: string): CliCommand {

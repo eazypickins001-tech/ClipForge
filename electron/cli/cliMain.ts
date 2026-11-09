@@ -15,6 +15,7 @@ import { serveMcpOverStdio } from "../mcp/stdio-server";
 import { registerSttIpc, shutdownStt } from "../stt";
 import { createRunnerWindow } from "../windows";
 import { CLI_USAGE, type CliCommand } from "./args";
+import { runBatchCommand } from "./batchCommand";
 import { openGuiFromCli } from "./openGui";
 import { runInfoCommand, runPackCommand } from "./projectCommands";
 import { createRunnerHost } from "./runnerHost";
@@ -304,6 +305,19 @@ export function runCli(command: CliCommand): void {
 		.whenReady()
 		.then(async () => {
 			milestone("app ready");
+			if (command.kind === "batch") {
+				const code = await runBatchCommand(command.manifestPath, {
+					json: command.json === true,
+					failFast: command.failFast,
+					execPath: process.execPath,
+					appPath: app.getAppPath(),
+					isPackaged: app.isPackaged,
+					write: writeStdout,
+					writeError: (text) => safeWrite(process.stderr, text),
+				});
+				app.exit(code);
+				return;
+			}
 			if (command.kind === "info") {
 				const code = await runInfoCommand(command.projectPath, command.json === true, writeStdout);
 				app.exit(code);

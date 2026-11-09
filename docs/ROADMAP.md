@@ -26,7 +26,7 @@ Each phase ends with: run tests → fix regressions → record commands/results 
 green, and the artifact is verified (`cf-aea9aa7`). Phases 0, 1 (in substance) and 5 are done; 2 and 4 are partial;
 3 and 6 are not started. Core hardening H1–H4 is closed (H1 reported, H2 unit-verified,
 H3 documented, H4 covered by the packaged smoke); F3 is closed. The remaining work is the
-Phase-B blend leftovers and the decision-gated/large items (TTS, F4, F6–F9). **Business model: not
+Phase-B blend leftovers and the decision-gated/large items (TTS, F4, F6–F8). **Business model: not
 freemium — see the section below.**
 
 - **Phase 0 — Engineering audit.** **Done.** Environment inventory, candidate clones + pinned commits, licence/dependency audit, real build/test attempts, foundation decision. → `docs/ENGINEERING_AUDIT.md`
@@ -174,11 +174,14 @@ position/scale/rotation/opacity/volume/effect parameters and editable easing gra
 schema surface, new UI, new export path. Do not start before F5 is closed (it is) and F3/F4 are
 decided.
 
-### F9 — Headless / batch render and agent surface · partial
+### F9 — Headless / batch render and agent surface · done (2026-11-09)
 
 ClipForge has an MCP server (`electron/mcp/`) with project, media, transcribe, `renderFrames` and
-export tools, and a CLI export runner. The missing piece is a **headless batch** entry point (render
-a list of projects/queues without the editor) and a stable public API contract for it.
+export tools, and a CLI export runner. `openscreen batch <manifest.json>` now renders a list of
+projects headlessly, one job at a time, through the same export path: paths resolve relative to
+the manifest, `--fail-fast` stops on the first failure, `--json` emits `batch-start` /
+`job-start` / `job-done` / `done`, and the exit code distinguishes success (0), failed jobs (1)
+and an invalid manifest or argument (2). The contract is documented in `website/docs/cli.md`.
 
 ## Reference projects (concept reuse only)
 

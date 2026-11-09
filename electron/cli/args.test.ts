@@ -302,4 +302,21 @@ describe("parseCliArgs", () => {
 		expect(parse(["help"])).toMatchObject({ kind: "help" });
 		expect(parse(["--help"])).toMatchObject({ kind: "help" });
 	});
+
+	it("parses batch and its flags", () => {
+		expect(parse(["batch", "jobs.json"])).toMatchObject({
+			kind: "batch",
+			manifestPath: inCwd("jobs.json"),
+			failFast: false,
+		});
+		expect(parse(["batch", "jobs.json", "--json", "--fail-fast"])).toMatchObject({
+			kind: "batch",
+			manifestPath: inCwd("jobs.json"),
+			json: true,
+			failFast: true,
+		});
+		expect(parse(["batch"])).toMatchObject({ kind: "error" });
+		expect(parse(["batch", "a.json", "b.json"])).toMatchObject({ kind: "error" });
+		expect(parse(["batch", "--bogus", "a.json"])).toMatchObject({ kind: "error" });
+	});
 });
