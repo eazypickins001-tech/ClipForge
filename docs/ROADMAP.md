@@ -269,4 +269,4 @@ hidden editing algorithms.
 
 ## Working method
 
-Small testable modules. Automated tests (`vitest`) + Playwright E2E + a repeatable Windows smoke test (record/import → edit → save → reopen → export). Synthetic media only. **Never claim a build/test/export/integration succeeded unless verified.** When context approaches ~90%, flush state to `docs/SESSION_HANDOVER.md` (see `ENGINEERING_AUDIT.md` §13 protocol).
+Small testable modules. Automated tests (`vitest`) + Playwright E2E + a repeatable Windows smoke test (record/import → edit → save → reopen → export). Synthetic media only. **Never claim a build/test/export/integration succeeded unless verified.** When context approaches ~90%, flush state to `docs/HANDOVER.md` (see `ENGINEERING_AUDIT.md` §13 protocol).
