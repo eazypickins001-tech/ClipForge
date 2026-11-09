@@ -17,7 +17,8 @@ export interface BatchChild {
 }
 
 export type SpawnBatch = (
-	argv: string[],
+	command: string,
+	args: string[],
 	options: { stdio: "inherit" | ["ignore", "pipe", "inherit"] },
 ) => BatchChild;
 
@@ -47,7 +48,8 @@ function oneLine(value: unknown): string {
 }
 
 function runOne(
-	argv: string[],
+	command: string,
+	args: string[],
 	json: boolean,
 	spawnImpl: SpawnBatch,
 ): Promise<{ code: number | null; error?: string }> {
@@ -60,7 +62,7 @@ function runOne(
 		};
 		let child: BatchChild;
 		try {
-			child = spawnImpl(argv, {
+			child = spawnImpl(command, args, {
 				stdio: json ? ["ignore", "pipe", "inherit"] : "inherit",
 			});
 		} catch (error) {
@@ -113,6 +115,7 @@ export async function runBatchCommand(
 		}
 
 		const { code, error } = await runOne(
+			options.execPath,
 			[...prefix, ...batchExportArgv(job)],
 			options.json,
 			spawnImpl,

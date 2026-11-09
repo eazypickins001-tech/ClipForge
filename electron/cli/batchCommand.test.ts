@@ -12,14 +12,14 @@ function manifest(jobs: unknown[], failFast = false) {
 }
 
 function fakeSpawn(codes: number[]) {
-	const calls: Array<{ argv: string[]; stdio: unknown }> = [];
-	const spawnImpl: SpawnBatch = ((argv: string[], options: { stdio: unknown }) => {
+	const calls: Array<{ command: string; argv: string[]; stdio: unknown }> = [];
+	const spawnImpl: SpawnBatch = ((command: string, argv: string[], options: { stdio: unknown }) => {
 		const child = new EventEmitter() as EventEmitter & {
 			stdout: { resume: () => void };
 		};
 		child.stdout = { resume: vi.fn() };
 		const code = codes[calls.length] ?? 0;
-		calls.push({ argv, stdio: options.stdio });
+		calls.push({ command, argv, stdio: options.stdio });
 		queueMicrotask(() => child.emit("exit", code, null));
 		return child;
 	}) as unknown as SpawnBatch;
@@ -65,6 +65,7 @@ describe("runBatchCommand", () => {
 			["export", path.resolve(DIR, "a.openscreen"), "--fps", "60"],
 			["export", path.resolve(DIR, "b.openscreen"), "--fps", "60"],
 		]);
+		expect(result.calls[0]?.command).toBe("C:\\ClipForge.exe");
 		expect(result.calls[0]?.stdio).toBe("inherit");
 	});
 
