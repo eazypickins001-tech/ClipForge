@@ -22,12 +22,12 @@ Local-first desktop workspace: recording → editing → AI-assisted content →
 
 Each phase ends with: run tests → fix regressions → record commands/results → update docs → summarise what works / remains / is blocked.
 
-**Status at 2026-11-09:** code `e2093f0`, design `9bb4235`; CI and the Windows installer build are
-green, and the artifact is verified (`cf-e2093f0`). Phases 0, 1 (in substance) and 5 are done; 2 and 4 are partial;
+**Status at 2026-11-09:** code `aea9aa7`, design `9bb4235`; CI and the Windows installer build are
+green, and the artifact is verified (`cf-aea9aa7`). Phases 0, 1 (in substance) and 5 are done; 2 and 4 are partial;
 3 and 6 are not started. Core hardening H1–H4 is closed (H1 reported, H2 unit-verified,
-H3 documented, H4 covered by the packaged smoke); the remaining work is the Phase-B blend
-leftovers and the decision-gated/large items (TTS, F6–F9). **Business model: not freemium — see the section
-below.**
+H3 documented, H4 covered by the packaged smoke); F3 is closed. The remaining work is the
+Phase-B blend leftovers and the decision-gated/large items (TTS, F4, F6–F9). **Business model: not
+freemium — see the section below.**
 
 - **Phase 0 — Engineering audit.** **Done.** Environment inventory, candidate clones + pinned commits, licence/dependency audit, real build/test attempts, foundation decision. → `docs/ENGINEERING_AUDIT.md`
 - **Phase 1 — Usable desktop editor.** Rebrand fork; create/save/reopen/duplicate project; import + preview; basic timeline edit (add/trim/split/move/delete/order); save/reopen; export playable MP4; clear missing-media + error handling. **Done in substance:** record/import, split, trim/save/reopen, MP4/GIF export and preview are implemented and exercised by the packaged smoke step. Missing-media handling is unit-verified (H2), split has a dedicated e2e (H4), and GIF cancel is explicitly reported as unreliable (H1).
