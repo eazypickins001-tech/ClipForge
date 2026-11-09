@@ -1,8 +1,8 @@
 # ClipForge — Handover
 
-**Updated:** 2026-11-09
-**Current commit:** `2c6b0c5` (code `21f0fc7`)
-**Verified artifact:** `C:\Users\Apple\AppData\Local\cf-21f0fc7\release\0.1.0\win-unpacked\ClipForge.exe`
+**Updated:** 2026-11-09 (afternoon)
+**Current commit:** `1f1f135` (code; this note is the docs commit on top)
+**Verified artifact:** `C:\Users\Apple\AppData\Local\cf-1f1f135\release\0.1.0\win-unpacked\ClipForge.exe`
 **Repo:** `C:\Users\Apple\Downloads\Telegram Desktop\UoK\ClipForge` · `github.com/eazypickins001-tech/ClipForge` · branch `main`
 
 This is the only handover note. The earlier dated notes were folded into it and removed; they remain
@@ -21,15 +21,18 @@ core editing works offline; AI is BYOK; the app is pre-1.x and not production-gr
 
 ## 2. Current state
 
-**Green and verified:** CI and the Windows installer build for `21f0fc7` are green, and the
-packaged smoke test passed (export, trim/save/reopen, clip edits, transitions, transcription).
+**Green and verified:** CI and the Windows installer build for `1f1f135` are green, and the packaged
+smoke test passed (export, trim/save/reopen, clip edits, transitions, transcription).
 
-- Latest CI: `42554860456` (docs) and `42553256598` (code) — success.
-- Latest build: `42553256552` — success in 12m33s, artifact verified.
-- The artifact's `app.asar` contains the batch feature, the OpenRouter bearer header and the
-  `anthropic/claude-sonnet-4.5` default.
-- Packaged CLI checks against `cf-21f0fc7`: `--help` lists `openscreen batch`; an empty manifest
-  exits 2; a missing-project job exits 1 and the child `CliExportRunner` actually starts.
+- Latest CI: `42561207218` — success. Latest build: `42561207113` — success; artifact downloaded
+  and verified as `cf-1f1f135`.
+- The artifact's `app.asar` carries `1f1f135` and the new `audioSourceEndSec` emit. Its packaged
+  tree carries `resources/mediapipe/selfie_segmentation/selfie_segmentation_landscape.onnx` and
+  `resources/electron/native/bin/win32-x64/onnxruntime.dll` — now asserted by a Build step, because
+  a miss hides the camera-background control silently.
+- Packaged CLI checks were made against `cf-21f0fc7`: `--help` lists `openscreen batch`; an empty
+  manifest exits 2; a missing-project job exits 1 and the child `CliExportRunner` actually starts.
+  Not re-run against `cf-1f1f135`.
 
 ### Shipped and closed
 
@@ -42,15 +45,23 @@ packaged smoke test passed (export, trim/save/reopen, clip edits, transitions, t
 | F9 headless batch | `openscreen batch <manifest.json>` with `--json`, `--fail-fast`, relative paths, exit 0/1/2. Documented in `website/docs/cli.md`. |
 | OpenRouter auth | Explicit `Authorization: Bearer` header; missing keys fail before the request; Provider settings reports failed key writes. Default text model is `anthropic/claude-sonnet-4.5`. |
 | Editor features | Scene detect/split, `scriptToVideo`, transitions including programme-end fade, export blend overlap, colour grade, speed ramps, 1280×720 composer. |
+| Blend audio crossfade | A boundary now dissolves over the transition's `d`, not the legacy 240 samples: the outgoing clip's untrimmed tail is decoded for audio and the plan overlaps + equal-power fades it (`4a29754`). Unit-tested; **not listened to**. |
+| F4 packaged runtime | The Build asserts the mediapipe model and `onnxruntime.dll` are in the installer tree (`1f1f135`); a miss used to hide the control silently. |
 
 ## 3. Remaining roadmap
 
-1. **F4 — background removal for the primary video.** Today the mediapipe mask is the camera
-   layer only. This is native compositor work (Rust across DX11/Metal/wgpu), and the packaged
-   runtime check still has to prove the model is found.
-2. **Phase-B blend leftovers.** The outgoing frame is still a freeze during the overlap; the audio
-   boundary is a 240-sample crossfade, not the transition duration `d`; the live preview/ruler
-   deliberately does not shorten.
+1. **F4 — background removal for the primary video.** Step 2 (the model is found in the packaged
+   build) is now asserted by the Build. Step 1 remains: the effect is a single scene-global
+   `webcamEffect` (`scene.rs::SceneWebcamEffect`) read only by the webcam draw; `SceneClip` has no
+   effect field and there is no `target`. On Windows the **flat** screen draw (the mode-0 `else`
+   branch in `compositor_windows.rs`) can take the same `t3` + `fx.z` treatment; the **tilted**
+   screen (mode 8) and the trail are different shader modes and need new shader work. macOS/Linux
+   must be taught to ignore a `target: "screen"` until their passes are mirrored. `pump_segmentation`
+   would need both SRV pairs and the scene's target to choose what to capture.
+2. **Phase-B blend leftovers.** The **audio** half is done (`4a29754`). The outgoing frame is still
+   a freeze during the overlap, and the live preview/ruler deliberately does not shorten. The freeze
+   needs a walk restructure — both decoders advancing per output frame, or a pre-rendered outgoing
+   tail — not a shader tweak.
 3. **F6–F8.** Stem separation is a spike (model + licence + real-time factor); F7 subject tracking
    needs F8's general keyframes; F8 is large (schema, UI, export path).
 4. **TTS** remains a product decision (engine/hosted), not a code-completable step.
@@ -63,11 +74,14 @@ Set-Location "C:\Users\Apple\Downloads\Telegram Desktop\UoK\ClipForge"
 gh run list --limit 5
 npx tsc --noEmit
 npx vitest --run <changed paths>
-& "C:\Users\Apple\AppData\Local\cf-21f0fc7\release\0.1.0\win-unpacked\ClipForge.exe"
+& "C:\Users\Apple\AppData\Local\cf-1f1f135\release\0.1.0\win-unpacked\ClipForge.exe"
 ```
 
 - Push with `git push origin main`; a code push starts CI and the Windows installer build. A
   docs-only push starts CI only.
+- The Build's GPU-less Rust step now runs `cargo test -p openscreen-compositor --lib regions::`
+  **and** `--lib audio::hold_tests` (the pure concat/crossfade math). Everything else in
+  `crates/compositor/tests/` still needs a real device and runs nowhere.
 - Download an artifact with
   `gh run download <run-id> -n clipforge-windows-x64 -D C:\Users\Apple\AppData\Local\cf-<sha>`.
 - Verify markers with `rg -a --fixed-strings <marker> app.asar`.
