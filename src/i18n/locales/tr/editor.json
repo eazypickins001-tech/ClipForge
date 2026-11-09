@@ -473,6 +473,7 @@
 		"title": "Yapay zekâ ayarları",
 		"subtitle": "Bir sağlayıcı seçin. Kimlik bilgileri işletim sisteminin anahtar zincirinde (safeStorage) saklanır.",
 		"loadFailed": "Yapay zekâ ayarları yüklenemedi",
+		"saveFailed": "YZ sağlayıcı ayarları kaydedilemedi.",
 		"saved": "{{provider}} kaydedildi",
 		"connected": "{{provider}} bağlandı",
 		"disconnected": "{{provider}} bağlantısı kesildi",

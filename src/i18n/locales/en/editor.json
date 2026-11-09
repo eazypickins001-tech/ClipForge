@@ -473,6 +473,7 @@
 		"title": "AI settings",
 		"subtitle": "Choose a provider. Your keys are stored securely on this computer.",
 		"loadFailed": "Could not load AI settings",
+		"saveFailed": "Could not save the AI provider settings.",
 		"saved": "{{provider}} saved",
 		"connected": "{{provider}} connected",
 		"disconnected": "{{provider}} disconnected",

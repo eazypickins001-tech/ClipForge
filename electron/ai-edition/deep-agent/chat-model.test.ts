@@ -40,6 +40,29 @@ describe("createOpenScreenChatModel — provider aliases", () => {
 	});
 });
 
+describe("createOpenScreenChatModel — auth", () => {
+	it("passes the OpenRouter key both as apiKey and an explicit bearer header", async () => {
+		const model = await createOpenScreenChatModel({
+			provider: "openrouter",
+			model: "anthropic/claude-sonnet-4.5",
+			apiKey: "  sk-or-v1-test  ",
+		});
+		expect((model as { apiKey?: string }).apiKey).toBe("sk-or-v1-test");
+		expect(clientConfig(model).defaultHeaders).toEqual({
+			Authorization: "Bearer sk-or-v1-test",
+		});
+	});
+
+	it("fails before a request when an API-key provider has no key", async () => {
+		await expect(
+			createOpenScreenChatModel({
+				provider: "openrouter",
+				model: "anthropic/claude-sonnet-4.5",
+			}),
+		).rejects.toThrow(/No API key for openrouter/);
+	});
+});
+
 describe("createOpenScreenChatModel — Anthropic-wire output budget", () => {
 	// Regression for #181: ChatAnthropic's default maxTokens table only knows
 	// Claude slugs (16k); anything else — MiniMax-M3 included — falls back to

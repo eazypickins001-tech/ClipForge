@@ -473,6 +473,7 @@
 		"title": "Cài đặt AI",
 		"subtitle": "Chọn một nhà cung cấp. Thông tin đăng nhập được lưu trong kho khóa của hệ điều hành (safeStorage).",
 		"loadFailed": "Không thể tải cài đặt AI",
+		"saveFailed": "Không thể lưu cài đặt nhà cung cấp AI.",
 		"saved": "Đã lưu {{provider}}",
 		"connected": "Đã kết nối {{provider}}",
 		"disconnected": "Đã ngắt kết nối {{provider}}",

@@ -473,6 +473,7 @@
 		"title": "Paramètres IA",
 		"subtitle": "Choisissez un fournisseur. Les identifiants sont stockés dans le trousseau du système (safeStorage).",
 		"loadFailed": "Impossible de charger les paramètres IA",
+		"saveFailed": "Impossible d'enregistrer les réglages du fournisseur d'IA.",
 		"saved": "{{provider}} enregistré",
 		"connected": "{{provider}} connecté",
 		"disconnected": "{{provider}} déconnecté",

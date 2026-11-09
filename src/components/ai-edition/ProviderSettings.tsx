@@ -134,10 +134,16 @@ function ProviderSettings({ open, onClose }: ProviderSettingsProps) {
 		setError(null);
 		try {
 			if (apiKey.trim()) {
-				await nativeBridgeClient.aiEdition.llmSetApiKey(active.id, apiKey.trim());
+				const saved = await nativeBridgeClient.aiEdition.llmSetApiKey(active.id, apiKey.trim());
+				if (!saved.success) {
+					throw new Error(saved.error ?? te("providerSettings.saveFailed"));
+				}
 				setApiKey("");
 			}
-			await nativeBridgeClient.aiEdition.llmSetConfig(config);
+			const configured = await nativeBridgeClient.aiEdition.llmSetConfig(config);
+			if (!configured.success) {
+				throw new Error(configured.error ?? te("providerSettings.saveFailed"));
+			}
 			await refreshSnapshot();
 			toast.success(te("providerSettings.saved", { provider: active.label }));
 			setMode("list");

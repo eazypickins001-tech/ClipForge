@@ -473,6 +473,7 @@
 		"title": "KI-Einstellungen",
 		"subtitle": "Wähle einen Anbieter. Zugangsdaten werden im Schlüsselbund des Betriebssystems gespeichert (safeStorage).",
 		"loadFailed": "KI-Einstellungen konnten nicht geladen werden",
+		"saveFailed": "Die KI-Anbieter-Einstellungen konnten nicht gespeichert werden.",
 		"saved": "{{provider}} gespeichert",
 		"connected": "{{provider}} verbunden",
 		"disconnected": "{{provider}} getrennt",

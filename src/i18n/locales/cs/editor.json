@@ -473,6 +473,7 @@
 		"title": "Nastavení AI",
 		"subtitle": "Vyberte poskytovatele. Přihlašovací údaje jsou uloženy v klíčence OS (safeStorage).",
 		"loadFailed": "Nepodařilo se načíst nastavení AI",
+		"saveFailed": "Nastavení poskytovatele AI se nepodařilo uložit.",
 		"saved": "{{provider}} uložen",
 		"connected": "{{provider}} připojen",
 		"disconnected": "{{provider}} odpojen",

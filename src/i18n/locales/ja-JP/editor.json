@@ -473,6 +473,7 @@
 		"title": "AI 設定",
 		"subtitle": "プロバイダーを選択してください。認証情報は OS のキーチェーン（safeStorage）に保存されます。",
 		"loadFailed": "AI 設定を読み込めませんでした",
+		"saveFailed": "AI プロバイダーの設定を保存できませんでした。",
 		"saved": "{{provider}} を保存しました",
 		"connected": "{{provider}} に接続しました",
 		"disconnected": "{{provider}} の接続を解除しました",

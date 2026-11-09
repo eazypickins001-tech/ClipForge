@@ -473,6 +473,7 @@
 		"title": "AI 设置",
 		"subtitle": "选择一个提供商。凭据存储在系统钥匙串（safeStorage）中。",
 		"loadFailed": "无法加载 AI 设置",
+		"saveFailed": "无法保存 AI 提供商设置。",
 		"saved": "已保存 {{provider}}",
 		"connected": "已连接 {{provider}}",
 		"disconnected": "已断开 {{provider}}",

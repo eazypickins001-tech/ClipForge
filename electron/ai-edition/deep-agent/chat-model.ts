@@ -320,7 +320,8 @@ function isKnownClaudeSlug(model: string): boolean {
 }
 
 export function resolveOpenAIChatApiKey(provider: string, apiKey?: string): string | undefined {
-	if (apiKey) return apiKey;
+	const trimmed = apiKey?.trim();
+	if (trimmed) return trimmed;
 	return provider === "openai-compatible" ? OPENAI_COMPATIBLE_NO_AUTH_API_KEY : undefined;
 }
 
@@ -377,6 +378,14 @@ export async function createOpenScreenChatModel(
 		provider: normalizeProviderId(input.provider) ?? input.provider,
 	};
 
+	// A missing key used to reach the provider as a request with no Authorization
+	// header, which OpenRouter reports as a bare 401 ("No auth credentials
+	// found"). Fail at the boundary instead, so the chat/caption caller can say
+	// what to fix. `openai-compatible` is the one provider that may be keyless.
+	if (config.provider !== "openai-compatible" && !config.apiKey?.trim()) {
+		throw new Error(`No API key for ${config.provider}. Add one in Settings → AI.`);
+	}
+
 	const reasoningOptions = buildLangChainReasoningOptions(
 		config.provider,
 		config.model,
@@ -419,6 +428,11 @@ export async function createOpenScreenChatModel(
 				? config.baseUrl || "https://generativelanguage.googleapis.com/v1beta/openai"
 				: config.baseUrl;
 	const apiKey = resolveOpenAIChatApiKey(config.provider, config.apiKey);
+	// OpenRouter's error for a request without this header is a generic 401, so
+	// send the bearer explicitly as well as through `apiKey`. `defaultHeaders`
+	// survives any SDK default-header rewriting.
+	const defaultHeaders =
+		config.provider === "openrouter" && apiKey ? { Authorization: `Bearer ${apiKey}` } : undefined;
 	return new ChatOpenAI({
 		...(apiKey ? { apiKey } : {}),
 		model: config.model,
@@ -432,7 +446,14 @@ export async function createOpenScreenChatModel(
 		...(shouldDisableModelStreamingForToolCalling(config.provider, config.model)
 			? { disableStreaming: true }
 			: {}),
-		...(baseURL ? { configuration: { baseURL } } : {}),
+		...(baseURL || defaultHeaders
+			? {
+					configuration: {
+						...(baseURL ? { baseURL } : {}),
+						...(defaultHeaders ? { defaultHeaders } : {}),
+					},
+				}
+			: {}),
 	});
 }
 

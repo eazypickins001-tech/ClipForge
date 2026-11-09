@@ -473,6 +473,7 @@
 		"title": "AI 設定",
 		"subtitle": "選擇一個供應商。憑證會儲存在系統金鑰鏈（safeStorage）中。",
 		"loadFailed": "無法載入 AI 設定",
+		"saveFailed": "無法儲存 AI 提供者設定。",
 		"saved": "已儲存 {{provider}}",
 		"connected": "已連線 {{provider}}",
 		"disconnected": "已中斷 {{provider}}",

@@ -473,6 +473,7 @@
 		"title": "Configurações de IA",
 		"subtitle": "Escolha um provedor. As credenciais são armazenadas no chaveiro do sistema (safeStorage).",
 		"loadFailed": "Não foi possível carregar as configurações de IA",
+		"saveFailed": "Não foi possível salvar as configurações do provedor de IA.",
 		"saved": "{{provider}} salvo",
 		"connected": "{{provider}} conectado",
 		"disconnected": "{{provider}} desconectado",

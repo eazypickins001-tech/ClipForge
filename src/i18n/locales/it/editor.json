@@ -473,6 +473,7 @@
 		"title": "Impostazioni IA",
 		"subtitle": "Scegli un provider. Le credenziali sono salvate nel portachiavi del sistema (safeStorage).",
 		"loadFailed": "Impossibile caricare le impostazioni IA",
+		"saveFailed": "Impossibile salvare le impostazioni del provider IA.",
 		"saved": "{{provider}} salvato",
 		"connected": "{{provider}} connesso",
 		"disconnected": "{{provider}} disconnesso",
