@@ -1,8 +1,9 @@
 # ClipForge — Handover
 
-**Updated:** 2026-11-09 (afternoon)
-**Current commit:** `1f1f135` (code; this note is the docs commit on top)
+**Updated:** 2026-11-09 (evening)
+**Current commit:** `49405b0` (code; this note is the docs commit on top)
 **Verified artifact:** `C:\Users\Apple\AppData\Local\cf-1f1f135\release\0.1.0\win-unpacked\ClipForge.exe`
+(**does not** include `49405b0` — that Build is blocked, see §2)
 **Repo:** `C:\Users\Apple\Downloads\Telegram Desktop\UoK\ClipForge` · `github.com/eazypickins001-tech/ClipForge` · branch `main`
 
 This is the only handover note. The earlier dated notes were folded into it and removed; they remain
@@ -23,6 +24,12 @@ core editing works offline; AI is BYOK; the app is pre-1.x and not production-gr
 
 **Green and verified:** CI and the Windows installer build for `1f1f135` are green, and the packaged
 smoke test passed (export, trim/save/reopen, clip edits, transitions, transcription).
+
+- `49405b0` (the UI fixes below) is **CI-green**, but its Windows Build is **blocked by an upstream
+  GitHub Releases outage**: every attempt dies on a `504 Gateway Time-out` inside a download —
+  `fetch:ffmpeg`, Electron's `install.js`, then electron-builder's NSIS fetch. The job got as far as
+  "Package NSIS installer" on the last retry, so the code itself compiled and the renderer built.
+  Rerun with `gh run rerun 42567489963 --failed` once the outage clears.
 
 - Latest CI: `42561207218` — success. Latest build: `42561207113` — success; artifact downloaded
   and verified as `cf-1f1f135`.
@@ -47,6 +54,7 @@ smoke test passed (export, trim/save/reopen, clip edits, transitions, transcript
 | Editor features | Scene detect/split, `scriptToVideo`, transitions including programme-end fade, export blend overlap, colour grade, speed ramps, 1280×720 composer. |
 | Blend audio crossfade | A boundary now dissolves over the transition's `d`, not the legacy 240 samples: the outgoing clip's untrimmed tail is decoded for audio and the plan overlaps + equal-power fades it (`4a29754`). Unit-tested; **not listened to**. |
 | F4 packaged runtime | The Build asserts the mediapipe model and `onnxruntime.dll` are in the installer tree (`1f1f135`); a miss used to hide the control silently. |
+| Topbar / Studio UI | Export no longer slides under the Windows caption buttons: the five menu triggers drop their words below 1500px and Export is right-aligned inside the titlebar-area reserve (`49405b0`). Thumbnail Studio enables with an open project (not a clip) and has a project-menu entry. Verified locally in the built renderer at 1440/1280/1100/1000/900/800 and by 87 unit tests. |
 
 ## 3. Remaining roadmap
 
