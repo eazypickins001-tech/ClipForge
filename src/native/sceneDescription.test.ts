@@ -343,6 +343,18 @@ describe("buildSceneDescription.webcamEffect", () => {
 		});
 	});
 
+	it("targets the camera by default, so the payload is unchanged", () => {
+		const doc = makeDoc({ legacyEditor: { webcamBackgroundMode: "transparent" } });
+		expect(buildSceneDescription(doc).webcamEffect?.target).toBeUndefined();
+	});
+
+	it("carries the primary-video target when the mask is aimed at the screen", () => {
+		const doc = makeDoc({
+			legacyEditor: { webcamBackgroundMode: "transparent", webcamBackgroundTarget: "screen" },
+		});
+		expect(buildSceneDescription(doc).webcamEffect?.target).toBe("screen");
+	});
+
 	// An unknown mode is already rejected by `getEditorSettings`, so it can never reach the
 	// scene — this pins that the two guards agree rather than each assuming the other.
 	it("falls back to omitting the effect when the stored mode is not a known one", () => {

@@ -212,6 +212,8 @@ export interface ProjectAppearanceDefaults {
 	webcamSizePreset: number;
 	webcamAnchor: WebcamAnchor;
 	webcamBackgroundMode: "none" | "transparent" | "blur" | "custom";
+	/** Which layer the background effect targets: the camera bubble, or the PRIMARY video. */
+	webcamBackgroundTarget: "webcam" | "screen";
 	webcamWallpaper: string;
 	webcamBlurIntensity: number;
 	cursor: {
@@ -258,6 +260,7 @@ export const DEFAULT_PROJECT_APPEARANCE: ProjectAppearanceDefaults = {
 	webcamSizePreset: 40,
 	webcamAnchor: "bottom-right",
 	webcamBackgroundMode: "none",
+	webcamBackgroundTarget: "webcam",
 	webcamWallpaper: "/wallpapers/wallpaper11.jpg",
 	webcamBlurIntensity: 0.5,
 	cursor: {

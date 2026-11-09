@@ -21,6 +21,7 @@ import {
 	type ThumbnailStudioResult,
 } from "@/lib/ai-edition/thumbnailStudio";
 import { ModalShell } from "./Modals";
+import css from "./NewEditorShell.module.css";
 import { ThumbnailComposer } from "./ThumbnailComposer";
 
 const fieldStyle = { display: "flex", flexDirection: "column", gap: 4 } as const;
@@ -253,12 +254,29 @@ export function ThumbnailStudioModal({
 			title={te("inspector.thumbnailStudio")}
 			subtitle={te("inspector.studioPromptOnly")}
 			footer={
+				// The primary action lives HERE, not in the scrollable body: generating the
+				// concepts is what produces the result Save writes, so a body button could be
+				// scrolled out of sight and leave Save permanently disabled ("dead").
 				<div style={{ display: "flex", justifyContent: "flex-end", gap: 8 }}>
-					<button type="button" onClick={onClose} data-testid="studio-close">
+					<button
+						type="button"
+						className={`${css.btn} ${css.btnSecondary}`}
+						onClick={onClose}
+						data-testid="studio-close"
+					>
 						{tc("actions.close")}
 					</button>
 					<button
 						type="button"
+						className={`${css.btn} ${result ? css.btnSecondary : css.btnPrimary}`}
+						onClick={generate}
+						data-testid="studio-generate"
+					>
+						{te("inspector.studioGenerate")}
+					</button>
+					<button
+						type="button"
+						className={`${css.btn} ${result ? css.btnPrimary : css.btnSecondary}`}
 						onClick={() => void save()}
 						disabled={!result || saving}
 						data-testid="studio-save"
@@ -336,20 +354,15 @@ export function ThumbnailStudioModal({
 						onChange={(event) => patchInputs({ exclusions: event.target.value })}
 					/>
 				</label>
-				<div style={{ display: "flex", alignItems: "flex-end", gap: 10 }}>
-					<button type="button" onClick={generate} data-testid="studio-generate">
-						{te("inspector.studioGenerate")}
-					</button>
-					<label style={{ ...fieldStyle, flex: 1 }}>
-						<span style={labelStyle}>{te("inspector.studioImageModel")}</span>
-						<input
-							data-testid="studio-image-model"
-							style={inputStyle}
-							value={imageModel}
-							onChange={(event) => setImageModel(event.target.value)}
-						/>
-					</label>
-				</div>
+				<label style={fieldStyle}>
+					<span style={labelStyle}>{te("inspector.studioImageModel")}</span>
+					<input
+						data-testid="studio-image-model"
+						style={inputStyle}
+						value={imageModel}
+						onChange={(event) => setImageModel(event.target.value)}
+					/>
+				</label>
 
 				{result ? (
 					<>

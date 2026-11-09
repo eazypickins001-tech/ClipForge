@@ -390,6 +390,18 @@ describe("patchEditorSettings", () => {
 		expect(snap.webcamBackgroundMode).toBe("custom");
 		expect(snap.webcamWallpaper).toBe("#ff0080");
 		expect(snap.webcamBlurIntensity).toBe(0.8);
+		// Camera is the default target, and every existing project reads as it.
+		expect(snap.webcamBackgroundTarget).toBe("webcam");
+	});
+
+	it("round-trips the primary-video effect target and rejects an unknown one", () => {
+		const patched = patchEditorSettings(baseDoc, { webcamBackgroundTarget: "screen" });
+		expect(getEditorSettings(patched).webcamBackgroundTarget).toBe("screen");
+		const odd = {
+			...baseDoc,
+			legacyEditor: { webcamBackgroundTarget: "projector" },
+		} as typeof baseDoc;
+		expect(getEditorSettings(odd).webcamBackgroundTarget).toBe("webcam");
 	});
 
 	// `legacyEditor` is user-writable JSON. An unknown mode used to flow straight through

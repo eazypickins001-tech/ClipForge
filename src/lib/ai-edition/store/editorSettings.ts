@@ -127,6 +127,7 @@ export interface EditorSettingsSnapshot {
 	webcamCropPan: CropPan;
 	audioGainDb: number;
 	webcamBackgroundMode: WebcamBackgroundMode;
+	webcamBackgroundTarget: "webcam" | "screen";
 	webcamWallpaper: string;
 	webcamBlurIntensity: number;
 	cursor: CursorVisualSettings;
@@ -186,6 +187,8 @@ interface LegacyShape {
 	webcamCropPan?: CropPan;
 	audioGainDb?: number;
 	webcamBackgroundMode?: WebcamBackgroundMode;
+	/** "webcam" (default) or "screen" — the primary video the camera is composed with. */
+	webcamBackgroundTarget?: "webcam" | "screen";
 	webcamWallpaper?: string;
 	webcamBlurIntensity?: number;
 	cursorSize?: number;
@@ -354,6 +357,7 @@ export function getEditorSettings(doc: AxcutDocument | null | undefined): Editor
 		webcamBackgroundMode: isWebcamBackgroundMode(legacy?.webcamBackgroundMode)
 			? legacy.webcamBackgroundMode
 			: DEFAULT_EDITOR_SETTINGS.webcamBackgroundMode,
+		webcamBackgroundTarget: legacy?.webcamBackgroundTarget === "screen" ? "screen" : "webcam",
 		webcamWallpaper: str(legacy?.webcamWallpaper, DEFAULT_EDITOR_SETTINGS.webcamWallpaper),
 		// Unclamped, a stored 1000 reached `blur(25000px)` on the preview canvas and wedged the
 		// compositing thread.
@@ -398,6 +402,7 @@ export interface EditorSettingsPatch {
 	webcamCropPan?: CropPan;
 	audioGainDb?: number;
 	webcamBackgroundMode?: WebcamBackgroundMode;
+	webcamBackgroundTarget?: "webcam" | "screen";
 	webcamWallpaper?: string;
 	webcamBlurIntensity?: number;
 	cursor?: Partial<CursorVisualSettings> & { theme?: string; show?: boolean; autoHide?: boolean };

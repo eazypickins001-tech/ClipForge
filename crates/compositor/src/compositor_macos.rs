@@ -2303,7 +2303,11 @@ impl Compositor {
         let (wants_effect, model_path) = {
             let scene = self.scene.borrow();
             match scene.as_ref().and_then(|s| s.webcam_effect.as_ref()) {
-                Some(e) if e.shader_code() > 0.0 => (true, e.model_path.clone()),
+                // The primary-video target is not drawn on this backend yet; running the model
+                // for it would be cost with no picture, so the effect stays inert here.
+                Some(e) if e.shader_code() > 0.0 && !e.targets_screen() => {
+                    (true, e.model_path.clone())
+                }
                 _ => (false, None),
             }
         };
@@ -3038,6 +3042,7 @@ impl Compositor {
             let effect = scene_ref
                 .as_ref()
                 .and_then(|s| s.webcam_effect.as_ref())
+                .filter(|e| !e.targets_screen())
                 .filter(|_| mask.is_some())
                 .map(|e| (e.shader_code(), e))
                 .filter(|(code, _)| *code > 0.0);

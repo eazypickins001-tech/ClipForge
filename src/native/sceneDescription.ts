@@ -640,6 +640,9 @@ export interface SceneWebcamEffect {
 	mode: WebcamBackgroundMode;
 	/** 0..1, only meaningful for "blur". */
 	blurIntensity: number;
+	/** Which layer the mask is applied to. Omitted (or "webcam") is the camera bubble; "screen"
+	 *  cuts the primary video out. Only the flat screen path draws it today (see the compositor). */
+	target?: "webcam" | "screen";
 	/** Background behind the subject for "custom", parsed like `settings.wallpaper`. */
 	background?: SceneBackground;
 }
@@ -1925,6 +1928,9 @@ export function buildSceneDescription(
 					webcamEffect: {
 						mode: settings.webcamBackgroundMode,
 						blurIntensity: settings.webcamBlurIntensity,
+						// Omitted for the default camera target, so a project that never moved the
+						// effect keeps the payload it always had.
+						...(settings.webcamBackgroundTarget === "screen" ? { target: "screen" as const } : {}),
 						background: parseWallpaper(settings.webcamWallpaper),
 					},
 				}

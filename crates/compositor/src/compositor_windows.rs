@@ -2052,20 +2052,25 @@ impl Compositor {
     /// cette conception cherche à ne pas payer.
     unsafe fn pump_segmentation(
         &self,
-        wy: &ID3D11ShaderResourceView,
-        wuv: &ID3D11ShaderResourceView,
-        valid: [f32; 2],
+        screen_y: &ID3D11ShaderResourceView,
+        screen_uv: &ID3D11ShaderResourceView,
+        screen_valid: [f32; 2],
+        webcam_y: &ID3D11ShaderResourceView,
+        webcam_uv: &ID3D11ShaderResourceView,
+        webcam_valid: [f32; 2],
     ) -> Result<()> {
         if *self.seg_failed.borrow() {
             return Ok(());
         }
         // Rien à faire si aucun effet n'est demandé : ni capture, ni inférence, ni masque.
         // Le coût de la fonctionnalité est alors exactement nul.
-        let (wants_effect, model_path) = {
+        let (wants_effect, model_path, target_screen) = {
             let scene = self.scene.borrow();
             match scene.as_ref().and_then(|s| s.webcam_effect.as_ref()) {
-                Some(e) if e.shader_code() > 0.0 => (true, e.model_path.clone()),
-                _ => (false, None),
+                Some(e) if e.shader_code() > 0.0 => {
+                    (true, e.model_path.clone(), e.targets_screen())
+                }
+                _ => (false, None, false),
             }
         };
         if !wants_effect {
@@ -2110,12 +2115,21 @@ impl Compositor {
             return Ok(());
         }
         let mut scratch = self.seg_scratch.borrow_mut();
+        // La couche que l'effet cible : la caméra (le défaut historique) ou la vidéo PRINCIPALE.
+        // Le même pipeline et le même masque servent les deux — seul l'échantillon d'entrée
+        // change. `screen_valid` est l'étendue valide de la texture écran, que le shader réutilise
+        // comme `fx.xy` sur le tirage de l'écran.
+        let (src_y, src_uv, valid) = if target_screen {
+            (screen_y, screen_uv, screen_valid)
+        } else {
+            (webcam_y, webcam_uv, webcam_valid)
+        };
         // La frame ENTIÈRE, pas le sous-rect dessiné : un crop utilisateur serré amputerait
         // le sujet en entrée du modèle, et le masque serait faux là où il compte le plus.
         // Le shader ramène ses coordonnées dans cet espace via `fx.xy`.
         self.capture_webcam_rgb(
-            wy,
-            wuv,
+            src_y,
+            src_uv,
             [0.0, 0.0, valid[0], valid[1]],
             crate::segmentation::MODEL_WIDTH,
             crate::segmentation::MODEL_HEIGHT,
@@ -2476,11 +2490,13 @@ impl Compositor {
         // Étendue valide de la texture webcam : les décodeurs allouent des textures alignées,
         // donc la frame n'occupe pas forcément toute la texture.
         let w_valid = [wcw / wtw as f32, wch / wth as f32];
-
-        // Segmentation, AVANT `begin()` : la capture réquisitionne la cible de rendu.
-        self.pump_segmentation(&wy, &wuv, w_valid)?;
         let u_max = scw / stw as f32;
         let v_max = sch / sth as f32;
+
+        // Segmentation, AVANT `begin()` : la capture réquisitionne la cible de rendu. The
+        // effect's target decides which layer is sampled; both pairs are passed so the choice
+        // stays in one place inside `pump_segmentation`.
+        self.pump_segmentation(&sy, &suv, [u_max, v_max], &wy, &wuv, w_valid)?;
 
         let scene_ref = self.scene.borrow();
         let cursor_ref = self.cursor.borrow();
@@ -2743,6 +2759,37 @@ impl Compositor {
                 s_radius,
                 render_px,
             );
+            // La moitié « vidéo PRINCIPALE » de l'effet d'arrière-plan : le même masque et la
+            // même branche `mode 0` du shader, tirés sur le quad écran À PLAT. Un écran incliné
+            // (mode 8) et la traînée sont d'autres modes de shader et ne le portent pas encore.
+            let screen_mask = self.webcam_mask.borrow();
+            let screen_effect = scene_ref
+                .as_ref()
+                .and_then(|s| s.webcam_effect.as_ref())
+                .filter(|e| e.targets_screen())
+                .filter(|_| screen_mask.is_some())
+                .map(|e| (e.shader_code(), e))
+                .filter(|(code, _)| *code > 0.0);
+            let (screen_code, screen_blur) = match screen_effect {
+                Some((code, e)) if code > 2.5 => {
+                    self.draw_webcam_bg(e.background.as_ref(), dst, quad_px, radius_px);
+                    (1.0, 0.0)
+                }
+                Some((code, e)) => (code, e.blur_intensity.clamp(0.0, 1.0)),
+                None => (0.0, 0.0),
+            };
+            // `fx` stays all-zero when the effect is off, so a project that never used it draws
+            // the exact payload it did before.
+            let screen_fx = if screen_code > 0.0 {
+                [u_max, v_max, screen_code, screen_blur]
+            } else {
+                [0.0; 4]
+            };
+            if screen_code > 0.0 {
+                if let Some(m) = screen_mask.as_ref() {
+                    self.ctx.PSSetShaderResources(3, Some(&[Some(m.srv.clone())]));
+                }
+            }
             self.draw_video(
                 &LayerCB {
                     dst,
@@ -2751,6 +2798,7 @@ impl Compositor {
                     radius_px,
                     mode: 0.0,
                     color: [0.0, 0.0, 0.0, 1.0],
+                    fx: screen_fx,
                     src_prev: [su0_p, sv0_p, su0_p + 2.0 * hu_p, sv0_p + 2.0 * hv_p],
                     dst_prev: s_dst_prev,
                     mb: [g.screen_pixel_taps(render_px), mb_amount, top_lift, square_top],
@@ -2759,6 +2807,9 @@ impl Compositor {
                 &sy,
                 &suv,
             );
+            if screen_code > 0.0 && screen_mask.is_some() {
+                self.ctx.PSSetShaderResources(3, Some(&[None]));
+            }
         }
         // L'appareil modelé (mode 17) passe APRÈS l'écran, et non sous lui comme le chrome plat :
         // son socle vient DEVANT le plan du métrage et sa lunette mord dessus. Le shader s'arrête
@@ -2959,6 +3010,8 @@ impl Compositor {
             let effect = scene_ref
                 .as_ref()
                 .and_then(|s| s.webcam_effect.as_ref())
+                // A scene that targets the PRIMARY video must not cut the camera out too.
+                .filter(|e| !e.targets_screen())
                 .filter(|_| mask.is_some())
                 .map(|e| (e.shader_code(), e))
                 .filter(|(code, _)| *code > 0.0);

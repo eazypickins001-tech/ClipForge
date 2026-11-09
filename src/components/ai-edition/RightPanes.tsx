@@ -3182,6 +3182,23 @@ export function LayoutPane() {
 							);
 						})}
 					</div>
+					{settings.webcamBackgroundMode !== "none" ? (
+						<div style={{ padding: "0 var(--sp-4) 12px" }}>
+							{/* The mask can target either layer. The camera is the default the
+							    feature was built for; "Primary video" cuts out the screen layer,
+							    which is the talking-head import case. */}
+							<ChoiceRow
+								label={ts("layout.backgroundTarget")}
+								options={[
+									{ value: "webcam", label: ts("layout.backgroundTargetWebcam") },
+									{ value: "screen", label: ts("layout.backgroundTargetScreen") },
+								]}
+								value={settings.webcamBackgroundTarget}
+								disabled={layoutControlsDisabled}
+								onChange={(target) => void set({ webcamBackgroundTarget: target })}
+							/>
+						</div>
+					) : null}
 					{settings.webcamBackgroundMode === "blur" ? (
 						<div className={styles.sliderGrid}>
 							<SliderCell
@@ -3220,7 +3237,11 @@ export function LayoutPane() {
 				crop={webcamCrop}
 				pan={cropPan}
 				background={
-					canSegmentCamera && settings.webcamBackgroundMode !== "none"
+					canSegmentCamera &&
+					settings.webcamBackgroundMode !== "none" &&
+					// The thumbnail previews the CAMERA, so it must only cut that layer out. When
+					// the effect targets the primary video the bubble keeps its own background.
+					settings.webcamBackgroundTarget === "webcam"
 						? {
 								mode: settings.webcamBackgroundMode,
 								blurIntensity: settings.webcamBlurIntensity,

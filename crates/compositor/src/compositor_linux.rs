@@ -2332,7 +2332,11 @@ impl Compositor {
         let (wants_effect, model_path) = {
             let scene = self.scene.borrow();
             match scene.as_ref().and_then(|s| s.webcam_effect.as_ref()) {
-                Some(e) if e.shader_code() > 0.0 => (true, e.model_path.clone()),
+                // The primary-video target is not drawn on this backend yet; running the model
+                // for it would be cost with no picture, so the effect stays inert here.
+                Some(e) if e.shader_code() > 0.0 && !e.targets_screen() => {
+                    (true, e.model_path.clone())
+                }
                 _ => (false, None),
             }
         };
@@ -2546,7 +2550,7 @@ impl Compositor {
             .borrow()
             .as_ref()
             .and_then(|s| s.webcam_effect.as_ref())
-            .is_some_and(|e| e.shader_code() > 0.0);
+            .is_some_and(|e| e.shader_code() > 0.0 && !e.targets_screen());
         if wants_seg && !webcam.is_null() {
             // `nv12_srvs` dereference `data[0]` sans verifier la frame elle-meme,
             // d'ou le garde de nullite au-dessus (meme condition que le draw PiP).
@@ -2823,6 +2827,7 @@ impl Compositor {
             let effect = scene_ref
                 .as_ref()
                 .and_then(|s| s.webcam_effect.as_ref())
+                .filter(|e| !e.targets_screen())
                 .filter(|_| has_mask)
                 .map(|e| (e.shader_code(), e))
                 .filter(|(code, _)| *code > 0.0);
@@ -2858,7 +2863,7 @@ impl Compositor {
         // `is_cutout` cote Windows.
         let is_cutout = matches!(
             scene_ref.as_ref().and_then(|s| s.webcam_effect.as_ref()),
-            Some(e) if e.shader_code() == 1.0
+            Some(e) if e.shader_code() == 1.0 && !e.targets_screen()
         ) && self.webcam_mask.borrow().is_some();
         let webcam_draw = webcam_planes.as_ref().map(|(wy, wu, wv)| {
             // COVER-CROP. `src` etait cable a [0,0,1,1], donc la texture entiere

@@ -980,6 +980,15 @@ pub struct SceneWebcamEffect {
     /// natif ne devine pas. Absent = pas de segmentation, l'effet reste éteint.
     #[serde(default)]
     pub model_path: Option<String>,
+    /// La couche que le masque découpe : `"webcam"` (par défaut, et ce que tout payload d'avant
+    /// ce champ veut dire) ou `"screen"`, la vidéo PRINCIPALE. Le champ est parsé partout ; seule
+    /// la passe écran à plat de Windows le dessine aujourd'hui (voir `compositor_windows.rs`).
+    #[serde(default = "default_effect_target")]
+    pub target: String,
+}
+
+fn default_effect_target() -> String {
+    "webcam".to_string()
 }
 
 impl SceneWebcamEffect {
@@ -992,6 +1001,12 @@ impl SceneWebcamEffect {
             "custom" => 3.0,
             _ => 0.0,
         }
+    }
+
+    /// Le masque découpe-t-il la vidéo PRINCIPALE plutôt que la caméra ? Un champ absent/ancien
+    /// ou une valeur inconnue répond `false` : la caméra reste la cible par défaut.
+    pub(crate) fn targets_screen(&self) -> bool {
+        self.target == "screen"
     }
 }
 
@@ -1333,6 +1348,11 @@ mod tests {
             Some(SceneBackground::Color { color }) => assert_eq!(color, "#ff0080"),
             other => panic!("attendu un fond couleur, obtenu {other:?}"),
         }
+
+        // The target defaults to the camera, which is what every pre-existing payload means.
+        assert_eq!(scene_with(r#"{"mode":"cutout"}"#).target, "webcam");
+        assert!(!scene_with(r#"{"mode":"transparent"}"#).targets_screen());
+        assert!(scene_with(r#"{"mode":"transparent","target":"screen"}"#).targets_screen());
     }
 }
 
