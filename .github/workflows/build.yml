@@ -147,6 +147,23 @@ jobs:
             build-licenses/THIRD-PARTY-LICENSES.txt
           if-no-files-found: error
 
+      # The camera-background control is the only editor control whose effect depends on optional
+      # binaries, and a miss is SILENT: `probeSegmentation()` answers "no-model" / "no-runtime"
+      # and the pane simply hides the control, so nothing red ever appears. Assert both pieces in
+      # the packaged tree exactly where they are resolved at runtime — the model under resources/
+      # (`realExistsSync` uses original-fs, which cannot see inside app.asar) and the runtime
+      # beside the compositor addon (`ensureOnnxRuntimeOnPath` walks that directory).
+      - name: Verify the segmentation payload is packaged
+        shell: pwsh
+        run: |
+          $exe = (Get-ChildItem -Path release -Recurse -Filter ClipForge.exe | Select-Object -First 1).FullName
+          $res = Join-Path (Split-Path $exe) "resources"
+          $model = Join-Path $res "mediapipe/selfie_segmentation/selfie_segmentation_landscape.onnx"
+          $ort = Join-Path $res "electron/native/bin/win32-x64/onnxruntime.dll"
+          if (-not (Test-Path $model)) { throw "segmentation model is missing from the packaged app: $model" }
+          if (-not (Test-Path $ort)) { throw "ONNX Runtime is missing beside the compositor addon: $ort" }
+          Get-Item $model, $ort | Select-Object FullName, Length | Format-Table -AutoSize
+
       # The native compositor addon only exists inside the packaged tree, so the export
       # path can be exercised NOWHERE else — a dev bundle answers "Native compositor
       # addon not present" and writes nothing. Before this step existed, these specs ran
