@@ -59,7 +59,9 @@ export function TopBarMenu({
 					data-testid={testId}
 				>
 					{icon}
-					{label}
+					{/* Visual only: the trigger's accessible name is `aria-label` above, so hiding
+					    this on a narrow bar costs no accessibility. */}
+					<span className={topbarStyles.menuLabel}>{label}</span>
 				</button>
 			</PopoverTrigger>
 			<PopoverContent

@@ -24,6 +24,7 @@ function makeActions(over: Partial<ClipMenuActions> = {}): ClipMenuActions {
 	return {
 		hasClips: true,
 		hasBoundary: true,
+		canOpenStudio: true,
 		split: vi.fn(),
 		detectScenes: vi.fn(),
 		thumbnailStudio: vi.fn(),
@@ -153,12 +154,21 @@ describe("Clip menu in the editor top bar", () => {
 		expect(actions.endFade).toHaveBeenCalledTimes(1);
 	});
 
-	it("disables every row when there is no clip to act on", async () => {
+	it("disables the clip rows with no clip, but not the project-level studio", async () => {
 		renderBar(makeActions({ hasClips: false, hasBoundary: false }));
 		const menu = await openMenu();
 		for (const row of within(menu).getAllByRole("menuitem")) {
-			expect(row).toBeDisabled();
+			// The studio reads the project (title and transcript), so it stays reachable on an
+			// empty timeline; everything else resolves the playhead's clip and cannot.
+			if (row.textContent === "Thumbnail Studio") expect(row).toBeEnabled();
+			else expect(row).toBeDisabled();
 		}
+	});
+
+	it("disables the studio only while no project is open", async () => {
+		renderBar(makeActions({ canOpenStudio: false }));
+		const menu = await openMenu();
+		expect(within(menu).getByRole("menuitem", { name: "Thumbnail Studio" })).toBeDisabled();
 	});
 
 	it("leaves Transition disabled until a boundary exists", async () => {

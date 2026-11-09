@@ -43,6 +43,7 @@ const noop = () => {};
 function renderTopBar(
 	projectTitle: string | null,
 	history: { canUndo?: boolean; canRedo?: boolean } = {},
+	studio: (() => void) | undefined = undefined,
 ) {
 	const onRename = vi.fn();
 	const onShowAbout = vi.fn();
@@ -78,6 +79,7 @@ function renderTopBar(
 					checkForUpdates: onCheckForUpdates,
 					undo: onUndo,
 					redo: onRedo,
+					thumbnailStudio: studio,
 				}}
 			/>
 		</TooltipProvider>,
@@ -218,6 +220,24 @@ describe("AppMenu", () => {
 		expect(screen.getByRole("menuitem", { name: "title" })).toBeInTheDocument();
 		expect(screen.getByRole("menuitem", { name: "providerSettings.title" })).toBeInTheDocument();
 		expect(screen.getByRole("menuitem", { name: /actions\.about/ })).toBeInTheDocument();
+	});
+
+	it("offers Thumbnail Studio from the project menu when a project is open", () => {
+		const onStudio = vi.fn();
+		renderTopBar("Demo Project", {}, onStudio);
+		fireEvent.click(screen.getByRole("button", { name: /ClipForge/ }));
+		fireEvent.click(screen.getByRole("menuitem", { name: "inspector.thumbnailStudio" }));
+		expect(onStudio).toHaveBeenCalledTimes(1);
+		// The row is project-scoped, so it closes behind itself like the others.
+		expect(screen.queryByRole("menu")).not.toBeInTheDocument();
+	});
+
+	it("omits the studio row with no project to hold its composition", () => {
+		renderTopBar(null);
+		fireEvent.click(screen.getByRole("button", { name: /ClipForge/ }));
+		expect(
+			screen.queryByRole("menuitem", { name: "inspector.thumbnailStudio" }),
+		).not.toBeInTheDocument();
 	});
 
 	// Issue #420: the AI dialog used to be openable only from the chat panel, which mounts in

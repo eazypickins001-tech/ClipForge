@@ -25,6 +25,8 @@ export interface ClipMenuActions {
 	hasClips: boolean;
 	/** At least two clips: there is a boundary for a transition to sit on. */
 	hasBoundary: boolean;
+	/** A project is open: the Thumbnail Studio works from the title/transcript, not a clip. */
+	canOpenStudio: boolean;
 	split: () => void;
 	detectScenes: () => void;
 	thumbnailStudio: () => void;
@@ -60,7 +62,7 @@ export function ClipMenu({ actions }: { actions: ClipMenuActions }) {
 				{
 					id: "thumbnail-studio",
 					label: te("inspector.thumbnailStudio"),
-					disabled: !actions.hasClips,
+					disabled: !actions.canOpenStudio,
 					onSelect: actions.thumbnailStudio,
 				},
 				{

@@ -1,5 +1,6 @@
 import {
 	ChevronDown,
+	Clapperboard,
 	Download,
 	FolderOpen,
 	FolderPlus,
@@ -46,6 +47,10 @@ export interface TopBarActions {
 	checkForUpdates: () => void;
 	undo: () => void;
 	redo: () => void;
+	/** Thumbnail Studio is a PROJECT action (it reads the title and transcript), not a clip one,
+	 *  so it also lives in this menu — reachable with no clips on the timeline. Absent while no
+	 *  project is open, which is the only state where saving its composition has nowhere to go. */
+	thumbnailStudio?: () => void;
 }
 
 interface EditorTopBarProps {
@@ -434,6 +439,18 @@ function AppMenu({ actions }: { actions: TopBarActions }) {
 						<Save size={15} />
 						{tEditor("topbar.saveProject")}
 					</button>
+					{actions.thumbnailStudio ? (
+						<button
+							type="button"
+							role="menuitem"
+							className={styles.appMenuRow}
+							data-testid="app-menu-thumbnail-studio"
+							onClick={run(actions.thumbnailStudio)}
+						>
+							<Clapperboard size={15} />
+							{tEditor("inspector.thumbnailStudio")}
+						</button>
+					) : null}
 					<div className={styles.appMenuSep} aria-hidden />
 					<button
 						type="button"

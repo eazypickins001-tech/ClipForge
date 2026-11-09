@@ -431,7 +431,7 @@ export function StylePresetsMenu() {
 					disabled={!hasDocument}
 				>
 					<SwatchBook size={15} />
-					{ts("stylePresets.button")}
+					<span className={topbarStyles.menuLabel}>{ts("stylePresets.button")}</span>
 				</button>
 			</PopoverTrigger>
 			<PopoverContent

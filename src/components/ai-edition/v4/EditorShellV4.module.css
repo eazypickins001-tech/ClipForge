@@ -425,6 +425,10 @@
 	font-weight: 600;
 	cursor: pointer;
 	flex-shrink: 0;
+	/* Parked at the right edge of the content box, i.e. just inside the titlebar-area reserve the
+	   native window controls leave. Without this the bar packs left and the button's position is
+	   whatever the sum of the items happens to be. */
+	margin-left: auto;
 	box-shadow: 0 4px 14px -4px var(--brand-glow);
 	transition: background var(--motion-fast) var(--ease);
 }
@@ -437,6 +441,19 @@
 }
 
 /* ─── Responsive topbar rules ─── */
+/* The five menu triggers carry a word after their icon. At 1440 the bar already exactly fills the
+   width the Windows/Linux caption buttons leave; a narrower window or a longer locale pushed the
+   Export button into that reserve — under controls the OS draws itself, so on the page it looked
+   like Export was "obscured by something". Icon + aria-label is enough below 1500. */
+.menuLabel {
+	display: inline;
+}
+@media (max-width: 1500px) {
+	.menuLabel {
+		display: none;
+	}
+}
+
 @media (max-width: 1240px) {
 	.topbar {
 		--topbar-gap: 10px;

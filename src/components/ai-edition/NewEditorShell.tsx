@@ -1838,6 +1838,10 @@ export function NewEditorShell() {
 					checkForUpdates: handleCheckForUpdates,
 					undo: runUndo,
 					redo: runRedo,
+					// Project-level, so it is offered whenever a project is open — the studio reads
+					// the title and transcript, not the timeline, and its saved composition needs a
+					// document to land in.
+					thumbnailStudio: document ? () => setThumbnailStudioOpen(true) : undefined,
 				}}
 				// The Clip menu's rows resolve their target from the playhead at click time, exactly
 				// as the inspector rail's buttons do — so, like theirs, a miss is reported on click
@@ -1846,6 +1850,9 @@ export function NewEditorShell() {
 				clipActions={{
 					hasClips: clips.length > 0,
 					hasBoundary: clips.length > 1,
+					// The studio works from the project, not a clip: enabled with an open document
+					// even when the timeline is empty.
+					canOpenStudio: Boolean(document),
 					// Lane-aware, exactly as the rail's own Split button is: one implementation, so the
 					// menu and the rail cannot disagree about what Split means.
 					split: splitAtPlayhead,
