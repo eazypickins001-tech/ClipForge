@@ -22,8 +22,8 @@ Local-first desktop workspace: recording → editing → AI-assisted content →
 
 Each phase ends with: run tests → fix regressions → record commands/results → update docs → summarise what works / remains / is blocked.
 
-**Status at 2026-11-08:** code `bbce83d`, design/docs `9bb4235`; CI and the Windows installer build are
-green, and the artifact is verified. Phases 0, 1 (in substance) and 5 are done; 2 and 4 are partial;
+**Status at 2026-11-09:** code `e2093f0`, design `9bb4235`; CI and the Windows installer build are
+green, and the artifact is verified (`cf-e2093f0`). Phases 0, 1 (in substance) and 5 are done; 2 and 4 are partial;
 3 and 6 are not started. Core hardening H1–H4 is closed (H1 reported, H2 unit-verified,
 H3 documented, H4 covered by the packaged smoke); the remaining work is the Phase-B blend
 leftovers and the decision-gated/large items (TTS, F6–F9). **Business model: not freemium — see the section
