@@ -319,6 +319,14 @@
 		"effectCode": "Code",
 		"copyEffectCode": "Copy code"
 	},
+	"help": {
+		"menu": "Help",
+		"title": "How to use ClipForge",
+		"gettingStarted": "Getting started",
+		"recording": "Recording",
+		"editing": "Editing",
+		"ai": "AI & agent"
+	},
 	"chat": {
 		"changeProvider": "Change provider",
 		"back": "Back",

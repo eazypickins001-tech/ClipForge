@@ -82,7 +82,7 @@ export const PROVIDER_DEFINITIONS: ProviderDefinition[] = [
 	{
 		id: "openrouter",
 		label: "OpenRouter API",
-		defaultModel: "anthropic/claude-3.5-sonnet",
+		defaultModel: "anthropic/claude-sonnet-4.5",
 		authKind: "api-key",
 		supportsReasoningEffort: true,
 		baseUrl: "https://openrouter.ai/api/v1",

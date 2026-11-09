@@ -319,6 +319,14 @@
 		"effectCode": "コード",
 		"copyEffectCode": "コードをコピー"
 	},
+	"help": {
+		"menu": "ヘルプ",
+		"title": "ClipForge の使い方",
+		"gettingStarted": "はじめに",
+		"recording": "録画",
+		"editing": "編集",
+		"ai": "AI とエージェント"
+	},
 	"chat": {
 		"changeProvider": "プロバイダーを変更",
 		"back": "戻る",

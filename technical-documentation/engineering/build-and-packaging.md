@@ -73,6 +73,15 @@ This shipped: the 1.9.0 Store build loaded no compositor at all, so the editor o
 
 `electron/native/bin/`, local native build directories, the compositor build output, models, and caches are gitignored. Rebuilding from a source checkout therefore requires the complete platform toolchain and third-party SDKs; running the generic `npm run build` alone does not manufacture missing native artifacts. The Windows compositor's D3D11/FFmpeg prerequisites are described by the source POC in `crates/README.md`, while capture helper lookup and output conventions are documented in `electron/native/README.md`.
 
+### Export has no JS fallback — a checkout without the addon cannot export
+
+There is no JavaScript exporter. Both the preview and every MP4/GIF export pull frames from `compositor_view.node`; the renderer only paints what the addon returns. A source checkout that never ran a native build has no addon in `electron/native/bin/<platform>-<arch>/`, so Export fails on the first frame. That is a checkout/toolchain state, not a product bug, and the error the user sees is the generic compositor failure:
+
+- `compositor.readFrame failed` / `compositor.exportMulti` errors near `open_input`
+- `Failed to load compositor_view.node` or `The specified module could not be found`
+
+If you are developing export, run `npm run build:native:compositor` (Windows/macOS) or the platform's `build:native:*` command from the table above, and copy the **whole** `electron/native/bin/<platform>-<arch>/` directory — the addon links six ffmpeg libraries from that directory. Testing a CI artifact avoids the toolchain entirely. Do not "fix" a missing addon by adding a renderer fallback: the native path is the only exporter on purpose.
+
 ### Nothing Windows ships may need the Visual C++ Redistributable
 
 `VCRUNTIME140.dll`, `VCRUNTIME140_1.dll` and `MSVCP140.dll` are **not part of Windows**. They come from the Visual C++ Redistributable, which arrives with Visual Studio, with the Rust MSVC toolchain, and with most desktop applications — so every machine that can build this repo already has them in `System32`, and so does almost every machine anyone would test on. A binary that depends on them therefore works locally, works in CI, and works in every packaging format, while being unloadable on a clean Windows image.

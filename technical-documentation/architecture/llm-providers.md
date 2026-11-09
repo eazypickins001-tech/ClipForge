@@ -37,7 +37,7 @@ Each `ProviderDefinition` carries a stable id and label, default model, `authKin
 | `openai` | OpenAI API | `gpt-4o` | OpenAI-compatible (`ChatOpenAI`) |
 | `google` | Gemini API | `gemini-3-flash-preview` | Google's OpenAI-compatible endpoint (`/v1beta/openai`) |
 | `mistral` | Mistral API | `mistral-large-latest` | First-party Mistral (`ChatMistralAI`) |
-| `openrouter` | OpenRouter API | `anthropic/claude-3.5-sonnet` | OpenAI-compatible |
+| `openrouter` | OpenRouter API | `anthropic/claude-sonnet-4.5` | OpenAI-compatible |
 | `minimax` | MiniMax API | `MiniMax-M3` | Anthropic-shaped, via `ChatAnthropic` at `https://api.minimax.io/anthropic` |
 | `minimax-token-plan` | MiniMax Token Plan | `MiniMax-M3` | Same as `minimax`, different env key |
 | `openai-compatible` | OpenAI Compatible | *(user-supplied)* | OpenAI-compatible at a required custom base URL |

@@ -319,6 +319,14 @@
 		"effectCode": "程式碼",
 		"copyEffectCode": "複製程式碼"
 	},
+	"help": {
+		"menu": "說明",
+		"title": "如何使用 ClipForge",
+		"gettingStarted": "快速開始",
+		"recording": "錄製",
+		"editing": "編輯",
+		"ai": "AI 與代理"
+	},
 	"chat": {
 		"changeProvider": "更換提供者",
 		"back": "返回",

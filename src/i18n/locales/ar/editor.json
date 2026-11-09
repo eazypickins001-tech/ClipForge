@@ -319,6 +319,14 @@
 		"effectCode": "الشيفرة",
 		"copyEffectCode": "نسخ الشيفرة"
 	},
+	"help": {
+		"menu": "مساعدة",
+		"title": "كيفية استخدام ClipForge",
+		"gettingStarted": "البدء",
+		"recording": "التسجيل",
+		"editing": "التحرير",
+		"ai": "الذكاء الاصطناعي والوكيل"
+	},
 	"chat": {
 		"changeProvider": "تغيير المزوّد",
 		"back": "رجوع",

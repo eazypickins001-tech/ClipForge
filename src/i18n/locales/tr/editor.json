@@ -319,6 +319,14 @@
 		"effectCode": "Kod",
 		"copyEffectCode": "Kodu kopyala"
 	},
+	"help": {
+		"menu": "Yardım",
+		"title": "ClipForge nasıl kullanılır",
+		"gettingStarted": "Başlarken",
+		"recording": "Kayıt",
+		"editing": "Düzenleme",
+		"ai": "YZ ve ajan"
+	},
 	"chat": {
 		"changeProvider": "Sağlayıcıyı değiştir",
 		"back": "Geri",

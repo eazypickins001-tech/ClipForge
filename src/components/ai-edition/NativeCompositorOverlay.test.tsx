@@ -19,6 +19,7 @@ const native = vi.hoisted(() => ({
 	setActiveClip: vi.fn(async () => ({ ok: true })),
 	setNativePlaying: vi.fn(),
 	setNativeScene: vi.fn(),
+	viewError: { value: null as string | null },
 }));
 
 vi.mock("@/native", () => ({
@@ -29,7 +30,7 @@ vi.mock("@/native", () => ({
 	setNativeScene: native.setNativeScene,
 	subscribeNativeCompositor: () => () => undefined,
 	useIsCpuCompositor: () => false,
-	useNativeCompositorView: () => ({ viewId: 7, error: null }),
+	useNativeCompositorView: () => ({ viewId: 7, error: native.viewError.value }),
 }));
 
 vi.mock("@/contexts/I18nContext", () => ({
@@ -301,5 +302,41 @@ describe("NativeCompositorOverlay while playing", () => {
 		expect(editedScene.clips).toHaveLength(2);
 		expect(editedScene.speedRegions.length).toBeGreaterThan(0);
 		expect(native.setActiveClip).toHaveBeenCalledWith(7, "/take.mp4", "", 0, 1, 8);
+	});
+});
+
+describe("NativeCompositorOverlay when the media is missing", () => {
+	function renderWithError(error: string) {
+		native.viewError.value = error;
+		useProjectStore.setState({
+			projectId: "proj_sync",
+			document: makeDocument(),
+			currentTimeSec: 1,
+			status: "ready",
+			error: null,
+			sourceDurationSec: 12,
+		});
+		const view = render(<NativeCompositorOverlay />);
+		native.viewError.value = null;
+		return view;
+	}
+
+	it("names the missing file and offers a relink instead of a GPU message", () => {
+		const { getByTestId, getByRole, queryByText } = renderWithError(
+			"open_input: -2 (No such file or directory)",
+		);
+		expect(getByTestId("native-compositor-error").textContent).toContain(
+			"errors.previewMediaMissing",
+		);
+		expect(getByRole("button", { name: "errors.relinkMedia" })).toBeTruthy();
+		expect(queryByText("errors.previewCompositorUnavailable")).toBeNull();
+	});
+
+	it("keeps the GPU headline for a compositor failure that is not ENOENT", () => {
+		const { getByTestId, queryByRole } = renderWithError("hwdevice_ctx_init: -1313558101");
+		expect(getByTestId("native-compositor-error").textContent).toContain(
+			"errors.previewCompositorUnavailable",
+		);
+		expect(queryByRole("button", { name: "errors.relinkMedia" })).toBeNull();
 	});
 });

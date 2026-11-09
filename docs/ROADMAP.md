@@ -24,12 +24,13 @@ Each phase ends with: run tests → fix regressions → record commands/results 
 
 **Status at 2026-11-08:** code `bbce83d`, design/docs `9bb4235`; CI and the Windows installer build are
 green, and the artifact is verified. Phases 0, 1 (in substance) and 5 are done; 2 and 4 are partial;
-3 and 6 are not started. The remaining work is core hardening H1–H4, the Phase-B blend leftovers,
-and the decision-gated/large items (TTS, F6–F9). **Business model: not freemium — see the section
+3 and 6 are not started. Core hardening H1–H4 is closed (H1 reported, H2 unit-verified,
+H3 documented, H4 covered by the packaged smoke); the remaining work is the Phase-B blend
+leftovers and the decision-gated/large items (TTS, F6–F9). **Business model: not freemium — see the section
 below.**
 
 - **Phase 0 — Engineering audit.** **Done.** Environment inventory, candidate clones + pinned commits, licence/dependency audit, real build/test attempts, foundation decision. → `docs/ENGINEERING_AUDIT.md`
-- **Phase 1 — Usable desktop editor.** Rebrand fork; create/save/reopen/duplicate project; import + preview; basic timeline edit (add/trim/split/move/delete/order); save/reopen; export playable MP4; clear missing-media + error handling. **Done in substance:** record/import, split, trim/save/reopen, MP4/GIF export and preview are implemented and exercised by the packaged smoke step. **Open:** missing-media handling has no test (H2), GIF cancel is unreliable (H1), and split has no dedicated e2e (H4).
+- **Phase 1 — Usable desktop editor.** Rebrand fork; create/save/reopen/duplicate project; import + preview; basic timeline edit (add/trim/split/move/delete/order); save/reopen; export playable MP4; clear missing-media + error handling. **Done in substance:** record/import, split, trim/save/reopen, MP4/GIF export and preview are implemented and exercised by the packaged smoke step. Missing-media handling is unit-verified (H2), split has a dedicated e2e (H4), and GIF cancel is explicitly reported as unreliable (H1).
 - **Phase 2 — Capture & recording handoff.** **Partial:** recording and manual import exist, with “open in editor”. Configurable watched folder with completion/duplicate detection, and the optional OBS WebSocket connector, are not implemented; the manual import path is the supported one.
 - **Phase 3 — Build-in-Public Content Engine.** **Not started.** Content sessions, the evidence model (notes, transcript, frames, read-only git, test results), and generated hooks/scripts/storyboards/platform copy with per-asset provenance. The Thumbnail Studio’s publishing copy is a small, completed slice of “everything inside ClipForge”, not the Content Studio.
 - **Phase 4 — Repurposing & captions.** **Partial:** local Whisper captions, 15-language subtitle translation, filler/silence cuts, ratio reframe and script-to-video exist. Derivative projects (landscape/vertical/square variants, highlights, captioned variants) and source↔derivative tracking are not implemented.
@@ -87,10 +88,10 @@ benches that are deliberately D3D11VA-only and keep their hard failure.
 
 | # | Item | Status / why it comes first |
 |---|---|---|
-| H1 | Make GIF export cancel dependable, or report honestly that it is not | **Open.** Master Prompt §8.4 requires a working cancel; today it is the one flaky spec. |
-| H2 | Verify missing-media handling | **Open.** The last unobserved Phase 1 criterion; no test, no observation. |
-| H3 | Document the compositor-addon constraint where developers will hit it | **Open (partial).** Export has **no JS fallback**: a dev checkout cannot export at all, and the failure reads as a product bug. The handovers say it; a developer-facing note is still missing. |
-| H4 | Split: give it a discoverable control and an e2e | **Partial.** Split is in the inspector rail, the Clip menu and on Ctrl+B, and the transitions e2e builds its clips with it - but no test presses the split control itself. |
+| H1 | Make GIF export cancel dependable, or report honestly that it is not | **Closed (reported, not fixed).** The cancel path is native and covered in unit tests; the packaged cancel spec is excluded from the smoke step, with both observed symptoms documented in `tests/e2e/gif-export.spec.ts`. A renderer-responsiveness fix is future work. |
+| H2 | Verify missing-media handling | **Closed (unit-verified).** `NativeCompositorOverlay.test.tsx` feeds both an ENOENT view error (missing-file headline + relink) and a non-ENOENT compositor error (GPU headline, no relink). |
+| H3 | Document the compositor-addon constraint where developers will hit it | **Closed.** “Export has no JS fallback” is documented in `technical-documentation/engineering/build-and-packaging.md`, including the failure strings and the whole-directory copy rule. |
+| H4 | Split: give it a discoverable control and an e2e | **Closed.** Split is in the inspector rail, the Clip menu and on Ctrl+B; `tests/e2e/clip-edits.spec.ts` presses the Split control and asserts two clips on disk and in the UI, and runs in the packaged smoke step. |
 
 ## Feature backlog
 
@@ -243,11 +244,11 @@ hidden editing algorithms.
 | TTS, voice cloning, AI dubbing, avatars/presenter | None | Decision/hosted |
 | Generative video (Seedance-class) | None | Hosted; non-goal for now |
 | Cloud storage, cross-device/web/mobile, Teams/brand kit, collaboration/review links | None | Non-goals |
-| Mature GIF-cancel robustness | Unreliable | Hardening (H1) |
+| Mature GIF-cancel robustness | Reported unreliable | Future hardening (H1 closed as reported) |
 
 ### Parity order (build, don't buy)
 
-1. **Craft, cheap:** H1-H4 hardening; general keyframes/graphs (F8); an effects picker/library;
+1. **Craft, cheap:** general keyframes/graphs (F8); an effects picker/library;
    LUTs/colour presets; 1440/2160 + 60fps export (F3); primary-video background removal (F4);
    auto-beat; reverse/stabilise/denoise.
 2. **Local/BYOK AI:** TTS; subject-tracking auto-reframe (F7); stem separation (F6); smart search;

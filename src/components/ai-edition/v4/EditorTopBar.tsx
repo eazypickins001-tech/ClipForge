@@ -28,6 +28,7 @@ import { formatFirstFixedBinding } from "@/lib/shortcuts";
 import { StylePresetsMenu } from "../StylePresetsMenu";
 import { ClipMenu, type ClipMenuActions } from "./ClipMenu";
 import styles from "./EditorShellV4.module.css";
+import { HelpMenu } from "./HelpMenu";
 import { TranscriptMenu, type TranscriptMenuActions } from "./TranscriptMenu";
 
 export type EditorMode = "media" | "edit" | "rec";
@@ -189,6 +190,7 @@ export function EditorTopBar({
 			<StylePresetsMenu />
 			{clipActions ? <ClipMenu actions={clipActions} /> : null}
 			{transcriptActions ? <TranscriptMenu actions={transcriptActions} /> : null}
+			<HelpMenu />
 			<button
 				type="button"
 				className={styles.exportBtn}

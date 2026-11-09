@@ -319,6 +319,14 @@
 		"effectCode": "Mã",
 		"copyEffectCode": "Sao chép mã"
 	},
+	"help": {
+		"menu": "Trợ giúp",
+		"title": "Cách dùng ClipForge",
+		"gettingStarted": "Bắt đầu",
+		"recording": "Ghi hình",
+		"editing": "Chỉnh sửa",
+		"ai": "AI và tác nhân"
+	},
 	"chat": {
 		"changeProvider": "Đổi nhà cung cấp",
 		"back": "Quay lại",

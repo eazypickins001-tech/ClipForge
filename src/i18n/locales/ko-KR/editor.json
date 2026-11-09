@@ -319,6 +319,14 @@
 		"effectCode": "코드",
 		"copyEffectCode": "코드 복사"
 	},
+	"help": {
+		"menu": "도움말",
+		"title": "ClipForge 사용 방법",
+		"gettingStarted": "시작하기",
+		"recording": "녹화",
+		"editing": "편집",
+		"ai": "AI 및 에이전트"
+	},
 	"chat": {
 		"changeProvider": "제공업체 변경",
 		"back": "뒤로",
