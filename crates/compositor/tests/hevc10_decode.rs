@@ -51,6 +51,8 @@ fn render_frame_10(source: &str) -> RenderedFrame {
         gain_db: 0.0,
         fade_in_sec: 0.0,
         fade_out_sec: 0.0,
+        audio_source_end_sec: None,
+        incoming_blend_sec: None,
     }];
     let mut cfg = config::all().pop().expect("C8");
     cfg.zoom = false;

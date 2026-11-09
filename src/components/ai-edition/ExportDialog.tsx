@@ -169,6 +169,10 @@ function buildNativeClipList(document: AxcutDocument): CompositorClipInput[] {
 				// The blend, from the SAME helper the canonical list uses. Two copies of this rule
 				// is the drift this module's header warns about.
 				...(blend ? { incomingBlend: blend } : {}),
+				// The tail a BLEND trimmed off this clip's video window, kept for its audio (see
+				// `CompositorClipInput.audioSourceEndSec`). Same gate as the canonical list: absent
+				// unless a tail was actually trimmed.
+				...(tailTrims[index] > 0 ? { audioSourceEndSec: resolvedEnds[index] } : {}),
 			},
 		];
 	});

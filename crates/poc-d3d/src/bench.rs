@@ -157,6 +157,8 @@ fn run_bench(args: &[String]) -> Result<()> {
                 gain_db: 0.0,
                 fade_in_sec: 0.0,
                 fade_out_sec: 0.0,
+                audio_source_end_sec: None,
+                incoming_blend_sec: None,
             };
             let path = format!("{out}/{}_{:?}.mp4", cfg.name, backend).to_lowercase();
             let s = pipeline::run_composited_multi(
@@ -302,6 +304,8 @@ fn run_gif_bench(
         gain_db: 0.0,
         fade_in_sec: 0.0,
         fade_out_sec: 0.0,
+        audio_source_end_sec: None,
+        incoming_blend_sec: None,
     }];
     for r in 0..repeat {
         // Each run writes to the same path — the last frame wins. The

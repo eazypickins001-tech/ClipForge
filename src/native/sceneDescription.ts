@@ -787,6 +787,11 @@ export function buildNativeClipList(document: AxcutDocument): CompositorClipInpu
 				// blend spans the two, which is why the programme is shorter by this much and why
 				// the value comes from the programme rather than from `transition.durationMs`.
 				...(blend ? { incomingBlend: blend } : {}),
+				// The tail a BLEND took off this clip's VIDEO window is still this clip's audio: the
+				// picture holds its last frame while the incoming clip opens, and the sound only
+				// crossfades over that overlap if it is decoded. Emitted only when a tail was trimmed,
+				// so a project with no blend keeps exactly its old payload.
+				...(tailTrims[index] > 0 ? { audioSourceEndSec: resolvedEnds[index] } : {}),
 			},
 		];
 	});

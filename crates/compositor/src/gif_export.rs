@@ -350,7 +350,7 @@ fn export_gif_inner(
 						write_ready(&mut pending).map(|_| ())
 					},
 					// GIF has no audio track, so clip boundaries need no work.
-					&mut |_, _, _, _| control.check(),
+					&mut |_, _, _, _, _, _| control.check(),
 				)?
 			};
 			drop(job_tx);

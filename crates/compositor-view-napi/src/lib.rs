@@ -543,6 +543,14 @@ fn make_progress_tsfn(
         .transpose()
 }
 
+/// Le fondu croisé entrant d'un clip, tel que le contrat JS le décrit. Seule la durée est lue:
+/// c'est un nombre de PROGRAMME, le chevauchement que la frontière a réellement ouvert.
+#[napi(object)]
+pub struct IncomingBlendInput {
+    pub kind: String,
+    pub duration_sec: f64,
+}
+
 /// Un clip de la timeline pour l'export multiclip (JS : camelCase).
 #[napi(object)]
 pub struct ClipInput {
@@ -560,6 +568,13 @@ pub struct ClipInput {
     pub gain_db: Option<f64>,
     pub fade_in_sec: Option<f64>,
     pub fade_out_sec: Option<f64>,
+    /// La fin source NON rognée, quand un BLEND après ce clip a coupé sa queue vidéo. L'image
+    /// s'arrête à `source_end_sec` (dernière frame tenue sur l'ouverture du clip suivant) ; le son
+    /// continue jusqu'ici pour se fondre sur le chevauchement au lieu de couper à la frontière.
+    pub audio_source_end_sec: Option<f64>,
+    /// Le fondu entrant de ce clip. Sa durée est le chevauchement de PROGRAMME que la frontière a
+    /// ouvert. Absent = coupe nette, et le crossfade de frontière de 240 échantillons reste la loi.
+    pub incoming_blend: Option<IncomingBlendInput>,
 }
 
 /// The export's pixel size. The SHAPE belongs to the scene: `scene.output` is what the live
@@ -788,6 +803,8 @@ fn clip_sources(clips: Vec<ClipInput>) -> Vec<pipeline::ClipSource> {
             gain_db: c.gain_db.unwrap_or(0.0) as f32,
             fade_in_sec: c.fade_in_sec.unwrap_or(0.0),
             fade_out_sec: c.fade_out_sec.unwrap_or(0.0),
+            audio_source_end_sec: c.audio_source_end_sec,
+            incoming_blend_sec: c.incoming_blend.map(|b| b.duration_sec),
         })
         .collect()
 }

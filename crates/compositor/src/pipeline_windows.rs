@@ -1338,6 +1338,12 @@ pub struct ClipSource {
     pub gain_db: f32,
     pub fade_in_sec: f64,
     pub fade_out_sec: f64,
+    /// La fin source NON rognée quand un BLEND a coupé la queue vidéo de ce clip : le son va
+    /// jusqu'ici et se fond sur `incoming_blend_sec` du clip suivant. `None` = pas de blend.
+    pub audio_source_end_sec: Option<f64>,
+    /// Le chevauchement de PROGRAMME à la TÊTE de ce clip (le blend dont il est l'entrant).
+    /// `None` = coupe nette, crossfade de frontière de 240 échantillons.
+    pub incoming_blend_sec: Option<f64>,
 }
 
 /// Export **multiclip** : rend la timeline (clips ordonnés, avec trims) en un seul MP4.
@@ -1820,7 +1826,9 @@ unsafe fn run_multi_inner(
 
     let opkt = av_packet_alloc();
     let _opkt = PacketGuard(opkt);
-    let mut clip_frame_counts = vec![0u64; clips.len()];
+    // Frames the AUDIO window produces, which is longer than the video's when a BLEND took the
+    // clip's tail off the picture. The plan overlaps adjacent segments by the boundary's `d`.
+    let mut audio_frame_counts = vec![0u64; clips.len()];
     let mut audio_jobs: ClipAudioJobs<Option<PlanarPcm>> = ClipAudioJobs::new(clips.len());
     let t0 = Instant::now();
 
@@ -1858,8 +1866,9 @@ unsafe fn run_multi_inner(
             progress(frame_index + 1);
             Ok(())
         },
-        &mut |clip_index, source_end_sec, frames_in_clip, speed_segments| {
-            clip_frame_counts[clip_index] = frames_in_clip;
+        &mut |clip_index, _source_end_sec, frames_in_clip, _speed_segments, audio_end_sec, audio_speed_segments| {
+            audio_frame_counts[clip_index] =
+                audio_speed_segments.iter().map(|span| span.frame_count).sum();
             let clip = &clips[clip_index];
             if clip.has_audio && frames_in_clip > 0 {
                 // L'audio d'un clip ne dépend que de ce clip : le décoder et l'étirer ici,
@@ -1872,13 +1881,13 @@ unsafe fn run_multi_inner(
                 let gain_db = clip.gain_db;
                 let fade_in_sec = clip.fade_in_sec;
                 let fade_out_sec = clip.fade_out_sec;
-                let segments = speed_segments.to_vec();
+                let segments = audio_speed_segments.to_vec();
                 audio_jobs.spawn(clip_index, move || {
                     decode_and_stretch_clip_audio(
                         clip_index,
                         &path,
                         source_start_sec,
-                        source_end_sec,
+                        audio_end_sec,
                         &segments,
                         out_fps as f64,
                         gain_db,
@@ -1908,9 +1917,16 @@ unsafe fn run_multi_inner(
         .collect();
 
     let declared_audio: Vec<bool> = clips.iter().map(|clip| clip.has_audio).collect();
+    // The programme seconds each blend boundary overlaps the previous clip by — the incoming
+    // clip's head overlap. Zero for a plain cut, which keeps the 240-sample boundary fade.
+    let overlap_sec: Vec<f64> = clips
+        .iter()
+        .map(|clip| clip.incoming_blend_sec.unwrap_or(0.0).max(0.0))
+        .collect();
     let audio_plan = build_audio_concat_plan(
-        &clip_frame_counts,
+        &audio_frame_counts,
         &declared_audio,
+        &overlap_sec,
         out_fps as f64,
     );
     let assembled_audio = finish_audio(

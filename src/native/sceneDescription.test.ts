@@ -27,6 +27,7 @@ import { getFocusBoundsForScale } from "@/lib/zoomMath/focusUtils";
 import { nativeBridgeClient } from "./client";
 import {
 	annotationFootageRect,
+	buildNativeClipList,
 	buildSceneDescription,
 	clampZoomKeyframes,
 	resolveVisibleClips,
@@ -1384,6 +1385,57 @@ describe("buildSceneDescription.clips programmeStartSec", () => {
 		expect(clips[1].sourceEndSec).toBe(10);
 		expect(clips[1].programmeStartSec).toBe(10);
 		expect(clips[1].incomingBlend).toEqual({ kind: "dissolve", durationSec: 1 });
+	});
+
+	it("keeps the outgoing's trimmed tail for its AUDIO on the export argument list", () => {
+		const assetA = makeAsset({ id: "a", originalPath: "/a.mp4" });
+		const assetB = makeAsset({ id: "b", originalPath: "/b.mp4" });
+		const clip1 = makeClip({
+			id: "c1",
+			assetId: "a",
+			sourceStartSec: 0,
+			sourceEndSec: 10,
+			timelineStartSec: 0,
+			timelineEndSec: 10,
+		});
+		const clip2 = makeClip({
+			id: "c2",
+			assetId: "b",
+			sourceStartSec: 0,
+			sourceEndSec: 10,
+			timelineStartSec: 10,
+			timelineEndSec: 20,
+		});
+		const document = makeDoc({
+			assets: [assetA, assetB],
+			clips: [clip1, clip2],
+			transitions: [{ id: "t1", clipId: "c2", side: "in", kind: "dissolve", durationMs: 1000 }],
+		});
+		const clips = buildNativeClipList(document);
+		// The picture stops at 9 and the sound still reaches 10: the compositor holds the outgoing
+		// frame while the incoming clip opens, and the audio crossfades over that same second.
+		expect(clips[0].sourceEndSec).toBeCloseTo(9, 6);
+		expect(clips[0].audioSourceEndSec).toBeCloseTo(10, 6);
+		expect(clips[1].audioSourceEndSec).toBeUndefined();
+		expect(clips[1].incomingBlend).toEqual({ kind: "dissolve", durationSec: 1 });
+	});
+
+	it("emits no audio tail when nothing trimmed one", () => {
+		const document = makeDoc({
+			assets: [makeAsset({ id: "a", originalPath: "/a.mp4" })],
+			clips: [
+				makeClip({
+					id: "c1",
+					assetId: "a",
+					sourceStartSec: 0,
+					sourceEndSec: 10,
+					timelineStartSec: 0,
+					timelineEndSec: 10,
+				}),
+			],
+		});
+		// A project that never used a blend keeps the payload it always had.
+		expect(buildNativeClipList(document)[0].audioSourceEndSec).toBeUndefined();
 	});
 
 	it("keeps the visible segments contiguous — the transport's raw mapping", () => {

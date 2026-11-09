@@ -172,6 +172,8 @@ fn whole_clip(dir: &PathBuf) -> ClipSource {
         gain_db: 0.0,
         fade_in_sec: 0.0,
         fade_out_sec: 0.0,
+        audio_source_end_sec: None,
+        incoming_blend_sec: None,
     }
 }
 
@@ -770,6 +772,8 @@ fn mp4_export_rejects_an_undecodable_single_tail_frame_without_publishing() {
                 gain_db: 0.0,
                 fade_in_sec: 0.0,
                 fade_out_sec: 0.0,
+                audio_source_end_sec: None,
+                incoming_blend_sec: None,
             }],
             &out.to_string_lossy(),
             &gpu,

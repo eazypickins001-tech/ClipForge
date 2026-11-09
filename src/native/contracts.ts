@@ -237,6 +237,12 @@ export interface CompositorClipInput {
 		kind: string;
 		durationSec: number;
 	};
+	/** The clip's UNTRIMMED source end, when a BLEND after it trimmed the video tail. The video
+	 *  stops at `sourceEndSec` and holds that last frame over the incoming clip's opening; the
+	 *  audio keeps decoding to this end and crossfades over the overlap, so the sound dissolves
+	 *  with the picture instead of cutting at the boundary. Absent when nothing trimmed the tail,
+	 *  which is what keeps a project with no blend emitting the payload it always did. */
+	audioSourceEndSec?: number;
 	/** The PROGRAMME second (output clock) this clip starts at, so the compositor can measure the
 	 *  blend window above in programme seconds instead of source seconds. `incomingBlend.durationSec`
 	 *  is a programme number, but `source_t` advances `speed×` faster under a speed region covering

@@ -1730,6 +1730,9 @@ pub fn stretch_clip_pcm_by_speed(
 pub struct AudioConcatSegmentPlan {
     pub start_sample: usize,
     pub sample_count: usize,
+    /// Samples at this segment's HEAD that overlap the previous segment's tail. Zero means the
+    /// segments are contiguous: a plain cut, which keeps the legacy 240-sample boundary fade.
+    pub overlap_before: usize,
     pub silence: bool,
 }
 
@@ -1738,29 +1741,55 @@ pub struct AudioConcatPlan {
     pub segments: Vec<AudioConcatSegmentPlan>,
 }
 
-/// Les offsets sont la somme ENTIÈRE des longueurs arrondies clip par clip ; recalculer depuis
-/// une durée cumulée ferait dériver les jonctions sur une longue timeline.
+/// Plan de concaténation des clips.
+///
+/// `audio_frame_counts` sont les frames de la fenêtre AUDIO du clip — plus longue que celle de
+/// l'IMAGE quand un BLEND a coupé sa queue vidéo, et c'est voulu : le son garde la queue que
+/// l'image gèle. `overlap_sec[i]` est le chevauchement de PROGRAMME que la frontière à la TÊTE du
+/// clip `i` a ouvert (le blend dont il est l'entrant), `0` pour une coupe nette. Un chevauchement
+/// positif décale le segment d'autant en arrière et le fond en puissance égale avec la queue du
+/// précédent — la dissolution audio qui accompagne la dissolution vidéo.
+///
+/// Les offsets restent la somme ENTIÈRE des longueurs arrondies clip par clip, moins les
+/// chevauchements, pour que les jonctions ne dérivent pas sur une longue timeline.
 pub fn build_audio_concat_plan(
-    output_frame_counts: &[u64],
+    audio_frame_counts: &[u64],
     has_audio: &[bool],
+    overlap_sec: &[f64],
     output_fps: f64,
 ) -> AudioConcatPlan {
+    let rate = AUDIO_OUTPUT_SAMPLE_RATE as f64;
     let mut cursor = 0usize;
-    let mut segments = Vec::with_capacity(output_frame_counts.len());
-    for (index, &frame_count) in output_frame_counts.iter().enumerate() {
+    let mut segments = Vec::with_capacity(audio_frame_counts.len());
+    for (index, &frame_count) in audio_frame_counts.iter().enumerate() {
         let sample_count = if output_fps > 0.0 {
-            ((frame_count as f64 / output_fps) * AUDIO_OUTPUT_SAMPLE_RATE as f64)
-                .round()
-                .max(0.0) as usize
+            ((frame_count as f64 / output_fps) * rate).round().max(0.0) as usize
         } else {
             0
         };
+        let previous_count = segments
+            .last()
+            .map(|segment: &AudioConcatSegmentPlan| segment.sample_count)
+            .unwrap_or(0);
+        let wanted = overlap_sec.get(index).copied().unwrap_or(0.0).max(0.0);
+        // Borné à la moitié de chaque côté : un chevauchement malformé ne peut ni replier un
+        // segment sur lui-même ni avaler le précédent. La règle de programme (`blendOverlapSec`)
+        // le borne déjà à la moitié des longueurs GARDÉES ; ici on protège l'assemblage seul.
+        let overlap_before = if index == 0 {
+            0
+        } else {
+            ((wanted * rate).round().max(0.0) as usize)
+                .min(sample_count / 2)
+                .min(previous_count / 2)
+        };
+        let start_sample = cursor.saturating_sub(overlap_before);
         segments.push(AudioConcatSegmentPlan {
-            start_sample: cursor,
+            start_sample,
             sample_count,
+            overlap_before,
             silence: !has_audio.get(index).copied().unwrap_or(false),
         });
-        cursor += sample_count;
+        cursor = start_sample + sample_count;
     }
     AudioConcatPlan { total_samples: cursor, segments }
 }
@@ -1770,6 +1799,13 @@ pub fn assemble_concatenated_pcm(
     plan: &AudioConcatPlan,
 ) -> PlanarPcm {
     let mut output = vec![vec![0.0f32; plan.total_samples]; AUDIO_OUTPUT_CHANNELS];
+    // Le chevauchement APRÈS un segment est celui qu'annonce le segment suivant.
+    let overlap_after = |index: usize| -> usize {
+        plan.segments
+            .get(index + 1)
+            .map(|segment| segment.overlap_before)
+            .unwrap_or(0)
+    };
     for (index, segment) in plan.segments.iter().enumerate() {
         if segment.sample_count == 0 || segment.silence {
             continue;
@@ -1777,19 +1813,38 @@ pub fn assemble_concatenated_pcm(
         let Some(Some(pcm)) = clip_pcm.get(index) else {
             continue;
         };
+        // Fondu en puissance égale : `sin` sur la tête qui entre, `cos` sur la queue qui sort.
+        // Les deux se SOMMENT dans la même fenêtre de sortie, ce qu'une coupe contiguë ne peut
+        // pas faire — d'où le `+=` et non le `copy_from_slice` d'avant.
+        let head = segment.overlap_before.min(segment.sample_count);
+        let tail = overlap_after(index).min(segment.sample_count);
         for channel in 0..AUDIO_OUTPUT_CHANNELS {
             let Some(source) = pcm.get(channel) else {
                 continue;
             };
             let count = segment.sample_count.min(source.len());
-            output[channel][segment.start_sample..segment.start_sample + count]
-                .copy_from_slice(&source[..count]);
+            for k in 0..count {
+                let mut gain = 1.0f32;
+                if head > 0 && k < head {
+                    gain *= ((k as f32 / head as f32) * PI * 0.5).sin();
+                }
+                if tail > 0 && k + tail >= count {
+                    gain *= (((k + tail - count) as f32 / tail as f32) * PI * 0.5).cos();
+                }
+                output[channel][segment.start_sample + k] += source[k] * gain;
+            }
         }
     }
 
+    // Frontières SANS chevauchement (coupe nette, ou charge utile d'avant les blends) : le
+    // crossfade historique de 240 échantillons, inchangé. Une frontière de blend a déjà fondu
+    // ses deux côtés dans la boucle ci-dessus et ne doit pas être fondue une seconde fois.
     for boundary in plan.segments.windows(2) {
         let current = boundary[0];
         let next = boundary[1];
+        if next.overlap_before > 0 {
+            continue;
+        }
         let fade = AUDIO_BOUNDARY_FADE_SAMPLES
             .min(current.sample_count / 2)
             .min(next.sample_count / 2);
@@ -2253,7 +2308,7 @@ mod hold_tests {
     #[test]
     fn a_longer_slot_than_pcm_leaves_silence_at_its_tail() {
         // 2s de créneau à 1 fps, mais seulement 1s de PCM décodé.
-        let plan = build_audio_concat_plan(&[2], &[true], 1.0);
+        let plan = build_audio_concat_plan(&[2], &[true], &[0.0], 1.0);
         let one_sec = AUDIO_OUTPUT_SAMPLE_RATE as usize;
         let pcm = vec![Some(vec![vec![0.5f32; one_sec]; AUDIO_OUTPUT_CHANNELS])];
         let out = assemble_concatenated_pcm(&pcm, &plan);
@@ -2265,7 +2320,7 @@ mod hold_tests {
     /// Et le son réel n'est PAS étiré pour remplir le créneau : la voix garde son rythme.
     #[test]
     fn the_clips_own_audio_is_not_stretched_to_fill_the_hold() {
-        let plan = build_audio_concat_plan(&[4], &[true], 1.0);
+        let plan = build_audio_concat_plan(&[4], &[true], &[0.0], 1.0);
         let one_sec = AUDIO_OUTPUT_SAMPLE_RATE as usize;
         let mut source = vec![0.0f32; one_sec];
         source[0] = 1.0;
@@ -2274,6 +2329,35 @@ mod hold_tests {
         // L'impulsion reste au premier échantillon, pas répartie sur quatre secondes.
         assert!((out[0][0] - 1.0).abs() < 1e-6);
         assert_eq!(out[0][1], 0.0);
+    }
+
+    /// Une frontière de BLEND ne coupe pas le son à la coupe : les deux clips se chevauchent de
+    /// `d` et se fondent en puissance égale dans la MÊME fenêtre de sortie, et la timeline
+    /// raccourcit d'exactement `d`. C'est la moitié audio du fondu croisé vidéo.
+    #[test]
+    fn a_blend_boundary_crossfades_the_two_clips_over_the_overlap() {
+        let one_sec = AUDIO_OUTPUT_SAMPLE_RATE as usize;
+        // Deux clips d'une seconde à 1 fps, chevauchement d'une demi-seconde au second.
+        let plan = build_audio_concat_plan(&[1, 1], &[true, true], &[0.0, 0.5], 1.0);
+        assert_eq!(plan.total_samples, one_sec + one_sec / 2);
+        let out = assemble_concatenated_pcm(
+            &[
+                Some(vec![vec![1.0f32; one_sec]; AUDIO_OUTPUT_CHANNELS]),
+                Some(vec![vec![1.0f32; one_sec]; AUDIO_OUTPUT_CHANNELS]),
+            ],
+            &plan,
+        );
+        // Avant le chevauchement, le premier clip sort à plein niveau.
+        assert!((out[0][0] - 1.0).abs() < 1e-6);
+        // Au milieu du chevauchement, les deux contributions se somment (puissance égale).
+        let middle = one_sec / 2 + one_sec / 4;
+        let expected = 2.0 * std::f32::consts::FRAC_PI_4.sin();
+        assert!(
+            (out[0][middle] - expected).abs() < 1e-3,
+            "{} != {}",
+            out[0][middle],
+            expected
+        );
     }
 }
 

@@ -156,7 +156,7 @@ pub(crate) unsafe fn walk_composited_timeline(
     screen_decs: &mut HashMap<String, Decoder>,
     webcam_decs: &mut HashMap<String, Decoder>,
     on_frame: &mut dyn FnMut(u64) -> Result<()>,
-    on_clip_end: &mut dyn FnMut(usize, f64, u64, &[SpeedSegment]) -> Result<()>,
+    on_clip_end: &mut dyn FnMut(usize, f64, u64, &[SpeedSegment], f64, &[SpeedSegment]) -> Result<()>,
 ) -> Result<u64> {
     let frames = walk_timeline(clips, gpu, comp, cfg, out_fps, scene, screen_decs, webcam_decs, None, on_frame, on_clip_end)?;
     if frames == 0 {
@@ -227,7 +227,7 @@ pub unsafe fn render_frames(
             out.push(RenderedFrame { index, width, height, rgba });
             Ok(())
         },
-        &mut |_, _, _, _| Ok(()),
+        &mut |_, _, _, _, _, _| Ok(()),
     )?;
     Ok(out)
 }
@@ -300,7 +300,7 @@ unsafe fn walk_timeline(
     webcam_decs: &mut HashMap<String, Decoder>,
     only: Option<&[u64]>,
     on_frame: &mut dyn FnMut(u64) -> Result<()>,
-    on_clip_end: &mut dyn FnMut(usize, f64, u64, &[SpeedSegment]) -> Result<()>,
+    on_clip_end: &mut dyn FnMut(usize, f64, u64, &[SpeedSegment], f64, &[SpeedSegment]) -> Result<()>,
 ) -> Result<u64> {
     // La piste se charge même curseur MASQUÉ : le focus auto des zooms la suit, comme en preview
     // (qui la charge toujours). Sans elle, un zoom auto suivait en preview et restait figé à
@@ -428,6 +428,35 @@ unsafe fn walk_timeline(
             programme_sec,
             out_fps as f64,
         );
+        // L'audio garde la queue qu'un BLEND a coupée à l'IMAGE. La fenêtre vidéo ci-dessus
+        // s'arrête à la fin rognée et tient sa dernière frame sur l'ouverture du clip suivant ;
+        // décoder la queue est ce qui permet aux deux sons de se fondre sur ces mêmes secondes
+        // au lieu de couper à la frontière. Absent (pas de blend, ou charge utile ancienne) rend
+        // les deux fenêtres identiques et l'audio exactement ce qu'il était.
+        let audio_end_sec = match clip.audio_source_end_sec {
+            Some(end) if end > source_end_sec => {
+                let end = match screen_available_duration {
+                    Some(duration) => end.min(duration),
+                    None => end,
+                };
+                end.max(source_end_sec)
+            }
+            _ => source_end_sec,
+        };
+        let audio_speed_segments = if audio_end_sec > source_end_sec + 1e-9 {
+            speed_segments_for_window(
+                clip_scene
+                    .as_ref()
+                    .map(|s| s.speed_regions.as_slice())
+                    .unwrap_or(&[]),
+                clip.source_start_sec,
+                audio_end_sec,
+                programme_sec,
+                out_fps as f64,
+            )
+        } else {
+            speed_segments.clone()
+        };
         if clip_scene.is_some() {
             comp.set_scene(clip_scene);
         }
@@ -541,6 +570,8 @@ unsafe fn walk_timeline(
             source_end_sec,
             frames - frames_before_clip,
             &speed_segments,
+            audio_end_sec,
+            &audio_speed_segments,
         )?;
     }
 

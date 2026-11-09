@@ -802,6 +802,8 @@ fn export_linux_mp4() {
         gain_db: 0.0,
         fade_in_sec: 0.0,
         fade_out_sec: 0.0,
+        audio_source_end_sec: None,
+        incoming_blend_sec: None,
     }];
     let params = ExportParams {
         width: 640,

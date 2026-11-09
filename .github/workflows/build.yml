@@ -87,9 +87,14 @@ jobs:
         # The filter is quoted because a trailing `::` closes a plain YAML scalar and the rest reads
         # as a nested mapping — how this step first took the whole workflow down. And `-p` takes the
         # PACKAGE name (`openscreen-compositor`), not the directory's (`compositor`).
+        #
+        # The second run is the audio CONCATENATION math: `build_audio_concat_plan` and
+        # `assemble_concatenated_pcm` are pure (no device, no decode) and are what a blend's audio
+        # crossfade is built from, so it belongs in the same GPU-less bucket as the region math.
         run: |
           $env:PATH = "${{ github.workspace }}\electron\native\bin\win32-x64;$env:PATH"
           cargo test -p openscreen-compositor --lib regions::
+          cargo test -p openscreen-compositor --lib audio::hold_tests
 
       # OpenScreen's build-whisper-stt.yml did not survive the fork, so nothing has produced
       # this helper since — which is why every Windows install logs "whisper-stt-server

@@ -79,6 +79,8 @@ fn a_frame_rendered_alone_is_the_frame_of_the_full_walk() {
             gain_db: 0.0,
             fade_in_sec: 0.0,
             fade_out_sec: 0.0,
+            audio_source_end_sec: None,
+            incoming_blend_sec: None,
         })
         .collect();
     // La config de l'export (`export_cfg_and_scene` dans l'addon).
