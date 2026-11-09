@@ -28,7 +28,7 @@ export interface VideoFrameData {
 	duration: number; // in microseconds
 }
 
-export type ExportQuality = "medium" | "good" | "source";
+export type ExportQuality = "medium" | "good" | "1440p" | "2160p" | "source";
 
 /** The MP4 frame rates the Export dialog offers. */
 export const MP4_FRAME_RATES = [24, 30, 60] as const;

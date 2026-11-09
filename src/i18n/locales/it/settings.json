@@ -284,6 +284,8 @@
 		"title": "Risoluzione esportazione",
 		"low": "720p",
 		"high": "Originale",
+		"qhd": "1440p",
+		"uhd": "2160p",
 		"medium": "1080p"
 	},
 	"audioTrack": {

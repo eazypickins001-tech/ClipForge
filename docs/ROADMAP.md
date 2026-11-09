@@ -118,15 +118,14 @@ span and an `offsetMs`, in one serialised write. Reachable from the inspector ra
 menu; the detached track survives save/reopen and the export level is unchanged. Still no
 right-click context menu.
 
-### F3 — Resolution presets up to 4K · partial
+### F3 — Resolution presets up to 4K · done (2026-11-09)
 
-The export dialog offers **medium / good / source**; Source targets the smallest clip's own
-resolution, so a 4K source can already produce a 4K file. There is **no 1440p/2160p preset, no 60fps
-tier and no default upscale**.
-
-1. Add 1440p/2160p tiers, gated on source resolution - never upscale by default.
-2. Add a 60fps option where the source and encoder support it.
-3. Verify each preset on the packaged build: export, decode-check, assert dimensions and frame rate.
+The export dialog offers **720p / 1080p / 1440p / 2160p / Source** and **24 / 30 / 60 fps**. The
+1440p and 2160p tiers are capped at the source's own short side, so a 1080p source asked for 2160p
+exports 1080p — no silent upscale. 720p/1080p keep their explicit behaviour (they may upscale a
+smaller source, which the dialog warns about), and Source still resolves to the smallest clip's own
+resolution. 60 fps is offered regardless of the source rate; a 30 fps source is frame-duplicated
+rather than refused. HDR is not implemented.
 
 ### F4 — Background removal for any clip, not just webcam · partial
 
@@ -231,7 +230,7 @@ hidden editing algorithms.
 
 | Gap | Our state | Track |
 |---|---|---|
-| 4K/60fps + HDR export tier | Source-resolution export; no 1440/2160 preset, no 60fps tier | Craft (F3) |
+| 4K/60fps + HDR export tier | 720p/1080p/1440p/2160p/Source and 24/30/60fps; no HDR | HDR is future craft |
 | Premium assets: templates, effects, transitions, fonts, music/SFX, stickers, graphic suite | None | Business decision (non-goal) |
 | General keyframes and graphs across properties | Zoom focus/scale only | Craft (F8) |
 | Colour wheel, LUTs, filters, presets | Sliders only | Craft |
@@ -249,7 +248,7 @@ hidden editing algorithms.
 ### Parity order (build, don't buy)
 
 1. **Craft, cheap:** general keyframes/graphs (F8); an effects picker/library;
-   LUTs/colour presets; 1440/2160 + 60fps export (F3); primary-video background removal (F4);
+   LUTs/colour presets; primary-video background removal (F4);
    auto-beat; reverse/stabilise/denoise.
 2. **Local/BYOK AI:** TTS; subject-tracking auto-reframe (F7); stem separation (F6); smart search;
    embeddings for media search.

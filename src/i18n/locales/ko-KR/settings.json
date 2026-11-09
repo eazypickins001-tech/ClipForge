@@ -284,6 +284,8 @@
 		"title": "내보내기 해상도",
 		"low": "720p",
 		"high": "Source",
+		"qhd": "1440p",
+		"uhd": "2160p",
 		"medium": "1080p"
 	},
 	"audioTrack": {

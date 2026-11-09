@@ -284,6 +284,8 @@
 		"title": "Dışa aktarma çözünürlüğü",
 		"low": "720p",
 		"high": "Source",
+		"qhd": "1440p",
+		"uhd": "2160p",
 		"medium": "1080p"
 	},
 	"audioTrack": {

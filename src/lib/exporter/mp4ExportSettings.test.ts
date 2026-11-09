@@ -109,9 +109,44 @@ describe("calculateMp4ExportSettings", () => {
 		});
 	});
 
+	it("caps 1440p and 2160p at the source instead of upscaling", () => {
+		const at = (
+			quality: "1440p" | "2160p",
+			sourceWidth: number,
+			sourceHeight: number,
+			aspectRatioValue: number,
+		) =>
+			calculateMp4ExportSettings({
+				quality,
+				sourceWidth,
+				sourceHeight,
+				aspectRatioValue,
+				frameRate: 60,
+			});
+
+		expect(at("1440p", 3840, 2160, 16 / 9)).toMatchObject({ width: 2560, height: 1440 });
+		expect(at("2160p", 3840, 2160, 16 / 9)).toMatchObject({ width: 3840, height: 2160 });
+		expect(at("2160p", 1920, 1080, 16 / 9)).toMatchObject({ width: 1920, height: 1080 });
+		expect(at("1440p", 1280, 720, 16 / 9)).toMatchObject({ width: 1280, height: 720 });
+	});
+
+	it("caps the high tiers on a portrait source too", () => {
+		const at = (quality: "1440p" | "2160p", sourceWidth: number, sourceHeight: number) =>
+			calculateMp4ExportSettings({
+				quality,
+				sourceWidth,
+				sourceHeight,
+				aspectRatioValue: 9 / 16,
+				frameRate: 60,
+			});
+
+		expect(at("2160p", 1080, 1920)).toMatchObject({ width: 1080, height: 1920 });
+		expect(at("1440p", 2160, 3840)).toMatchObject({ width: 1440, height: 2560 });
+	});
+
 	it("does not call letterbox rows an upscale (1920x1032 window capture, 16:9 project)", () => {
 		const source = { width: 1920, height: 1032 };
-		const tier = (quality: "medium" | "good" | "source") =>
+		const tier = (quality: "medium" | "good" | "1440p" | "2160p" | "source") =>
 			calculateMp4ExportSettings({
 				quality,
 				sourceWidth: source.width,
@@ -185,7 +220,11 @@ describe("calculateMp4ExportSettings", () => {
 });
 
 describe("calculateMp4ExportSettings bitrate", () => {
-	const bitrate = (quality: "medium" | "good" | "source", frameRate: number, source = 1080) =>
+	const bitrate = (
+		quality: "medium" | "good" | "1440p" | "2160p" | "source",
+		frameRate: number,
+		source = 1080,
+	) =>
 		calculateMp4ExportSettings({
 			quality,
 			sourceWidth: (source * 16) / 9,

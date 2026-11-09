@@ -180,6 +180,8 @@ const QUALITY_OPTIONS: Array<{
 }> = [
 	{ value: "medium", labelKey: "exportQuality.low" },
 	{ value: "good", labelKey: "exportQuality.medium" },
+	{ value: "1440p", labelKey: "exportQuality.qhd" },
+	{ value: "2160p", labelKey: "exportQuality.uhd" },
 	{ value: "source", labelKey: "exportQuality.high" },
 ];
 
@@ -281,10 +283,9 @@ export function ExportDialog({ open, onClose, document }: ExportDialogProps) {
 		[document],
 	);
 	// Output dimensions the export will produce for a given tier, from the (crop-aware)
-	// SMALLEST clip on the timeline — see `smallestSource` above for why. Only "Source"
-	// quality actually uses these as its target size; 720p/1080p target a fixed short side
-	// regardless (`calculateDimensionsForShortSide`), so this only changes what "Source"
-	// resolves to.
+	// SMALLEST clip on the timeline — see `smallestSource` above for why. "Source" resolves to
+	// the source's own size; 720p/1080p target a fixed short side; 1440p/2160p target a fixed
+	// short side capped at the source, so they never upscale.
 	const tierOutputDims = (value: ExportQuality) =>
 		smallestSource
 			? calculateMp4ExportSettings({
@@ -634,7 +635,13 @@ export function ExportDialog({ open, onClose, document }: ExportDialogProps) {
 				{format === "audio" ? null : format === "mp4" ? (
 					<section>
 						<div className={styles.groupLabel}>{t("exportDialog.quality")}</div>
-						<div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 8 }}>
+						<div
+							style={{
+								display: "grid",
+								gridTemplateColumns: "repeat(auto-fit, minmax(92px, 1fr))",
+								gap: 8,
+							}}
+						>
 							{QUALITY_OPTIONS.map((q) => (
 								<button
 									type="button"

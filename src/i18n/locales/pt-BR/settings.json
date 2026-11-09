@@ -284,6 +284,8 @@
 		"title": "Qualidade de Exportação",
 		"low": "Baixa",
 		"high": "Alta",
+		"qhd": "1440p",
+		"uhd": "2160p",
 		"medium": "Média"
 	},
 	"audioTrack": {

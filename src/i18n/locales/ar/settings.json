@@ -284,7 +284,9 @@
 		"title": "دقة التصدير",
 		"low": "720p",
 		"high": "Source",
-		"medium": "1080p"
+		"medium": "1080p",
+		"qhd": "1440p",
+		"uhd": "2160p"
 	},
 	"audioTrack": {
 		"defaultLabel": "مسار صوتي",

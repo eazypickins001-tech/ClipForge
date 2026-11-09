@@ -32,6 +32,8 @@ export function wouldUpscale(output: Dims, source: Dims): boolean {
 
 const MEDIUM_SHORT_SIDE = 720;
 const HIGH_SHORT_SIDE = 1080;
+const QHD_SHORT_SIDE = 1440;
+const UHD_SHORT_SIDE = 2160;
 
 function even(value: number) {
 	return Math.floor(value / 2) * 2;
@@ -114,6 +116,26 @@ function calculateSourceDimensions(
 }
 
 /**
+ * A fixed-short-side tier that refuses to upscale: the target is clamped to the source's own
+ * short side first, so a 1080p source asked for 2160p exports 1080p, while a 4K source gets the
+ * full 2160p frame. The existing 720p/1080p tiers stay explicit even when they upscale (that is
+ * their documented behaviour); only the new high tiers are source-gated.
+ */
+function calculateCappedDimensions(
+	targetShortSide: number,
+	sourceWidth: number,
+	sourceHeight: number,
+	aspectRatioValue: number,
+) {
+	const sourceDimensions = calculateSourceDimensions(sourceWidth, sourceHeight, aspectRatioValue);
+	const sourceShortSide = Math.min(sourceDimensions.width, sourceDimensions.height);
+	return calculateDimensionsForShortSide(
+		Math.min(targetShortSide, sourceShortSide),
+		aspectRatioValue,
+	);
+}
+
+/**
  * Bits the encoder may spend per pixel of each frame. Measured with NVENC on scrolled text under
  * animated zooms, against the same export with no cap: at 1080p60 the quality climbs steeply up
  * to 16-20 Mb/s and flattens after, and 0.15 sits on that knee (18.7 Mb/s; 9.3 at 1080p30).
@@ -157,6 +179,19 @@ export function calculateMp4ExportSettings({
 
 	if (quality === "good") {
 		const dimensions = calculateDimensionsForShortSide(HIGH_SHORT_SIDE, aspectRatioValue);
+		return {
+			...dimensions,
+			bitrate: calculateBitrate(dimensions.width, dimensions.height, frameRate),
+		};
+	}
+
+	if (quality === "1440p" || quality === "2160p") {
+		const dimensions = calculateCappedDimensions(
+			quality === "1440p" ? QHD_SHORT_SIDE : UHD_SHORT_SIDE,
+			sourceWidth,
+			sourceHeight,
+			aspectRatioValue,
+		);
 		return {
 			...dimensions,
 			bitrate: calculateBitrate(dimensions.width, dimensions.height, frameRate),
