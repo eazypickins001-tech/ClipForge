@@ -135,7 +135,8 @@
 		"shadowNone": "なし",
 		"shadowLight": "弱",
 		"shadowMedium": "中",
-		"shadowStrong": "強"
+		"shadowStrong": "強",
+		"vignette": "ビネット"
 	},
 	"stylePresets": {
 		"button": "プリセット",

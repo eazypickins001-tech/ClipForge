@@ -135,7 +135,8 @@
 		"shadowNone": "없음",
 		"shadowLight": "약하게",
 		"shadowMedium": "보통",
-		"shadowStrong": "강하게"
+		"shadowStrong": "강하게",
+		"vignette": "비네트"
 	},
 	"stylePresets": {
 		"button": "프리셋",

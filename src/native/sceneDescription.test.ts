@@ -3476,6 +3476,37 @@ describe("buildSceneDescription.colourGrade", () => {
 	});
 });
 
+describe("buildSceneDescription.vignette", () => {
+	it("emits nothing when the vignette is off", () => {
+		const doc = makeDoc({ legacyEditor: { vignetteAmount: 0 } });
+		expect(buildSceneDescription(doc).shaderEffects).toBeUndefined();
+	});
+
+	it("emits one vignette fragment per clip, after the grade", () => {
+		const asset = makeAsset({ id: "a", originalPath: "/a.mp4" });
+		const clip = makeClip({
+			id: "c1",
+			assetId: "a",
+			sourceStartSec: 0,
+			sourceEndSec: 4,
+			timelineStartSec: 0,
+			timelineEndSec: 4,
+		});
+		const { shaderEffects } = buildSceneDescription(
+			makeDoc({
+				assets: [asset],
+				clips: [clip],
+				legacyEditor: { vignetteAmount: 0.6, colourExposure: 0.5 },
+			}),
+		);
+		// Grade first, vignette second, both over the same clip.
+		expect(shaderEffects).toHaveLength(2);
+		expect(shaderEffects?.[1]?.values).toEqual({ amount: 0.6 });
+		expect(shaderEffects?.[1]?.code).toContain("params.amount");
+		expect(shaderEffects?.[1]?.clipIndex).toBe(0);
+	});
+});
+
 describe("buildSceneDescription.shaderEffects", () => {
 	const code = "fn effect(uv: vec2<f32>) -> vec4<f32> { return frame(uv); }";
 	const effect = {

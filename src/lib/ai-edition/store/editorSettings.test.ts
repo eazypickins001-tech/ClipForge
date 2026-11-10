@@ -404,6 +404,13 @@ describe("patchEditorSettings", () => {
 		expect(getEditorSettings(odd).webcamBackgroundTarget).toBe("webcam");
 	});
 
+	it("round-trips the vignette strength and clamps it to the slider", () => {
+		const patched = patchEditorSettings(baseDoc, { vignetteAmount: 0.4 });
+		expect(getEditorSettings(patched).vignetteAmount).toBe(0.4);
+		const odd = { ...baseDoc, legacyEditor: { vignetteAmount: 1000 } } as typeof baseDoc;
+		expect(getEditorSettings(odd).vignetteAmount).toBe(1);
+	});
+
 	// `legacyEditor` is user-writable JSON. An unknown mode used to flow straight through
 	// as a WebcamBackgroundMode, so the export pre-render ran and `renderSegmentedWebcam`
 	// matched no branch — encoding a blank webcam track.

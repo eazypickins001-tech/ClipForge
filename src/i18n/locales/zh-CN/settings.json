@@ -135,7 +135,8 @@
 		"shadowNone": "无",
 		"shadowLight": "轻",
 		"shadowMedium": "中",
-		"shadowStrong": "强"
+		"shadowStrong": "强",
+		"vignette": "暗角"
 	},
 	"stylePresets": {
 		"button": "预设",

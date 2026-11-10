@@ -2778,6 +2778,24 @@ export function VideoEffectsPane() {
 					onCommit={() => void commit()}
 				/>
 			</div>
+			{/* A curated entry from the effects library: one fixed WGSL pass, no code box. Neutral
+			    emits nothing, so a project that never uses it renders exactly as before. */}
+			<div className={styles.sectionLabel}>{ts("effects.vignette")}</div>
+			<div className={styles.sliderGrid}>
+				<SliderCell
+					label={ts("effects.vignette")}
+					value={settings.vignetteAmount}
+					min={0}
+					max={1}
+					step={0.01}
+					decimals={2}
+					showValue
+					defaultValue={DEFAULT_EDITOR_SETTINGS.vignetteAmount}
+					disabled={!hasDocument}
+					onChange={(vignetteAmount) => setLive({ vignetteAmount })}
+					onCommit={() => void commit()}
+				/>
+			</div>
 			{/* Next to motion blur because it is the other blur of the RECORDING. It only ever
 			    acts on a 3D-tilted zoom, so with none in the project it is not offered. */}
 			{hasTiltedZoom ? (

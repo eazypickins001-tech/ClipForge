@@ -57,6 +57,7 @@ import {
 	MIN_ZOOM_SCALE,
 	maxZoomScaleFor,
 } from "@/lib/ai-edition/timeline/zoom-scale";
+import { isNeutralVignette, vignetteEffect } from "@/lib/ai-edition/vignette";
 import {
 	computeCompositeLayout,
 	isWebcamBlockLayout,
@@ -1423,8 +1424,32 @@ export function buildSceneDescription(
 			}
 		}
 	}
+	// A curated vignette rides the SAME fixed-shader path, after the grade so it darkens the graded
+	// picture. Neutral emits nothing, so its payload is only added when the creator turns it on.
+	const vignetteFragments: SceneShaderEffect[] = [];
+	if (!isNeutralVignette({ amount: settings.vignetteAmount })) {
+		const vignette = vignetteEffect({ amount: settings.vignetteAmount });
+		if (vignette) {
+			for (const [index, clip] of visibleClips.entries()) {
+				const sourceEndSec = resolveClipSourceEndSec(clip, assetById.get(clip.assetId));
+				vignetteFragments.push({
+					startSec: clip.sourceStartSec,
+					endSec: sourceEndSec,
+					clipIndex: index,
+					programmeStartSec: clip.sourceStartSec,
+					programmeEndSec: sourceEndSec,
+					target: "image",
+					contract: vignette.contract,
+					code: vignette.code,
+					params: vignette.params.map(({ name, type }) => ({ name, type })),
+					values: { amount: settings.vignetteAmount },
+				});
+			}
+		}
+	}
 	const sceneShaderEffects: SceneShaderEffect[] = [
 		...gradeFragments,
+		...vignetteFragments,
 		...projectedShaderEffects.flatMap((region) => {
 			const effect = effectsById.get(region.effectId);
 			if (!effect) return [];

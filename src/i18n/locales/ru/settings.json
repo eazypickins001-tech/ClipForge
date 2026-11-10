@@ -135,7 +135,8 @@
 		"shadowNone": "Нет",
 		"shadowLight": "Лёгкая",
 		"shadowMedium": "Средняя",
-		"shadowStrong": "Сильная"
+		"shadowStrong": "Сильная",
+		"vignette": "Виньетка"
 	},
 	"stylePresets": {
 		"button": "Пресеты",

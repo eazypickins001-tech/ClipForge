@@ -135,7 +135,8 @@
 		"shadowNone": "Yok",
 		"shadowLight": "Hafif",
 		"shadowMedium": "Orta",
-		"shadowStrong": "Güçlü"
+		"shadowStrong": "Güçlü",
+		"vignette": "Vinyet"
 	},
 	"stylePresets": {
 		"button": "Ön ayarlar",

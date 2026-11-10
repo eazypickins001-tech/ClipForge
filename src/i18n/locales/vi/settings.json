@@ -135,7 +135,8 @@
 		"shadowNone": "Không",
 		"shadowLight": "Nhẹ",
 		"shadowMedium": "Vừa",
-		"shadowStrong": "Đậm"
+		"shadowStrong": "Đậm",
+		"vignette": "Viền tối"
 	},
 	"stylePresets": {
 		"button": "Cài đặt sẵn",

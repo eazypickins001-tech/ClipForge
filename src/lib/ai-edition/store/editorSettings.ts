@@ -130,6 +130,8 @@ export interface EditorSettingsSnapshot {
 	webcamBackgroundTarget: "webcam" | "screen";
 	webcamWallpaper: string;
 	webcamBlurIntensity: number;
+	/** Global vignette strength (0..1), the first curated entry in the effects library. */
+	vignetteAmount: number;
 	cursor: CursorVisualSettings;
 	cursorShow: boolean;
 	cursorAutoHide: boolean;
@@ -191,6 +193,7 @@ interface LegacyShape {
 	webcamBackgroundTarget?: "webcam" | "screen";
 	webcamWallpaper?: string;
 	webcamBlurIntensity?: number;
+	vignetteAmount?: number;
 	cursorSize?: number;
 	cursorSmoothing?: number;
 	cursorMotionBlur?: number;
@@ -366,6 +369,7 @@ export function getEditorSettings(doc: AxcutDocument | null | undefined): Editor
 			"webcamBlurIntensity",
 			defaults.webcamBlurIntensity,
 		),
+		vignetteAmount: readBounded(legacy?.vignetteAmount, "vignetteAmount", defaults.vignetteAmount),
 		cursor,
 		cursorShow: bool(legacy?.cursorShow, DEFAULT_EDITOR_SETTINGS.cursorShow),
 		cursorAutoHide: bool(legacy?.cursorAutoHide, DEFAULT_EDITOR_SETTINGS.cursorAutoHide),
@@ -405,6 +409,7 @@ export interface EditorSettingsPatch {
 	webcamBackgroundTarget?: "webcam" | "screen";
 	webcamWallpaper?: string;
 	webcamBlurIntensity?: number;
+	vignetteAmount?: number;
 	cursor?: Partial<CursorVisualSettings> & { theme?: string; show?: boolean; autoHide?: boolean };
 	cursorAutoHide?: boolean;
 	autoFocusAll?: boolean;

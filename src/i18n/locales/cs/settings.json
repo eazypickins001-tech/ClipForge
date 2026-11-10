@@ -135,7 +135,8 @@
 		"shadowNone": "Žádný",
 		"shadowLight": "Lehký",
 		"shadowMedium": "Střední",
-		"shadowStrong": "Silný"
+		"shadowStrong": "Silný",
+		"vignette": "Vinětace"
 	},
 	"stylePresets": {
 		"button": "Předvolby",

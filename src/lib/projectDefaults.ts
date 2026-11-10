@@ -216,6 +216,8 @@ export interface ProjectAppearanceDefaults {
 	webcamBackgroundTarget: "webcam" | "screen";
 	webcamWallpaper: string;
 	webcamBlurIntensity: number;
+	/** Global vignette strength, 0 = off. A curated shader effect, like the colour grade. */
+	vignetteAmount: number;
 	cursor: {
 		size: number;
 		smoothing: number;
@@ -263,6 +265,7 @@ export const DEFAULT_PROJECT_APPEARANCE: ProjectAppearanceDefaults = {
 	webcamBackgroundTarget: "webcam",
 	webcamWallpaper: "/wallpapers/wallpaper11.jpg",
 	webcamBlurIntensity: 0.5,
+	vignetteAmount: 0,
 	cursor: {
 		// 3.6 draws a 98 px arrow in a 1080p export, about five times the system one: the cursor
 		// effects are part of the product, and a smaller arrow plays them down. 6 reaches 164 px.
@@ -306,6 +309,7 @@ export const SETTING_BOUNDS = {
 	webcamSizePreset: [WEBCAM_SIZE_MIN, WEBCAM_SIZE_MAX],
 	webcamRoundness: [0, 1],
 	webcamBlurIntensity: [0, 1],
+	vignetteAmount: [0, 1],
 	// 1.5 is the floor: nothing smaller reads in a demo. At 6 the arrow is 164 px tall in a
 	// 1080p export, eight times the system one.
 	cursorSize: [1.5, 6],

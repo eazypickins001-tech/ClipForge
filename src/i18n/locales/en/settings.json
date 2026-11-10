@@ -135,7 +135,8 @@
 		"shadowNone": "None",
 		"shadowLight": "Light",
 		"shadowMedium": "Medium",
-		"shadowStrong": "Strong"
+		"shadowStrong": "Strong",
+		"vignette": "Vignette"
 	},
 	"stylePresets": {
 		"button": "Presets",

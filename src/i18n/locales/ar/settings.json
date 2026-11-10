@@ -135,7 +135,8 @@
 		"shadowNone": "بلا",
 		"shadowLight": "خفيف",
 		"shadowMedium": "متوسط",
-		"shadowStrong": "قوي"
+		"shadowStrong": "قوي",
+		"vignette": "تظليل الأطراف"
 	},
 	"stylePresets": {
 		"button": "الإعدادات المسبقة",
