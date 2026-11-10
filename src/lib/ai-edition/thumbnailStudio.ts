@@ -241,6 +241,85 @@ function evidenceLabel(basis: StudioEvidenceBasis): string {
 }
 
 /**
+ * Capitalised multi-word names (and all-caps acronyms) from the evidence: the concrete subjects an
+ * image can actually show. Single capitalised words are skipped — they are usually just sentence
+ * starts, and the title already names the video.
+ */
+function namedSubjects(...parts: string[]): string[] {
+	const seen = new Set<string>();
+	const out: string[] = [];
+	for (const part of parts) {
+		const matches = part.match(/\b[A-Z][A-Za-z0-9'’-]*(?:\s+[A-Z][A-Za-z0-9'’-]*)*\b/g) ?? [];
+		for (const raw of matches) {
+			const words = raw.trim().split(/\s+/);
+			const acronym =
+				words.length === 1 && words[0].length >= 2 && words[0] === words[0].toUpperCase();
+			if (words.length < 2 && !acronym) continue;
+			const key = raw.toLowerCase();
+			if (seen.has(key)) continue;
+			seen.add(key);
+			out.push(raw.trim());
+		}
+	}
+	return out;
+}
+
+/** Numbers the evidence actually states — a duration, count or percentage — as a proof point the
+ *  thumbnail may show. Extracted, never invented. */
+function proofPoints(...parts: string[]): string[] {
+	const found = new Set<string>();
+	for (const part of parts) {
+		const matches =
+			part.match(
+				/\b\d[\d.,]*\s*(?:%|x|minutes?|mins?|hours?|hrs?|days?|weeks?|months?|years?|steps?|ways?|tips?|tools?|seconds?|secs?)\b/gi,
+			) ?? [];
+		for (const match of matches) found.add(match.replace(/\s+/g, " ").trim());
+	}
+	return [...found].slice(0, 4);
+}
+
+/**
+ * How each destination presents a cover: its aspect ratio and the zones the platform paints over
+ * (duration badge, action rail, timestamp). A context-aware prompt names the format it is drawn
+ * for, so the same text is not asked to sit under TikTok's action rail.
+ */
+const PLATFORM_PRESENTATION: Record<
+	StudioPlatform,
+	{ name: string; aspect: string; safe: string; portrait: boolean }
+> = {
+	youtube: {
+		name: "YouTube",
+		aspect: "16:9 (1280×720)",
+		safe: "keep the text inside the central safe area and clear of the bottom-right duration badge",
+		portrait: false,
+	},
+	x: {
+		name: "X",
+		aspect: "16:9",
+		safe: "keep the text clear of the bottom-left timestamp and the bottom-right action row",
+		portrait: false,
+	},
+	linkedin: {
+		name: "LinkedIn",
+		aspect: "16:9",
+		safe: "keep the text clear of the bottom-right play button",
+		portrait: false,
+	},
+	tiktok: {
+		name: "TikTok",
+		aspect: "9:16 (1080×1920 cover)",
+		safe: "keep the text in the upper-middle third and clear of the bottom action rail and the top status bar",
+		portrait: true,
+	},
+	instagram: {
+		name: "Instagram",
+		aspect: "4:5 (1080×1350 feed cover)",
+		safe: "keep the text inside the central safe area",
+		portrait: true,
+	},
+};
+
+/**
  * Build the studio's whole result. `transcriptText` is optional: without it the evidence basis says
  * so, and the prompts tell the image tool not to depict anything the inputs do not state.
  */
@@ -274,6 +353,20 @@ export function buildThumbnailStudio(
 	const kit = brand ? `Brand kit: ${brand}.` : "";
 	const avoid = exclusions ? `Do not include: ${exclusions}.` : "";
 
+	// Context the prompt can stand on: the destination's format, the named subjects and the numbers
+	// the video states. All extracted from what the creator supplied or the transcript says —
+	// nothing here is invented.
+	const presentation = PLATFORM_PRESENTATION[inputs.platform];
+	const subjects = namedSubjects(brief, transcript);
+	const proofs = proofPoints(title, brief, transcript);
+	const subjectLine =
+		subjects.length > 0 ? `Main subject: ${subjects.slice(0, 3).join(", ")}.` : "";
+	const contextLine = excerpt ? `Context from the video: "${excerpt}"` : "";
+	const proofLine = proofs.length > 0 ? `Proof points to show: ${proofs.join(", ")}.` : "";
+	const composition = presentation.portrait
+		? "Subject filling the frame (waist-up if a person), the bold text in the upper third, and clean space at the bottom for the platform's action rail."
+		: "One clear subject (or a tight crop of the payoff) on one side, the bold text in the opposite safe area, and enough empty space that nothing competes with the face or the result.";
+
 	const concept = (
 		id: ThumbnailConcept["id"],
 		hook: string,
@@ -289,11 +382,15 @@ export function buildThumbnailStudio(
 		palette,
 		thumbnailText,
 		prompt: [
-			`A 16:9 video thumbnail for "${title}".`,
+			`A ${presentation.aspect} video thumbnail for "${title}" on ${presentation.name}.`,
 			composition,
+			subjectLine,
+			contextLine,
+			proofLine,
 			`Focal point: ${focalPoint}.`,
 			`Palette: ${palette.join(", ")}.`,
 			`Bold thumbnail text: "${thumbnailText}".`,
+			`Safe area: ${presentation.safe}.`,
 			who,
 			kit,
 			avoid,
@@ -310,7 +407,7 @@ export function buildThumbnailStudio(
 		concept(
 			"curiosity",
 			"Show the payoff, withhold the method.",
-			"One clear subject (or a tight crop of the payoff) on one side, the bold text in the opposite safe area, and enough empty space that nothing competes with the face or the result.",
+			composition,
 			`The result of "${title}", clearly visible`,
 			headlineText,
 			"A visible payoff with the method withheld is the most reliable curiosity gap: the text names the outcome, not the process.",

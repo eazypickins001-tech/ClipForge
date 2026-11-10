@@ -68,6 +68,38 @@ describe("buildThumbnailStudio", () => {
 			),
 		).toBe(true);
 	});
+
+	it("grounds the prompt in the transcript's own words", () => {
+		const result = buildThumbnailStudio(
+			inputs,
+			"First open the recorder. Then pick the window, not the whole screen, and record once.",
+		);
+		expect(result.concepts[0]?.prompt).toContain("Context from the video:");
+		expect(result.concepts[0]?.prompt).toContain("First open the recorder");
+	});
+
+	it("names the destination's format and safe area", () => {
+		const youtube =
+			buildThumbnailStudio({ ...inputs, platform: "youtube" }).concepts[0]?.prompt ?? "";
+		expect(youtube).toContain("16:9 (1280×720)");
+		expect(youtube).toContain("Safe area:");
+		const tiktok =
+			buildThumbnailStudio({ ...inputs, platform: "tiktok" }).concepts[0]?.prompt ?? "";
+		expect(tiktok).toContain("9:16");
+		expect(tiktok).toContain("upper third");
+	});
+
+	it("pulls named subjects and stated numbers into the prompt", () => {
+		const result = buildThumbnailStudio({
+			...inputs,
+			title: "How I edit a week of video in 20 minutes",
+			brief: "A walkthrough for GreenBuild Construction, with 3 steps.",
+		});
+		const prompt = result.concepts[0]?.prompt ?? "";
+		expect(prompt).toContain("Main subject: GreenBuild Construction");
+		expect(prompt).toContain("20 minutes");
+		expect(prompt).toContain("3 steps");
+	});
 });
 
 describe("the stored composition", () => {
