@@ -49,14 +49,17 @@ afterEach(() => {
 });
 
 describe("ThumbnailStudioModal", () => {
-	it("generates three concepts and the publishing copy from the inputs", () => {
+	it("generates one prompt and the publishing copy from the inputs", () => {
 		setup();
 		fireEvent.change(screen.getByLabelText("Brief"), {
 			target: { value: "Show a clean demo without a second monitor." },
 		});
 		fireEvent.click(screen.getByTestId("studio-generate"));
 
-		expect(screen.getAllByTestId(/studio-prompt-/)).toHaveLength(3);
+		expect(screen.getAllByTestId(/studio-prompt-/)).toHaveLength(1);
+		expect((screen.getByTestId("studio-prompt-0") as HTMLTextAreaElement).value).toContain(
+			"Record Better Demos",
+		);
 		expect(screen.getByTestId("studio-publishing-title")).toHaveValue("Record Better Demos");
 		expect((screen.getByTestId("studio-publishing-body") as HTMLTextAreaElement).value).toContain(
 			"Show a clean demo",
@@ -66,6 +69,12 @@ describe("ThumbnailStudioModal", () => {
 		).toBeGreaterThan(0);
 	});
 
+	it("guides the inputs with placeholders", () => {
+		setup();
+		expect(screen.getByTestId("studio-title")).toHaveAttribute("placeholder");
+		expect(screen.getByLabelText("Brief")).toHaveAttribute("placeholder");
+	});
+
 	it("copies the edited prompt through the preload bridge", async () => {
 		setup();
 		fireEvent.click(screen.getByTestId("studio-generate"));
@@ -73,7 +82,7 @@ describe("ThumbnailStudioModal", () => {
 			target: { value: "my edited prompt" },
 		});
 
-		fireEvent.click(screen.getAllByRole("button", { name: "Copy" })[0]);
+		fireEvent.click(screen.getByTestId("studio-copy-prompt"));
 
 		await waitFor(() => expect(copyToClipboard).toHaveBeenCalledWith("my edited prompt"));
 	});
@@ -84,8 +93,8 @@ describe("ThumbnailStudioModal", () => {
 			target: { value: "A brief" },
 		});
 		fireEvent.click(screen.getByTestId("studio-generate"));
-		fireEvent.change(screen.getByTestId("studio-prompt-1"), {
-			target: { value: "the second prompt" },
+		fireEvent.change(screen.getByTestId("studio-prompt-0"), {
+			target: { value: "the edited prompt" },
 		});
 
 		fireEvent.click(screen.getByTestId("studio-save"));
@@ -96,54 +105,15 @@ describe("ThumbnailStudioModal", () => {
 			result: { concepts: Array<{ prompt: string }> };
 		};
 		expect(payload.inputs).toMatchObject({ title: "Record Better Demos", brief: "A brief" });
-		expect(payload.result.concepts[1].prompt).toBe("the second prompt");
+		expect(payload.result.concepts[0].prompt).toBe("the edited prompt");
 		expect(await screen.findByText("Saved to project")).toBeInTheDocument();
 	});
 
-	it("generates an image with consent, reports the cost, saves the file and stores only metadata", async () => {
-		const { onSave } = setup();
-		generateThumbnailImage.mockResolvedValue({
-			success: true,
-			dataUrl: "data:image/png;base64,AAAA",
-			mediaType: "image/png",
-			model: "google/gemini-2.5-flash-image",
-			costUsd: 0.04,
-		});
-		saveThumbnailImage.mockResolvedValue({ success: true, path: "C:/thumbs/demo.png" });
-
+	it("is prompt-only: no image model and no provider generation", () => {
+		setup();
 		fireEvent.click(screen.getByTestId("studio-generate"));
-		fireEvent.click(screen.getByTestId("studio-image-0"));
-		expect(screen.getByTestId("studio-image-confirm")).toBeInTheDocument();
-		fireEvent.click(screen.getByTestId("studio-image-confirm"));
-
-		await waitFor(() => expect(generateThumbnailImage).toHaveBeenCalledTimes(1));
-		expect(generateThumbnailImage).toHaveBeenCalledWith({
-			prompt: expect.stringContaining("Record Better Demos"),
-			model: "google/gemini-2.5-flash-image",
-		});
-		expect(await screen.findByTestId("studio-image-preview")).toBeInTheDocument();
-		expect(screen.getByText("Cost: $0.0400")).toBeInTheDocument();
-
-		fireEvent.click(screen.getByTestId("studio-image-save"));
-		await waitFor(() =>
-			expect(saveThumbnailImage).toHaveBeenCalledWith({
-				dataUrl: "data:image/png;base64,AAAA",
-				suggestedName: "Record Better Demos",
-			}),
-		);
-
-		fireEvent.click(screen.getByTestId("studio-save"));
-		await waitFor(() => expect(onSave).toHaveBeenCalledTimes(1));
-		const payload = onSave.mock.calls[0]?.[0] as {
-			image?: Record<string, unknown>;
-		};
-		expect(payload.image).toEqual({
-			model: "google/gemini-2.5-flash-image",
-			mediaType: "image/png",
-			costUsd: 0.04,
-			path: "C:/thumbs/demo.png",
-		});
-		expect(payload.image).not.toHaveProperty("dataUrl");
+		expect(screen.queryByTestId("studio-image-model")).not.toBeInTheDocument();
+		expect(screen.queryByTestId("studio-image-0")).not.toBeInTheDocument();
 	});
 
 	it("opens on the saved composition when the project has one", () => {

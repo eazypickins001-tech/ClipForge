@@ -1,5 +1,5 @@
-// The prompt-only Thumbnail Studio: three honest concepts and one publishing block, each declaring
-// the evidence it was built from. No provider, no image, no invented facts.
+// The prompt-only Thumbnail Studio: one honest prompt and one publishing block, each declaring the
+// evidence it was built from. No provider, no image, no invented facts.
 
 import { describe, expect, it } from "vitest";
 import { createEmptyDocument } from "./schema";
@@ -20,10 +20,10 @@ const inputs = {
 };
 
 describe("buildThumbnailStudio", () => {
-	it("returns three distinct concepts and the title-only evidence basis", () => {
+	it("returns one prompt and the title-only evidence basis", () => {
 		const result = buildThumbnailStudio(defaultStudioInputs("Record Better Demos"));
-		expect(result.concepts).toHaveLength(3);
-		expect(new Set(result.concepts.map((concept) => concept.id)).size).toBe(3);
+		expect(result.concepts).toHaveLength(1);
+		expect(result.concepts[0]?.id).toBe("curiosity");
 		expect(result.evidence.basis).toBe("title");
 		for (const concept of result.concepts) {
 			expect(concept.prompt).toContain("Record Better Demos");
@@ -98,6 +98,20 @@ describe("the stored composition", () => {
 			studio,
 		);
 		expect(readThumbnailStudio(document)?.editor).toEqual(editor);
+	});
+
+	it("still parses a project saved with the old three concepts", () => {
+		const one = buildThumbnailStudio(inputs);
+		const three = {
+			...one,
+			concepts: [one.concepts[0], one.concepts[0], one.concepts[0]],
+		};
+		const document = withThumbnailStudio(createEmptyDocument({ title: "T", projectId: "p" }), {
+			version: 1,
+			inputs,
+			result: three,
+		});
+		expect(readThumbnailStudio(document)?.result.concepts).toHaveLength(3);
 	});
 
 	it("ignores a malformed stored value instead of throwing", () => {

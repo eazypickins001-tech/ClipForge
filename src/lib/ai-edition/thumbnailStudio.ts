@@ -1,14 +1,18 @@
 // Thumbnail Studio's prompt-only core, plus the publishing copy that sits beside it.
 //
 // This is deliberately local and deterministic: F5 starts with the half that needs no credentials or
-// spend, so nothing here calls a provider. It composes three distinct thumbnail concepts and one
-// platform-ready publishing block from the inputs the creator gave and, when the project has one,
-// the transcript. Every result carries the EVIDENCE BASIS it was built from, so a concept can never
-// quietly pretend to know something the footage never said.
+// spend, so nothing here calls a provider. It composes ONE thumbnail prompt — the text a creator
+// pastes into any image tool — and one platform-ready publishing block from the inputs the creator
+// gave and, when the project has one, the transcript. Every result carries the EVIDENCE BASIS it was
+// built from, so the prompt can never quietly pretend to know something the footage never said.
 //
 // The composition is stored as data in the project envelope (`legacyEditor.thumbnailStudio`, which
-// the schema passes through), never as an image. Image generation, the composition editor and PNG
-// export are the later F5 steps and are not claimed here.
+// the schema passes through), never as an image. No image model is called here or by this panel.
+//
+// Historical note: the first cut produced three concepts (curiosity / benefit / contrast). The
+// panel now shows one prompt, because the output is something to take to an external image tool,
+// not a set of directions to choose between; the stored array keeps its shape so old projects
+// still parse, and only its first entry is used.
 
 import { z } from "zod";
 import type { AxcutDocument } from "./schema";
@@ -261,6 +265,7 @@ export function buildThumbnailStudio(
 	const excerpt = transcript ? sentence(transcript, 220) : undefined;
 	const keywords = studioKeywords(title, brief, transcript);
 	const text = (keywords.slice(0, 3).join(" ") || "WATCH THIS").toUpperCase().slice(0, 30);
+	const headlineText = (brief ? keywords.slice(0, 4).join(" ") : text).toUpperCase().slice(0, 30);
 	const palette = brand
 		? ["brand colours from the kit", "one high-contrast accent"]
 		: ["#0f172a", "#f8fafc", "#f59e0b"];
@@ -292,6 +297,7 @@ export function buildThumbnailStudio(
 			who,
 			kit,
 			avoid,
+			"Quality: high contrast, uncluttered, and readable at a glance on a phone.",
 			evidenceNote,
 		]
 			.filter(Boolean)
@@ -304,26 +310,10 @@ export function buildThumbnailStudio(
 		concept(
 			"curiosity",
 			"Show the payoff, withhold the method.",
-			"Subject on the left third and a tight crop of the payoff on the right, with the text in the top-left safe area.",
+			"One clear subject (or a tight crop of the payoff) on one side, the bold text in the opposite safe area, and enough empty space that nothing competes with the face or the result.",
 			`The result of "${title}", clearly visible`,
-			text,
+			headlineText,
 			"A visible payoff with the method withheld is the most reliable curiosity gap: the text names the outcome, not the process.",
-		),
-		concept(
-			"benefit",
-			"State the result the viewer gets.",
-			"Subject on the right, one short benefit line in large type on the left, and generous empty space between them.",
-			"The person or object the result belongs to",
-			(brief ? keywords.slice(0, 4).join(" ") : text).toUpperCase().slice(0, 30),
-			"A direct benefit reads at a glance and survives a small mobile thumbnail, where a busy scene does not.",
-		),
-		concept(
-			"contrast",
-			"Show the change.",
-			"Split frame: the before state on the left, the after state on the right, divided by a clean vertical edge.",
-			"The difference between the two states",
-			"BEFORE / AFTER",
-			"Contrast makes a change legible without a sentence, and the split gives the eye one place to land.",
 		),
 	];
 
@@ -371,7 +361,8 @@ export const thumbnailStudioSchema = z.object({
 	version: z.literal(1).default(1),
 	inputs: inputsSchema,
 	result: z.object({
-		concepts: z.array(conceptSchema).length(3),
+		// One prompt now; old projects carry three and still parse. The panel reads the first.
+		concepts: z.array(conceptSchema).min(1),
 		publishing: z.object({
 			title: z.string(),
 			body: z.string(),
