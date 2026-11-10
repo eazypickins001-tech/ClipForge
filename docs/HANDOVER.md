@@ -1,8 +1,8 @@
 # ClipForge — Handover
 
-**Updated:** 2026-11-09 (night)
-**Current commit:** `2ea450d` (code; this note is the docs commit on top)
-**Verified artifact:** `C:\Users\Apple\AppData\Local\cf-2ea450d\release\0.1.0\win-unpacked\ClipForge.exe`
+**Updated:** 2026-11-10
+**Current commit:** `80e44a7` (code; this note is the docs commit on top)
+**Verified artifact:** `C:\Users\Apple\AppData\Local\cf-80e44a7\release\0.1.0\win-unpacked\ClipForge.exe`
 **Repo:** `C:\Users\Apple\Downloads\Telegram Desktop\UoK\ClipForge` · `github.com/eazypickins001-tech/ClipForge` · branch `main`
 
 This is the only handover note. The earlier dated notes were folded into it and removed; they remain
@@ -21,13 +21,13 @@ core editing works offline; AI is BYOK; the app is pre-1.x and not production-gr
 
 ## 2. Current state
 
-**Green and verified:** CI and the Windows installer build for `2ea450d` are green, and the
+**Green and verified:** CI and the Windows installer build for `80e44a7` are green, and the
 packaged smoke test passed (export, trim/save/reopen, clip edits, transitions, transcription).
 
-- Latest CI: `42667288769` — success. Latest build: `42667288702` — success; artifact downloaded
-  and verified as `cf-2ea450d`.
-- The artifact's `app.asar` carries `2ea450d`, `backgroundTarget` and `webcamBackgroundTarget`;
-  the packaged tree carries the mediapipe model and `onnxruntime.dll`.
+- Latest CI: `42740343064` — success. Latest build: `42740343336` — success; artifact downloaded
+  and verified as `cf-80e44a7`.
+- The artifact's `app.asar` carries `80e44a7`, `studioTitlePlaceholder`, `studioPromptHint` and
+  `webcamBackgroundTarget`; the packaged tree carries the mediapipe model and `onnxruntime.dll`.
 - The Build was blocked for a while by a sustained GitHub Releases `504`; it cleared, and the
   final run above is green. The earlier UI-only commit `49405b0` compiled and its renderer built
   on a retry, but its installer never completed; `2ea450d` contains it.
@@ -42,7 +42,7 @@ packaged smoke test passed (export, trim/save/reopen, clip edits, transitions, t
 | Core hardening H1–H4 | Closed. H1 (GIF cancel) is **reported, not fixed**; H2 has unit coverage; H3 is documented; H4's split e2e runs in the packaged smoke. |
 | In-app Help | Top-bar Help menu, seven task topics, six new keys across 15 locales, `HelpMenu.test.tsx`. |
 | F3 export tiers | 720p / 1080p / 1440p / 2160p / Source, 24/30/60 fps. 1440p/2160p clamp to the source and never upscale. |
-| F5 Thumbnail Studio | Three concepts, publishing copy, OpenRouter image generation with real cost, 1280×720 composer, PNG/JPEG export. |
+| F5 Thumbnail Studio | **Prompt-only** (one prompt, not three), field placeholders, copy button, publishing copy, 1280×720 composer, PNG/JPEG export. The OpenRouter image-generation flow (image model, consent, cost, preview, save) was **removed on 2026-11-10** — the prompt goes to an external tool. Old projects saved with three concepts still parse. |
 | F9 headless batch | `openscreen batch <manifest.json>` with `--json`, `--fail-fast`, relative paths, exit 0/1/2. Documented in `website/docs/cli.md`. |
 | OpenRouter auth | Explicit `Authorization: Bearer` header; missing keys fail before the request; Provider settings reports failed key writes. Default text model is `anthropic/claude-sonnet-4.5`. |
 | Editor features | Scene detect/split, `scriptToVideo`, transitions including programme-end fade, export blend overlap, colour grade, speed ramps, 1280×720 composer. |

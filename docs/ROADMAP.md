@@ -135,22 +135,25 @@ read it) and the compositor draws it. Today the mask is the **camera layer only*
 1. Allow the mask to target the primary video.
 2. Verify the model is found at runtime in the packaged build - a miss disables the feature silently.
 
-### F5 — Thumbnail Studio · done (2026-11-08)
+### F5 — Thumbnail Studio · done (2026-11-08, prompt-only since 2026-11-10)
 
 Shipped end to end:
 
-1. Inputs (title, brief, audience, platform, brand kit, exclusions) with the transcript when present.
-2. Three distinct concepts (curiosity / benefit / contrast) with hook, composition, focal point,
-   palette, thumbnail text, prompt and rationale - each declaring its evidence basis.
-3. Copy, save and edit; the composition is stored as versioned data, never image bytes.
-4. Direct generation via OpenRouter with consent, the **actual** reported cost, a timeout and one
-   in-flight request per window.
+1. Inputs (title, brief, audience, platform, brand kit, exclusions) with the transcript when present,
+   each with a guiding placeholder.
+2. **One** thumbnail prompt with composition, focal point, palette, thumbnail text, prompt and
+   rationale, declaring its evidence basis. Earlier builds offered three directions (curiosity /
+   benefit / contrast); stored projects still parse them and only the first is shown.
+3. Copy, save and edit the prompt; the composition is stored as versioned data, never image bytes.
+4. **Prompt-only: no provider, no image model, no spend.** The prompt is pasted into whatever
+   external image tool the creator uses. (The OpenRouter image-generation flow shipped on
+   2026-11-08 and was removed on 2026-11-10.)
 5. 1280x720 composer: text/font size/alignment/outline/colours, logo, background zoom, PNG and JPEG
    export.
 6. Publishing copy beside the prompt: platform-ready title, description body and tags/hashtags,
    derived from the same evidence basis.
 
-Remaining limits: the composer's background is the generated image or a solid colour (no video-frame
+Remaining limits: the composer's background is a solid colour (no video-frame or external-image
 picker), and a reopened project asks for the logo file again because its bytes are not stored.
 
 ### F6 — AI stem separation (vocal isolation) · spike, not a feature
