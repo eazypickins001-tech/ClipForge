@@ -56,20 +56,25 @@ packaged smoke test passed (export, trim/save/reopen, clip edits, transitions, t
 
 ## 3. Remaining roadmap
 
-1. **F4 — background removal for the primary video.** The Windows **flat screen** path is done
-   (`2ea450d`): `target: "screen"` on the scene, `webcamBackgroundTarget` in the editor,
-   `pump_segmentation` choosing the layer, and the flat screen draw applying `t3`/`fx.z`. Still
-   open: the **macOS/Linux** mirror (today they ignore `"screen"` and do not run the model for it);
-   the **tilted screen (mode 8)** and the **trail**, which are different shader modes; and a human
-   viewing — the picture was never watched.
-2. **Phase-B blend leftovers.** The **audio** half is done (`4a29754`). The outgoing frame is still
-   a freeze during the overlap, and the live preview/ruler deliberately does not shorten. The freeze
-   needs a walk restructure — both decoders advancing per output frame, or a pre-rendered outgoing
-   tail — not a shader tweak.
-3. **F6–F8.** Stem separation is a spike (model + licence + real-time factor); F7 subject tracking
-   needs F8's general keyframes; F8 is large (schema, UI, export path).
-4. **TTS** remains a product decision (engine/hosted), not a code-completable step.
-5. **H1** GIF-cancel responsiveness, if it is ever prioritised.
+1. **F4 — background removal for the primary video.** Windows flat path done (`2ea450d`). **Blocked
+   on a platform build:** the macOS/Linux mirrors cannot be compiled by this repo's CI (Windows-only
+   build), and the tilted screen (mode 8) + trail need a new `LayerCB` slot and shader branches in
+   HLSL/Metal/WGSL. The picture was never watched. Next step: add a Linux `cargo check` job
+   (`libclang-dev`, `patchelf`, `fetch:ffmpeg:sdk`) and a macOS one, then port both mirrors.
+2. **Phase-B blend leftovers.** Audio done (`4a29754`); the outgoing frame is still a freeze. The fix
+   is a walk restructure, designed but not written: per overlap frame, advance the outgoing decoder,
+   compose the outgoing clip into the RT, refresh `blend_from`, then compose the incoming clip — two
+   composes per frame, a `clear_blend_source` on the compositor, and both decoders held. Blocked on a
+   GPU watch. The live preview not shortening is deliberate.
+3. **F6–F8.** F6 is a **spike outcome** (do not ship yet; candidates, licences and the RTF protocol
+   are in `docs/ROADMAP.md`). F8's general-keyframe design is recorded; its first slice is `opacity`,
+   then `volume`, both needing a GPU watch. F7 depends on F8.
+4. **TTS** — **decision recorded**: defer; if it ships, it is BYOK hosted, opt-in, with consent and a
+   real cost. Not a bundled platform engine.
+5. **H1** — closed as reported; its spec is excluded from the smoke step.
+
+The four native items above are blocked on *verification* (a mac/Linux build and a GPU watch), not on
+design. Writing them blind would risk breaking those platforms with no compile check to catch it.
 
 ## 4. Verification and commands
 
@@ -78,7 +83,7 @@ Set-Location "C:\Users\Apple\Downloads\Telegram Desktop\UoK\ClipForge"
 gh run list --limit 5
 npx tsc --noEmit
 npx vitest --run <changed paths>
-& "C:\Users\Apple\AppData\Local\cf-1f1f135\release\0.1.0\win-unpacked\ClipForge.exe"
+& "C:\Users\Apple\AppData\Local\cf-f28b499\release\0.1.0\win-unpacked\ClipForge.exe"
 ```
 
 - Push with `git push origin main`; a code push starts CI and the Windows installer build. A

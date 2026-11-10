@@ -158,11 +158,37 @@ Shipped end to end:
 Remaining limits: the composer's background is a solid colour (no video-frame or external-image
 picker), and a reopened project asks for the logo file again because its bytes are not stored.
 
-### F6 — AI stem separation (vocal isolation) · spike, not a feature
+### F6 — AI stem separation (vocal isolation) · spike outcome (2026-11-10)
 
-CapCut-Pro-class. ONNX Runtime already ships (`fetch:onnxruntime`, `onnxruntime.dll`), so there is a
-road, but decide before promising: pick a model and its licence, measure real-time factor on a modest
-CPU, then choose between muting a stem and full re-mixing.
+**Decision: do not ship yet.** ONNX Runtime already ships (`fetch:onnxruntime`), so the road is
+technical, but the spike has to pick a model, pin the *weights'* licence separately from the code's,
+and measure the real-time factor before promising anything.
+
+Candidates, cheapest to heaviest:
+- **MDX-Net (UVR) vocal/instrumental** — ONNX-native, small weights, strong on vocals; the UVR
+  *code* is MIT but each checkpoint carries its own licence, so pin and record the exact one.
+- **Open-Unmix (UMX)** — MIT code, four stems, lighter; ONNX export works.
+- **HTDemucs (Demucs v4)** — MIT code, best separation, four stems, heaviest and slowest on CPU;
+  ONNX export is possible but the graph is large.
+
+Spike protocol, before any feature work: a 60 s stereo clip through each candidate on a 4-core CPU,
+reporting wall time / clip length (RTF), peak memory, and the licence of the exact weights. Then
+choose **mute a stem** (cheap: one extra anchored audio track) or **full re-mix** (sum the stems
+back; more UI). No model enters the installer until that measurement exists.
+
+### TTS — decision (2026-11-10)
+
+**Decision: defer; if it ships, it is a BYOK provider call, not a bundled engine.**
+
+- **Platform engines** (Windows SAPI, macOS `say`) are free and offline but are two platform hacks in
+  a cross-platform app, with robotic voices and no consistent quality; rejected as the product story.
+- **Local neural (Piper/Coqui)** is offline and permissively licensed, but adds a model plus a helper
+  binary per platform and a larger installer; viable later, not this slice.
+- **BYOK hosted** (OpenAI TTS, ElevenLabs) is the best quality and already the pattern for AI: a user
+  key, an explicit consent step, and a real cost. It needs a network call and uploads text, so it
+  cannot be the default; it can be an opt-in agent tool.
+
+That is a product call (engine vs hosted), not a code-completable step.
 
 ### F7 — Auto-reframe (subject tracking) · partial
 
@@ -178,6 +204,14 @@ a zoom can move and push in over time. What is missing is the **general** proper
 position/scale/rotation/opacity/volume/effect parameters and editable easing graphs. Large: new
 schema surface, new UI, new export path. Do not start before F5 is closed (it is) and F3/F4 are
 decided.
+
+**Design for the general system.** One keyframe track per property: `{ clipId, property: "opacity" |
+"scale" | "rotation" | "position" | "volume" | "effect:<id>:<param>", keys: [{ at: 0..1, value,
+easing }] }`, sampled in Rust with the easing helpers the zoom path already uses (`lerp`,
+`smoothstep`, spring). The export path reads the track per frame; audio volume is sampled by the
+mixer. **First slice, when a GPU watch is available:** `opacity` on a clip, because the compositor
+already has an alpha path for boundary dips; then `volume`, because the mixer already applies a gain.
+Not rotation/position first: those need new scene fields and layout maths.
 
 ### F9 — Headless / batch render and agent surface · done (2026-11-09)
 
