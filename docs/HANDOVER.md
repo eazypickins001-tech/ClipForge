@@ -1,8 +1,8 @@
 # ClipForge — Handover
 
 **Updated:** 2026-11-10
-**Current commit:** `169f201` (code; this note is the docs commit on top)
-**Verified artifact:** `C:\Users\Apple\AppData\Local\cf-169f201\release\0.1.0\win-unpacked\ClipForge.exe`
+**Current commit:** `f28b499` (code; this note is the docs commit on top)
+**Verified artifact:** `C:\Users\Apple\AppData\Local\cf-f28b499\release\0.1.0\win-unpacked\ClipForge.exe`
 **Repo:** `C:\Users\Apple\Downloads\Telegram Desktop\UoK\ClipForge` · `github.com/eazypickins001-tech/ClipForge` · branch `main`
 
 This is the only handover note. The earlier dated notes were folded into it and removed; they remain
@@ -21,13 +21,14 @@ core editing works offline; AI is BYOK; the app is pre-1.x and not production-gr
 
 ## 2. Current state
 
-**Green and verified:** CI and the Windows installer build for `169f201` are green, and the
+**Green and verified:** CI and the Windows installer build for `f28b499` are green, and the
 packaged smoke test passed (export, trim/save/reopen, clip edits, transitions, transcription).
 
-- Latest CI: `42745473206` — success. Latest build: `42745473543` — success; artifact downloaded
-  and verified as `cf-169f201`.
-- The artifact's `app.asar` carries `169f201`, `studioPromptHint` and `cinematic`; the packaged
-  tree carries the mediapipe model and `onnxruntime.dll`.
+- Latest CI: `42750506688` — success. Latest build: `42750506588` — success after one rerun of the
+  documented `transitions.spec.ts` split flake (a Split click timed out; the button was visible and
+  enabled). Artifact downloaded and verified as `cf-f28b499`.
+- The artifact's `app.asar` carries `f28b499` and `vignetteAmount`; the packaged tree carries the
+  mediapipe model and `onnxruntime.dll`.
 - The Build was blocked for a while by a sustained GitHub Releases `504`; it cleared, and the
   final run above is green. The earlier UI-only commit `49405b0` compiled and its renderer built
   on a retry, but its installer never completed; `2ea450d` contains it.
@@ -44,9 +45,10 @@ packaged smoke test passed (export, trim/save/reopen, clip edits, transitions, t
 | F3 export tiers | 720p / 1080p / 1440p / 2160p / Source, 24/30/60 fps. 1440p/2160p clamp to the source and never upscale. |
 | F5 Thumbnail Studio | **Prompt-only** (one prompt, not three), field placeholders, copy button, publishing copy, 1280×720 composer, PNG/JPEG export. The prompt is **context-aware**: it quotes the transcript's opening, names extracted subjects and stated numbers, and carries the destination platform's aspect ratio and safe areas. The OpenRouter image-generation flow was **removed on 2026-11-10** — the prompt goes to an external tool. Old projects saved with three concepts still parse. |
 | Colour presets | Seven starting looks (neutral / warm / cool / cinematic / vivid / faded / mono) on the existing five grade axes, one `ChoiceRow` above the sliders, written in one save (`169f201`). No Rust, no schema change; neutral emits nothing. |
+| Vignette | The first curated entry in the effects library: a global fixed-WGSL vignette with one slider, emitted per clip after the colour grade (`f28b499`). No Rust; neutral emits nothing. **Picture not watched.** |
 | F9 headless batch | `openscreen batch <manifest.json>` with `--json`, `--fail-fast`, relative paths, exit 0/1/2. Documented in `website/docs/cli.md`. |
 | OpenRouter auth | Explicit `Authorization: Bearer` header; missing keys fail before the request; Provider settings reports failed key writes. Default text model is `anthropic/claude-sonnet-4.5`. |
-| Editor features | Scene detect/split, `scriptToVideo`, transitions including programme-end fade, export blend overlap, colour grade, speed ramps, 1280×720 composer. |
+| Editor features | Scene detect/split, `scriptToVideo`, transitions including programme-end fade, export blend overlap, colour grade + presets, vignette, speed ramps, 1280×720 composer. |
 | Blend audio crossfade | A boundary now dissolves over the transition's `d`, not the legacy 240 samples: the outgoing clip's untrimmed tail is decoded for audio and the plan overlaps + equal-power fades it (`4a29754`). Unit-tested; **not listened to**. |
 | F4 packaged runtime | The Build asserts the mediapipe model and `onnxruntime.dll` are in the installer tree (`1f1f135`); a miss used to hide the control silently. |
 | Topbar / Studio UI | Export no longer slides under the Windows caption buttons: the five menu triggers drop their words below 1500px and Export is right-aligned inside the titlebar-area reserve (`49405b0`). Thumbnail Studio enables with an open project (not a clip) and has a project-menu entry; its **Generate prompts** action now sits in the footer beside Save (styled), so Save is never a disabled button with no visible way to produce its result. |

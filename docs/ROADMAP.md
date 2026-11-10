@@ -225,7 +225,8 @@ hidden editing algorithms.
 ### Where we match or lead
 
 - **Core craft:** multi-track editing, crop/trim/split/resize, transitions (dips, dissolve, wipe,
-  slide, programme-end fade), speed ramps/curves, colour grade + seven presets, zoom keyframes/scale.
+  slide, programme-end fade), speed ramps/curves, colour grade + seven presets, vignette, zoom
+  keyframes/scale.
 - **Local AI:** on-device Whisper auto captions with styles and 15-language translation, filler/
   silence removal, scene detection -> split, ratio reframe, script-to-video via the agent.
 - **Thumbnail Studio:** a context-aware, prompt-only thumbnail prompt (transcript quote, subjects,
@@ -242,7 +243,7 @@ hidden editing algorithms.
 | Premium assets: templates, effects, transitions, fonts, music/SFX, stickers, graphic suite | None | Business decision (non-goal) |
 | General keyframes and graphs across properties | Zoom focus/scale only | Craft (F8) |
 | Colour wheel, LUTs, filters, presets | Sliders + seven presets; no wheel, LUTs or imported filters | Craft |
-| Browsable effects library/picker | Shader lane is agent-authored only | Craft |
+| Browsable effects library/picker | One curated effect (vignette); the rest of the shader lane is agent-authored | Craft |
 | Body/beauty effects; background removal on primary video | Camera on all three backends; the primary video on the Windows flat-screen path (macOS/Linux and the tilted/trail paths not yet) | Craft (F4), large |
 | Camera/motion tracking, subject-tracking auto-reframe | Ratio reframe + cursor-follow zooms | Craft/AI (F7) |
 | Auto beat / music-to-cut sync | None | Craft |
