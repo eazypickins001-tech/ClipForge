@@ -57,7 +57,11 @@ import {
 } from "@/components/video-editor/types";
 import { useI18n, useScopedT } from "@/contexts/I18nContext";
 import { resolveCaptionLane } from "@/lib/ai-edition/captions/settings";
-import { DEFAULT_COLOUR_GRADE } from "@/lib/ai-edition/colourGrade";
+import {
+	COLOUR_PRESETS,
+	DEFAULT_COLOUR_GRADE,
+	matchingColourPreset,
+} from "@/lib/ai-edition/colourGrade";
 import {
 	AUDIO_FADE_MAX_MS,
 	collapseTracksToPills,
@@ -2695,6 +2699,24 @@ export function VideoEffectsPane() {
 			    shader-effect path and needs no scalar native param. Neutral emits nothing; each slider
 			    patches only its own axis. */}
 			<div className={styles.sectionLabel}>{ts("colour.title")}</div>
+			{/* A preset is a starting look, not a separate pipeline: it writes the same five axes the
+			    sliders edit, in one save. Choosing Neutral emits no effect at all. */}
+			<div style={{ padding: "0 var(--sp-4) 12px" }}>
+				<ChoiceRow<string>
+					label={ts("colour.preset")}
+					columns={4}
+					options={COLOUR_PRESETS.map((preset) => ({
+						value: preset.id,
+						label: ts(`colour.presets.${preset.id}`),
+					}))}
+					value={matchingColourPreset(settings.colourGrade) ?? ""}
+					disabled={!hasDocument}
+					onChange={(id) => {
+						const preset = COLOUR_PRESETS.find((candidate) => candidate.id === id);
+						if (preset) void set({ colourGrade: { ...preset.grade } });
+					}}
+				/>
+			</div>
 			<div className={styles.sliderGrid}>
 				<SliderCell
 					label={ts("colour.exposure")}

@@ -256,7 +256,17 @@
 		"contrast": "Contraste",
 		"saturation": "Saturation",
 		"temperature": "Température",
-		"tint": "Teinte"
+		"tint": "Teinte",
+		"preset": "Préréglage",
+		"presets": {
+			"neutral": "Neutre",
+			"warm": "Chaud",
+			"cool": "Froid",
+			"cinematic": "Cinéma",
+			"vivid": "Vif",
+			"faded": "Délavé",
+			"mono": "Mono"
+		}
 	},
 	"panes": {
 		"help": "Aide"

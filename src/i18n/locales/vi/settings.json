@@ -256,7 +256,17 @@
 		"contrast": "Tương phản",
 		"saturation": "Độ bão hòa",
 		"temperature": "Nhiệt độ",
-		"tint": "Sắc độ"
+		"tint": "Sắc độ",
+		"preset": "Cài đặt sẵn",
+		"presets": {
+			"neutral": "Trung tính",
+			"warm": "Ấm",
+			"cool": "Lạnh",
+			"cinematic": "Điện ảnh",
+			"vivid": "Rực rỡ",
+			"faded": "Bạc màu",
+			"mono": "Đơn sắc"
+		}
 	},
 	"panes": {
 		"help": "Trợ giúp"

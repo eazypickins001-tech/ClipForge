@@ -256,7 +256,17 @@
 		"contrast": "Kontrast",
 		"saturation": "Sytost",
 		"temperature": "Teplota",
-		"tint": "Odstín"
+		"tint": "Odstín",
+		"preset": "Předvolba",
+		"presets": {
+			"neutral": "Neutrální",
+			"warm": "Teplé",
+			"cool": "Studené",
+			"cinematic": "Filmové",
+			"vivid": "Živé",
+			"faded": "Vybledlé",
+			"mono": "Mono"
+		}
 	},
 	"panes": {
 		"help": "Nápověda"

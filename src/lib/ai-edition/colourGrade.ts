@@ -69,6 +69,56 @@ export function isNeutralColourGrade(grade: ColourGrade): boolean {
 	);
 }
 
+export interface ColourPreset {
+	id: string;
+	grade: ColourGrade;
+}
+
+/**
+ * A handful of starting looks on the same five axes, so a creator does not have to build one from
+ * five neutral sliders. Every value stays inside the slider's range (the scene bounds it again),
+ * and `neutral` is the identity, which emits no effect.
+ */
+export const COLOUR_PRESETS: ColourPreset[] = [
+	{ id: "neutral", grade: { ...DEFAULT_COLOUR_GRADE } },
+	{
+		id: "warm",
+		grade: { exposure: 0.05, contrast: 1.05, saturation: 1.1, temperature: 25, tint: 5 },
+	},
+	{
+		id: "cool",
+		grade: { exposure: 0, contrast: 1.05, saturation: 1.05, temperature: -25, tint: -5 },
+	},
+	{
+		id: "cinematic",
+		grade: { exposure: -0.05, contrast: 1.15, saturation: 0.9, temperature: -10, tint: -8 },
+	},
+	{
+		id: "vivid",
+		grade: { exposure: 0.05, contrast: 1.1, saturation: 1.4, temperature: 0, tint: 0 },
+	},
+	{
+		id: "faded",
+		grade: { exposure: 0.05, contrast: 0.85, saturation: 0.75, temperature: 5, tint: 0 },
+	},
+	{
+		id: "mono",
+		grade: { exposure: 0, contrast: 1.05, saturation: 0, temperature: 0, tint: 0 },
+	},
+];
+
+const COLOUR_AXES = Object.keys(DEFAULT_COLOUR_GRADE) as Array<keyof ColourGrade>;
+
+/** The preset the grade currently equals (within the neutral epsilon), or null for a custom mix. */
+export function matchingColourPreset(grade: ColourGrade): string | null {
+	for (const preset of COLOUR_PRESETS) {
+		if (COLOUR_AXES.every((axis) => Math.abs(grade[axis] - preset.grade[axis]) < NEUTRAL_EPSILON)) {
+			return preset.id;
+		}
+	}
+	return null;
+}
+
 /** The effect definition the scene emits when the grade is not neutral, else null. */
 export function colourGradeEffect(grade: ColourGrade): AxcutShaderEffect | null {
 	if (isNeutralColourGrade(grade)) return null;

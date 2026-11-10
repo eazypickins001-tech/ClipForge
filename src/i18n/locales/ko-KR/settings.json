@@ -256,7 +256,17 @@
 		"contrast": "대비",
 		"saturation": "채도",
 		"temperature": "색온도",
-		"tint": "틴트"
+		"tint": "틴트",
+		"preset": "프리셋",
+		"presets": {
+			"neutral": "중립",
+			"warm": "따뜻함",
+			"cool": "차가움",
+			"cinematic": "시네마",
+			"vivid": "선명함",
+			"faded": "바랜",
+			"mono": "모노"
+		}
 	},
 	"panes": {
 		"help": "도움말"

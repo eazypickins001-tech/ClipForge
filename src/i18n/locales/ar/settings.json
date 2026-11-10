@@ -256,7 +256,17 @@
 		"contrast": "التباين",
 		"saturation": "التشبع",
 		"temperature": "درجة الحرارة",
-		"tint": "الصبغة"
+		"tint": "الصبغة",
+		"preset": "إعداد مسبق",
+		"presets": {
+			"neutral": "محايد",
+			"warm": "دافئ",
+			"cool": "بارد",
+			"cinematic": "سينمائي",
+			"vivid": "زاهي",
+			"faded": "باهت",
+			"mono": "أحادي"
+		}
 	},
 	"panes": {
 		"help": "مساعدة"

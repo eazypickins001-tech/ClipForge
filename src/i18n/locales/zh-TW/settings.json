@@ -256,7 +256,17 @@
 		"contrast": "對比度",
 		"saturation": "飽和度",
 		"temperature": "色溫",
-		"tint": "色調"
+		"tint": "色調",
+		"preset": "預設",
+		"presets": {
+			"neutral": "中性",
+			"warm": "暖色",
+			"cool": "冷色",
+			"cinematic": "電影",
+			"vivid": "鮮豔",
+			"faded": "褪色",
+			"mono": "黑白"
+		}
 	},
 	"panes": {
 		"help": "說明"

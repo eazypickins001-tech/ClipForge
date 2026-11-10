@@ -256,7 +256,17 @@
 		"contrast": "コントラスト",
 		"saturation": "彩度",
 		"temperature": "色温度",
-		"tint": "色合い"
+		"tint": "色合い",
+		"preset": "プリセット",
+		"presets": {
+			"neutral": "ニュートラル",
+			"warm": "暖色",
+			"cool": "寒色",
+			"cinematic": "シネマ",
+			"vivid": "ビビッド",
+			"faded": "フェード",
+			"mono": "モノ"
+		}
 	},
 	"panes": {
 		"help": "ヘルプ"

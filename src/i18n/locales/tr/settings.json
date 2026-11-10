@@ -256,7 +256,17 @@
 		"contrast": "Kontrast",
 		"saturation": "Doygunluk",
 		"temperature": "Sıcaklık",
-		"tint": "Renk tonu"
+		"tint": "Renk tonu",
+		"preset": "Ön ayar",
+		"presets": {
+			"neutral": "Nötr",
+			"warm": "Sıcak",
+			"cool": "Soğuk",
+			"cinematic": "Sinematik",
+			"vivid": "Canlı",
+			"faded": "Soluk",
+			"mono": "Mono"
+		}
 	},
 	"panes": {
 		"help": "Yardım"
