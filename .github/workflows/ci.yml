@@ -34,3 +34,51 @@ jobs:
 
       - name: Unit tests
         run: npm test
+
+  # The Windows build never compiles the Linux (Vulkan/wgpu) backend, so a Linux-only
+  # change could break that target with nothing in this repo noticing. This is the
+  # compile gate F4's Linux mirror needs (and the first Rust test/check on Linux).
+  linux-compositor-check:
+    name: Linux compositor compiles
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache cargo registry and target
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            crates/target
+          key: cargo-linux-check-${{ hashFiles('crates/Cargo.lock') }}
+          restore-keys: cargo-linux-check-
+
+      # bindgen parses the FFmpeg headers through libclang; gcc is on the image already.
+      - name: Install libclang for bindgen
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libclang-dev
+
+      - name: Install dependencies
+        run: npm ci
+
+      # The compositor's build script looks for the SHARED tree at
+      # crates/thirdparty/ffmpeg-linux64-lgpl-shared, with include/ and lib/;
+      # --sdk-only vendors exactly that (the static ffmpeg CLI cannot be linked against).
+      - name: Vendor the LGPL FFmpeg shared SDK
+        run: npm run fetch:ffmpeg:sdk
+
+      # A check, not a build: no link and no device, but the whole Linux backend,
+      # its FFmpeg bindings and its shader code must type-check.
+      - name: Check the Linux compositor
+        working-directory: crates
+        run: cargo check -p openscreen-compositor
