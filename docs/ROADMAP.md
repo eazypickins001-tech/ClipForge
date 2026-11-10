@@ -142,8 +142,10 @@ Shipped end to end:
 1. Inputs (title, brief, audience, platform, brand kit, exclusions) with the transcript when present,
    each with a guiding placeholder.
 2. **One** thumbnail prompt with composition, focal point, palette, thumbnail text, prompt and
-   rationale, declaring its evidence basis. Earlier builds offered three directions (curiosity /
-   benefit / contrast); stored projects still parse them and only the first is shown.
+   rationale, declaring its evidence basis. The prompt is context-aware: it quotes the transcript's
+   opening, names extracted subjects and stated numbers, and carries the destination platform's
+   aspect ratio and safe areas. Earlier builds offered three directions (curiosity / benefit /
+   contrast); stored projects still parse them and only the first is shown.
 3. Copy, save and edit the prompt; the composition is stored as versioned data, never image bytes.
 4. **Prompt-only: no provider, no image model, no spend.** The prompt is pasted into whatever
    external image tool the creator uses. (The OpenRouter image-generation flow shipped on
@@ -223,11 +225,11 @@ hidden editing algorithms.
 ### Where we match or lead
 
 - **Core craft:** multi-track editing, crop/trim/split/resize, transitions (dips, dissolve, wipe,
-  slide, programme-end fade), speed ramps/curves, colour grade basics, zoom keyframes/scale.
+  slide, programme-end fade), speed ramps/curves, colour grade + seven presets, zoom keyframes/scale.
 - **Local AI:** on-device Whisper auto captions with styles and 15-language translation, filler/
   silence removal, scene detection -> split, ratio reframe, script-to-video via the agent.
-- **Thumbnail Studio:** prompt-only concepts, OpenRouter image generation with actual cost, 1280x720
-  composer/export, publishing title/body/tags.
+- **Thumbnail Studio:** a context-aware, prompt-only thumbnail prompt (transcript quote, subjects,
+  proof points, platform format), 1280x720 composer/export, publishing title/body/tags.
 - **Differences worth protecting:** fully local core, no watermark, no subscription/paywall, AI
   optional and BYOK, an agent/MCP surface that edits the real document, and screen-recording craft
   (cursor themes, click effects, auto-zoom, screen+webcam) that CapCut treats as secondary.
@@ -239,9 +241,9 @@ hidden editing algorithms.
 | 4K/60fps + HDR export tier | 720p/1080p/1440p/2160p/Source and 24/30/60fps; no HDR | HDR is future craft |
 | Premium assets: templates, effects, transitions, fonts, music/SFX, stickers, graphic suite | None | Business decision (non-goal) |
 | General keyframes and graphs across properties | Zoom focus/scale only | Craft (F8) |
-| Colour wheel, LUTs, filters, presets | Sliders only | Craft |
+| Colour wheel, LUTs, filters, presets | Sliders + seven presets; no wheel, LUTs or imported filters | Craft |
 | Browsable effects library/picker | Shader lane is agent-authored only | Craft |
-| Body/beauty effects; background removal on primary video | Webcam segmentation only | Craft (F4), large |
+| Body/beauty effects; background removal on primary video | Camera on all three backends; the primary video on the Windows flat-screen path (macOS/Linux and the tilted/trail paths not yet) | Craft (F4), large |
 | Camera/motion tracking, subject-tracking auto-reframe | Ratio reframe + cursor-follow zooms | Craft/AI (F7) |
 | Auto beat / music-to-cut sync | None | Craft |
 | Stem separation / vocal isolation | None | Spike (F6) |
