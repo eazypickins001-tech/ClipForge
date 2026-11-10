@@ -2319,6 +2319,10 @@ impl Compositor {
     /// est exactement le cout que toute cette conception cherche a ne pas payer.
     unsafe fn pump_segmentation(
         &self,
+        screen_y: &wgpu::TextureView,
+        screen_u: &wgpu::TextureView,
+        screen_v: &wgpu::TextureView,
+        screen_valid: [f32; 2],
         wy: &wgpu::TextureView,
         wu: &wgpu::TextureView,
         wv: &wgpu::TextureView,
@@ -2329,15 +2333,13 @@ impl Compositor {
         }
         // Rien a faire si aucun effet n'est demande : ni capture, ni inference,
         // ni masque. Le cout de la fonctionnalite est alors exactement nul.
-        let (wants_effect, model_path) = {
+        let (wants_effect, model_path, target_screen) = {
             let scene = self.scene.borrow();
             match scene.as_ref().and_then(|s| s.webcam_effect.as_ref()) {
-                // The primary-video target is not drawn on this backend yet; running the model
-                // for it would be cost with no picture, so the effect stays inert here.
-                Some(e) if e.shader_code() > 0.0 && !e.targets_screen() => {
-                    (true, e.model_path.clone())
+                Some(e) if e.shader_code() > 0.0 => {
+                    (true, e.model_path.clone(), e.targets_screen())
                 }
-                _ => (false, None),
+                _ => (false, None, false),
             }
         };
         if !wants_effect {
@@ -2384,14 +2386,22 @@ impl Compositor {
             return Ok(());
         }
         let mut scratch = self.seg_scratch.borrow_mut();
+        // La couche que l'effet cible : la camera (le defaut historique) ou la video
+        // PRINCIPALE. Le meme pipeline et le meme masque servent les deux — seul
+        // l'echantillon d'entree change.
+        let (src_y, src_u, src_v, valid) = if target_screen {
+            (screen_y, screen_u, screen_v, screen_valid)
+        } else {
+            (wy, wu, wv, valid)
+        };
         // La frame ENTIERE, pas le sous-rect dessine : un crop utilisateur serre
         // amputerait le sujet en entree du modele, et le masque serait faux la ou
         // il compte le plus. Le shader ramene ses coordonnees dans cet espace via
         // `fx.xy`.
         self.capture_webcam_rgb(
-            wy,
-            wu,
-            wv,
+            src_y,
+            src_u,
+            src_v,
             [0.0, 0.0, valid[0], valid[1]],
             crate::segmentation::MODEL_WIDTH,
             crate::segmentation::MODEL_HEIGHT,
@@ -2545,18 +2555,43 @@ impl Compositor {
         // ce backend `nv12_srvs` ALLOUE deux `TextureView` a chaque appel (il n'y
         // a pas de cache, cf. `clear_srv_cache`), et la fonctionnalite doit couter
         // exactement zero quand elle est eteinte — ce qui est le cas general.
-        let wants_seg = self
+        let seg_target = self
             .scene
             .borrow()
             .as_ref()
             .and_then(|s| s.webcam_effect.as_ref())
-            .is_some_and(|e| e.shader_code() > 0.0 && !e.targets_screen());
-        if wants_seg && !webcam.is_null() {
-            // `nv12_srvs` dereference `data[0]` sans verifier la frame elle-meme,
-            // d'ou le garde de nullite au-dessus (meme condition que le draw PiP).
-            if let Ok((wy, wu, wv)) = self.nv12_srvs(webcam) {
-                self.pump_segmentation(&wy, &wu, &wv, w_valid)?;
+            .filter(|e| e.shader_code() > 0.0)
+            .map(|e| e.targets_screen());
+        match seg_target {
+            // The screen views already exist (`sy/su/sv` above); the webcam pair the
+            // signature wants is ignored when the target is the screen.
+            Some(true) => self.pump_segmentation(
+                &sy,
+                &su,
+                &sv,
+                [u_max, v_max],
+                &sy,
+                &su,
+                &sv,
+                [u_max, v_max],
+            )?,
+            Some(false) if !webcam.is_null() => {
+                // `nv12_srvs` dereference `data[0]` sans verifier la frame elle-meme,
+                // d'ou le garde de nullite au-dessus (meme condition que le draw PiP).
+                if let Ok((wy, wu, wv)) = self.nv12_srvs(webcam) {
+                    self.pump_segmentation(
+                        &sy,
+                        &su,
+                        &sv,
+                        [u_max, v_max],
+                        &wy,
+                        &wu,
+                        &wv,
+                        w_valid,
+                    )?;
+                }
             }
+            _ => {}
         }
 
         let scene_ref = self.scene.borrow();
@@ -2656,6 +2691,24 @@ impl Compositor {
         // Et la remontee du contour interieur du chrome au-dessus de l'ecran (`mb.z` au mode 0,
         // `color.z` au mode 8) : l'arrondi du haut se fait par le cadre. 0 sans fenetre.
         let top_lift = g.screen_top_lift_px([rw, rh]);
+        // La moitie « video PRINCIPALE » de l'effet : la meme branche `mode 0` du
+        // shader, sur le calque ecran A PLAT. Le masque est deja lie sur tous les
+        // draws (binding 4) ; seuls le code et l'etendue valide changent. Un ecran
+        // incline (mode 8) et la trainee (mode 18) ne le portent pas encore, et
+        // `custom` se rabat sur le detourage (le fond choisi n'est peint que cote
+        // Windows pour l'instant).
+        let screen_effect = scene_ref
+            .as_ref()
+            .and_then(|s| s.webcam_effect.as_ref())
+            .filter(|e| e.targets_screen() && e.shader_code() > 0.0)
+            .filter(|_| self.webcam_mask.borrow().is_some())
+            .map(|e| {
+                (
+                    if e.shader_code() > 2.5 { 1.0 } else { e.shader_code() },
+                    e.blur_intensity.clamp(0.0, 1.0),
+                )
+            });
+        let (screen_code, screen_blur) = screen_effect.unwrap_or((0.0, 0.0));
         let screen_layer = match tilt.as_ref() {
             None => {
                 // Sous le masque d'un layout en bloc, rogne au slot (`mask_flat_screen`).
@@ -2668,6 +2721,11 @@ impl Compositor {
                     radius_px,
                     mode: 0.0,
                     color: [1.0, 1.0, 1.0, 1.0],
+                    fx: if screen_code > 0.0 {
+                        [u_max, v_max, screen_code, screen_blur]
+                    } else {
+                        [0.0; 4]
+                    },
                     src_prev: g.cut,
                     dst_prev: g.s_dst_prev,
                     mb: [g.screen_pixel_taps([rw, rh]), g.mb_amount, top_lift, square_top],
@@ -2732,7 +2790,9 @@ impl Compositor {
         // quand l'ecran est droit, quadrilatere projete (mode 12) quand il penche. Avec un
         // cadre de fenetre, c'est le CADRE qui la porte (`shadow_caster`), sinon la barre de
         // titre flotterait au-dessus de l'ombre.
-        let screen_shadow = cfg.shadow.then(|| {
+        // A cut-out screen has no rectangle to cast one; same reasoning as the webcam.
+        let screen_is_cutout = screen_effect.is_some_and(|(code, _)| code == 1.0);
+        let screen_shadow = (cfg.shadow && !screen_is_cutout).then(|| {
             let spread = crate::frame_geometry::SCREEN_SHADOW_SPREAD_FRAC * g.screen_unit_px;
             let offset = g.screen_shadow_offset();
             let opacity = 0.45 * lp.shadow_scale;
