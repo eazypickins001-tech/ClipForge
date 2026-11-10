@@ -130,10 +130,12 @@ rather than refused. HDR is not implemented.
 ### F4 — Background removal for any clip, not just webcam · partial
 
 The mediapipe segmentation model ships (`public/mediapipe`, out of the asar so the compositor can
-read it) and the compositor draws it. Today the mask is the **camera layer only**.
+read it) and the compositor draws it. The mask targets the camera by default and can target the
+primary video.
 
-1. Allow the mask to target the primary video.
-2. Verify the model is found at runtime in the packaged build - a miss disables the feature silently.
+1. Primary video: the **Windows flat screen path** and the **Linux** backend (cutout/blur, `custom`
+   falling back to cutout) are done; **macOS** and the **tilted/trail** screen modes are not.
+2. The packaged runtime check (model + ONNX Runtime in the installer) is asserted by the Build.
 
 ### F5 — Thumbnail Studio · done (2026-11-08, prompt-only since 2026-11-10)
 

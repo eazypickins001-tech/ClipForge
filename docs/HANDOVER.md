@@ -1,8 +1,9 @@
 # ClipForge — Handover
 
 **Updated:** 2026-11-10
-**Current commit:** `f28b499` (code; this note is the docs commit on top)
+**Current commit:** `45b18a3` (code; this note is the docs commit on top)
 **Verified artifact:** `C:\Users\Apple\AppData\Local\cf-f28b499\release\0.1.0\win-unpacked\ClipForge.exe`
+(`45b18a3` only changes the Linux backend, so the Windows tree is unchanged)
 **Repo:** `C:\Users\Apple\Downloads\Telegram Desktop\UoK\ClipForge` · `github.com/eazypickins001-tech/ClipForge` · branch `main`
 
 This is the only handover note. The earlier dated notes were folded into it and removed; they remain
@@ -21,13 +22,13 @@ core editing works offline; AI is BYOK; the app is pre-1.x and not production-gr
 
 ## 2. Current state
 
-**Green and verified:** CI and the Windows installer build for `f28b499` are green, and the
+**Green and verified:** CI and the Windows installer build for `45b18a3` are green, and the
 packaged smoke test passed (export, trim/save/reopen, clip edits, transitions, transcription).
 
-- Latest CI: `42750506688` — success. Latest build: `42750506588` — success after one rerun of the
-  documented `transitions.spec.ts` split flake (a Split click timed out; the button was visible and
-  enabled). Artifact downloaded and verified as `cf-f28b499`.
-- The artifact's `app.asar` carries `f28b499` and `vignetteAmount`; the packaged tree carries the
+- Latest CI: `42853891145` — success, including the new **`Linux compositor compiles`** job.
+- Latest build: `42853891543` — success. `45b18a3` only changes the Linux backend, so the Windows
+  tree is unchanged and the last downloaded artifact is still `cf-f28b499`.
+- `cf-f28b499`'s `app.asar` carries `f28b499` and `vignetteAmount`; its packaged tree carries the
   mediapipe model and `onnxruntime.dll`.
 - The Build was blocked for a while by a sustained GitHub Releases `504`; it cleared, and the
   final run above is green. The earlier UI-only commit `49405b0` compiled and its renderer built
@@ -52,15 +53,16 @@ packaged smoke test passed (export, trim/save/reopen, clip edits, transitions, t
 | Blend audio crossfade | A boundary now dissolves over the transition's `d`, not the legacy 240 samples: the outgoing clip's untrimmed tail is decoded for audio and the plan overlaps + equal-power fades it (`4a29754`). Unit-tested; **not listened to**. |
 | F4 packaged runtime | The Build asserts the mediapipe model and `onnxruntime.dll` are in the installer tree (`1f1f135`); a miss used to hide the control silently. |
 | Topbar / Studio UI | Export no longer slides under the Windows caption buttons: the five menu triggers drop their words below 1500px and Export is right-aligned inside the titlebar-area reserve (`49405b0`). Thumbnail Studio enables with an open project (not a clip) and has a project-menu entry; its **Generate prompts** action now sits in the footer beside Save (styled), so Save is never a disabled button with no visible way to produce its result. |
-| F4 primary video (Windows) | `SceneWebcamEffect.target` (`"webcam"` default, `"screen"` for the primary video), editor setting + UI, and the flat screen path draws the same mask/effect (`2ea450d`). macOS/Linux ignore `"screen"`; tilted screen and trail are not covered. **Picture not watched.** |
+| F4 primary video (Windows) | `SceneWebcamEffect.target` (`"webcam"` default, `"screen"` for the primary video), editor setting + UI, and the flat screen path draws the same mask/effect (`2ea450d`). macOS ignores `"screen"`; tilted screen and trail are not covered. **Picture not watched.** |
+| F4 primary video (Linux) | The Vulkan/wgpu backend picks the layer in `pump_segmentation` and applies cutout/blur on the flat screen draw (`custom` → cutout). Compile-checked by the `linux-compositor-check` job; **picture not watched** (`45b18a3`). |
 
 ## 3. Remaining roadmap
 
-1. **F4 — background removal for the primary video.** Windows flat path done (`2ea450d`). **Blocked
-   on a platform build:** the macOS/Linux mirrors cannot be compiled by this repo's CI (Windows-only
-   build), and the tilted screen (mode 8) + trail need a new `LayerCB` slot and shader branches in
-   HLSL/Metal/WGSL. The picture was never watched. Next step: add a Linux `cargo check` job
-   (`libclang-dev`, `patchelf`, `fetch:ffmpeg:sdk`) and a macOS one, then port both mirrors.
+1. **F4 — background removal for the primary video.** Windows **flat** path (`2ea450d`) and **Linux**
+   (cutout/blur, compile-checked by the new `linux-compositor-check` CI job, `45b18a3`) are done.
+   Still open: **macOS** (no macOS build in CI; the backend still ignores `"screen"`), the **tilted
+   screen (mode 8)** and the **trail (mode 18)**, and the picture was never watched. `custom` falls
+   back to cutout on Linux.
 2. **Phase-B blend leftovers.** Audio done (`4a29754`); the outgoing frame is still a freeze. The fix
    is a walk restructure, designed but not written: per overlap frame, advance the outgoing decoder,
    compose the outgoing clip into the RT, refresh `blend_from`, then compose the incoming clip — two
@@ -91,6 +93,9 @@ npx vitest --run <changed paths>
 - The Build's GPU-less Rust step now runs `cargo test -p openscreen-compositor --lib regions::`
   **and** `--lib audio::hold_tests` (the pure concat/crossfade math). Everything else in
   `crates/compositor/tests/` still needs a real device and runs nowhere.
+- CI now has a **`Linux compositor compiles`** job: `cargo check -p openscreen-compositor` on
+  ubuntu-latest with the shared FFmpeg SDK and libclang. It is the compile gate for Linux-only Rust;
+  macOS Rust still has no gate (no macOS build in the repo).
 - Download an artifact with
   `gh run download <run-id> -n clipforge-windows-x64 -D C:\Users\Apple\AppData\Local\cf-<sha>`.
 - Verify markers with `rg -a --fixed-strings <marker> app.asar`.
