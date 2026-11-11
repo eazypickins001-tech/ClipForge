@@ -314,6 +314,9 @@ const DECLARED: WritePath[] = [
 	// the audio track's own updateAudioTrack above, and committed on release rather than on
 	// every frame of the drag, so a slider sweep is one undo step.
 	w("src/lib/ai-edition/store/useTimeline.ts", "updateClipAudio", "save", "gesture"),
+	// The clip opacity panel (F8): a key capture or a slider release is the user's own edit and one
+	// write, so one undo step. Clearing the track is the same list write.
+	w("src/lib/ai-edition/store/useTimeline.ts", "updateClipOpacity", "save", "gesture"),
 	// Boundary dips: setting one on a clip's edge (kind, duration, colour — the same write whether
 	// it is the first or a change) and taking it off. Both are the user's own edit from the
 	// junction button or its panel, one write each, so one undo step each.
