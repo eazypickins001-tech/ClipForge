@@ -1522,18 +1522,21 @@ export function setClipSourceRange(
 	const clamp = (n: number) => (Number.isFinite(n) ? Math.max(0, n) : 0);
 	const lo = Math.min(clamp(sourceStartSec), clamp(sourceEndSec));
 	const hi = Math.max(clamp(sourceStartSec), clamp(sourceEndSec));
-	const arr = document.timeline.clips.map((c) =>
-		c.id === clipId
-			? {
-					...c,
-					sourceStartSec: lo,
-					sourceEndSec: hi,
-					timelineStartSec: 0,
-					timelineEndSec: 0,
-					...(cropRegion === undefined ? {} : { cropRegion: cropRegion ?? undefined }),
-				}
-			: c,
-	);
+	const arr = document.timeline.clips.map((c) => {
+		if (c.id !== clipId) return c;
+		const oldEnd = c.sourceEndSec ?? c.sourceStartSec + (c.timelineEndSec - c.timelineStartSec);
+		return {
+			...c,
+			sourceStartSec: lo,
+			sourceEndSec: hi,
+			timelineStartSec: 0,
+			timelineEndSec: 0,
+			// `at` is anchored to the window this trim is changing: move the keys with it.
+			opacityKeys: retimePropertyKeys(c.opacityKeys, c.sourceStartSec, oldEnd, lo, hi),
+			volumeKeys: retimePropertyKeys(c.volumeKeys, c.sourceStartSec, oldEnd, lo, hi),
+			...(cropRegion === undefined ? {} : { cropRegion: cropRegion ?? undefined }),
+		};
+	});
 	return withClipsChanged(document, arr);
 }
 
@@ -1613,6 +1616,46 @@ function splitPropertyKeys(
 			.map((key) => ({ ...key, at: (key.at - cut) / (1 - cut) })),
 	]);
 	return { left: left.length ? left : undefined, right: right.length ? right : undefined };
+}
+
+/**
+ * Re-anchor a property track when the clip's source window is trimmed. `at` is normalized over that
+ * window (opacity) or over the output span that mirrors it (volume), so a trim has to move every
+ * key and drop the ones the trim removed. Boundary keys hold the value at the NEW edges, so a fade
+ * cut mid-ramp stays continuous instead of snapping to the nearest surviving key.
+ *
+ * A window that does not overlap the old one drops the track: there is no animation left to carry.
+ */
+function retimePropertyKeys(
+	keys: readonly AxcutClipPropertyKey[] | undefined,
+	oldStart: number,
+	oldEnd: number,
+	newStart: number,
+	newEnd: number,
+): AxcutClipPropertyKey[] | undefined {
+	if (!keys?.length) return undefined;
+	const oldSpan = oldEnd - oldStart;
+	const newSpan = newEnd - newStart;
+	if (oldSpan <= 1e-9 || newSpan <= 1e-9) return undefined;
+	if (Math.abs(oldStart - newStart) <= 1e-9 && Math.abs(oldEnd - newEnd) <= 1e-9) {
+		return [...keys];
+	}
+	if (newEnd <= oldStart || newStart >= oldEnd) return undefined;
+	const sorted = [...keys].sort((a, b) => a.at - b.at);
+	const valueAtNew = (newAt: number) =>
+		sampleOpacity(sorted, (newStart + newAt * newSpan - oldStart) / oldSpan);
+	const retimed = sorted
+		.map((key) => ({
+			...key,
+			at: (oldStart + key.at * oldSpan - newStart) / newSpan,
+		}))
+		.filter((key) => key.at > KEY_SPLIT_EPSILON && key.at < 1 - KEY_SPLIT_EPSILON);
+	const next = normaliseClipKeys([
+		{ at: 0, value: valueAtNew(0) },
+		...retimed,
+		{ at: 1, value: valueAtNew(1) },
+	]);
+	return next.length ? next : undefined;
 }
 
 /**

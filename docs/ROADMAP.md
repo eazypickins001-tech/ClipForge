@@ -242,6 +242,10 @@ graph editor yet — that is the remaining half of "editable easing graphs".
 the keys in its own span, re-normalized, and gets a boundary key holding the value at the cut (the
 right half's keeps the segment easing), so the animation stays continuous and does not repeat.
 
+**Trim and keyframes.** Trimming re-anchors both tracks into the new source window: surviving keys
+move with it and the new edges get boundary keys holding the sampled values, so a fade cut mid-ramp
+stays continuous. A window with no overlap with the old one drops the track.
+
 ### F9 — Headless / batch render and agent surface · done (2026-11-09)
 
 ClipForge has an MCP server (`electron/mcp/`) with project, media, transcribe, `renderFrames` and

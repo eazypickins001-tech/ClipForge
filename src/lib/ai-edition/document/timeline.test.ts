@@ -2496,3 +2496,94 @@ describe("splitClip keyframes", () => {
 		expect(right.opacityKeys?.[0]).toEqual({ at: 0, value: 0.25, easing: "ease-in" });
 	});
 });
+
+describe("setClipSourceRange keyframes", () => {
+	function docWith(overrides: Partial<AxcutClip>) {
+		return makeDoc({
+			timeline: {
+				...makeDoc().timeline,
+				clips: [
+					makeClip({
+						id: "c1",
+						sourceStartSec: 0,
+						sourceEndSec: 10,
+						timelineStartSec: 0,
+						timelineEndSec: 10,
+						...overrides,
+					}),
+				],
+			},
+		});
+	}
+
+	it("retimes the track into the trimmed window, keeping the edges continuous", () => {
+		const doc = setClipSourceRange(
+			docWith({
+				opacityKeys: [
+					{ at: 0, value: 0 },
+					{ at: 1, value: 1 },
+				],
+				volumeKeys: [
+					{ at: 0, value: 1 },
+					{ at: 1, value: 0 },
+				],
+			}),
+			"c1",
+			2,
+			8,
+		);
+		const clip = doc.timeline.clips[0];
+		expect(clip.opacityKeys).toHaveLength(2);
+		expect(clip.opacityKeys?.[0].at).toBe(0);
+		expect(clip.opacityKeys?.[0].value).toBeCloseTo(0.2);
+		expect(clip.opacityKeys?.[1].at).toBe(1);
+		expect(clip.opacityKeys?.[1].value).toBeCloseTo(0.8);
+		expect(clip.volumeKeys).toHaveLength(2);
+		expect(clip.volumeKeys?.[0].at).toBe(0);
+		expect(clip.volumeKeys?.[0].value).toBeCloseTo(0.8);
+		expect(clip.volumeKeys?.[1].at).toBe(1);
+		expect(clip.volumeKeys?.[1].value).toBeCloseTo(0.2);
+	});
+
+	it("keeps interior keys and samples the new edges", () => {
+		const doc = setClipSourceRange(
+			docWith({
+				opacityKeys: [
+					{ at: 0, value: 0 },
+					{ at: 0.2, value: 1 },
+					{ at: 1, value: 0 },
+				],
+			}),
+			"c1",
+			0,
+			6,
+		);
+		const keys = doc.timeline.clips[0].opacityKeys ?? [];
+		expect(keys).toHaveLength(3);
+		expect(keys[0]).toEqual({ at: 0, value: 0 });
+		expect(keys[1]?.at).toBeCloseTo(1 / 3);
+		expect(keys[1]?.value).toBeCloseTo(1);
+		expect(keys[2]?.at).toBe(1);
+		expect(keys[2]?.value).toBeCloseTo(0.5);
+	});
+
+	it("drops a track when the new window does not overlap the old one", () => {
+		const doc = setClipSourceRange(
+			docWith({
+				opacityKeys: [
+					{ at: 0, value: 0 },
+					{ at: 1, value: 1 },
+				],
+			}),
+			"c1",
+			20,
+			30,
+		);
+		expect(doc.timeline.clips[0].opacityKeys).toBeUndefined();
+	});
+
+	it("leaves the clip without a track when it had none", () => {
+		const doc = setClipSourceRange(docWith({}), "c1", 2, 8);
+		expect(doc.timeline.clips[0].opacityKeys).toBeUndefined();
+	});
+});
