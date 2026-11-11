@@ -109,3 +109,26 @@ export function setKeyEasing(
 			: key,
 	);
 }
+
+/**
+ * Move the key at `fromAt` to `toAt`, keeping its value and easing. Moving one onto another
+ * replaces that key (one key per instant, the same rule as a capture). An unknown `fromAt` is a
+ * no-op, so a stale row cannot invent a key.
+ */
+export function moveKey(
+	keys: readonly AxcutClipPropertyKey[] | undefined,
+	fromAt: number,
+	toAt: number,
+): AxcutClipPropertyKey[] {
+	const source = (keys ?? []).find((key) => Math.abs(key.at - fromAt) <= SAME_OPACITY_KEY_EPSILON);
+	if (!source) return [...(keys ?? [])];
+	const moved = { ...source, at: clamp01(toAt) };
+	return [
+		...(keys ?? []).filter(
+			(key) =>
+				Math.abs(key.at - fromAt) > SAME_OPACITY_KEY_EPSILON &&
+				Math.abs(key.at - moved.at) > SAME_OPACITY_KEY_EPSILON,
+		),
+		moved,
+	].sort((a, b) => a.at - b.at);
+}

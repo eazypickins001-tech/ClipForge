@@ -2102,6 +2102,7 @@ export function NewEditorShell() {
 				onClose={() => setClipAudioTarget(null)}
 				clip={clipAudioTarget}
 				playheadSec={useProjectStore.getState().currentTimeSec}
+				onSeek={(sec) => useProjectStore.getState().setCurrentTime(sec)}
 				// One gesture, one write, one undo step — the panel commits on release, so a
 				// slider sweep is not sixty saves.
 				onChange={(patch) => {
@@ -2115,6 +2116,7 @@ export function NewEditorShell() {
 				onClose={() => setClipOpacityTarget(null)}
 				clip={clipOpacityTarget}
 				playheadSec={useProjectStore.getState().currentTimeSec}
+				onSeek={(sec) => useProjectStore.getState().setCurrentTime(sec)}
 				speedRegions={tl.speedRegions}
 				onChange={(keys) => {
 					if (!clipOpacityTarget) return;

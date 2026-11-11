@@ -21,7 +21,12 @@ function clip(overrides: Partial<AxcutClip> = {}): AxcutClip {
 	} as AxcutClip;
 }
 
-function renderPanel(target: AxcutClip | null, playheadSec = 1, onChange = vi.fn()) {
+function renderPanel(
+	target: AxcutClip | null,
+	playheadSec = 1,
+	onChange = vi.fn(),
+	onSeek = vi.fn(),
+) {
 	const tree = (at: number) => (
 		<I18nProvider>
 			<ClipOpacityModal
@@ -31,12 +36,14 @@ function renderPanel(target: AxcutClip | null, playheadSec = 1, onChange = vi.fn
 				playheadSec={at}
 				speedRegions={[]}
 				onChange={onChange}
+				onSeek={onSeek}
 			/>
 		</I18nProvider>
 	);
 	const utils = render(tree(playheadSec));
 	return {
 		onChange,
+		onSeek,
 		movePlayhead: (at: number) => utils.rerender(tree(at)),
 	};
 }
@@ -76,6 +83,21 @@ describe("ClipOpacityModal", () => {
 		expect(add).toBeDisabled();
 		fireEvent.click(add);
 		expect(onChange).not.toHaveBeenCalled();
+	});
+
+	it("moves a key and jumps to it through the source clock", () => {
+		const onChange = vi.fn();
+		const onSeek = vi.fn();
+		renderPanel(clip(), 1, onChange, onSeek);
+		fireEvent.click(screen.getByTestId("clip-opacity-add"));
+
+		const position = screen.getByLabelText("Key position (%)");
+		fireEvent.change(position, { target: { value: "50" } });
+		fireEvent.blur(position);
+		expect(onChange).toHaveBeenLastCalledWith([{ at: 0.5, value: 1 }]);
+
+		fireEvent.click(screen.getByRole("button", { name: "Go to key" }));
+		expect(onSeek).toHaveBeenCalledWith(5);
 	});
 
 	it("renders nothing without a clip", () => {

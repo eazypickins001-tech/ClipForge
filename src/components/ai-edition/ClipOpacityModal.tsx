@@ -9,6 +9,7 @@ import { useScopedT } from "@/contexts/I18nContext";
 import type { AxcutClip, AxcutClipPropertyKey } from "@/lib/ai-edition/schema";
 import {
 	KEY_EASINGS,
+	moveKey,
 	type OpacityEasing,
 	opacityKeyAtFor,
 	removeOpacityKey,
@@ -16,7 +17,7 @@ import {
 	setKeyEasing,
 	setOpacityKey,
 } from "@/lib/ai-edition/timeline/opacityKeyframes";
-import { type SpeedRegion, screenTimeMs } from "@/lib/ai-edition/timeline/speed";
+import { type SpeedRegion, screenTimeMs, timelineTimeMs } from "@/lib/ai-edition/timeline/speed";
 import { ModalShell } from "./Modals";
 import { SliderCell } from "./RightPanes";
 
@@ -27,6 +28,7 @@ export function ClipOpacityModal({
 	playheadSec,
 	speedRegions,
 	onChange,
+	onSeek,
 }: {
 	open: boolean;
 	onClose: () => void;
@@ -35,6 +37,8 @@ export function ClipOpacityModal({
 	playheadSec: number;
 	speedRegions: readonly SpeedRegion[];
 	onChange: (keys: AxcutClipPropertyKey[]) => void;
+	/** Jump the playhead to a key (timeline seconds). Omitted in tests/no-player contexts. */
+	onSeek?: (sec: number) => void;
 }) {
 	const t = useScopedT("settings");
 	const tc = useScopedT("common");
@@ -65,6 +69,13 @@ export function ClipOpacityModal({
 	const capture = (next: number) => {
 		if (at === null) return;
 		write(setOpacityKey(keys, at, next));
+	};
+	const seekToKey = (keyAt: number) => {
+		const end = clip.sourceEndSec;
+		// `at` is source-normalised, so the way back to the ruler goes through the speed map.
+		if (!onSeek || end === undefined) return;
+		const sourceSec = clip.sourceStartSec + keyAt * (end - clip.sourceStartSec);
+		onSeek(timelineTimeMs(speedRegions, sourceSec * 1000) / 1000);
 	};
 
 	return (
@@ -126,9 +137,39 @@ export function ClipOpacityModal({
 									borderBottom: "1px solid rgba(255,255,255,0.08)",
 								}}
 							>
-								<span>
-									{Math.round(key.at * 100)}% · {Math.round(key.value * 100)}%
-								</span>
+								<input
+									type="number"
+									min={0}
+									max={100}
+									step={1}
+									aria-label={t("opacity.keyPosition")}
+									defaultValue={Math.round(key.at * 100)}
+									onKeyDown={(event) => {
+										if (event.key === "Enter") event.currentTarget.blur();
+									}}
+									onBlur={(event) => {
+										const pct = Number(event.target.value);
+										if (Number.isFinite(pct) && pct >= 0 && pct <= 100) {
+											const nextAt = pct / 100;
+											if (Math.abs(nextAt - key.at) > 1e-6) {
+												write(moveKey(keys, key.at, nextAt));
+											}
+										} else {
+											event.target.value = String(Math.round(key.at * 100));
+										}
+									}}
+									style={{ width: 54 }}
+								/>
+								<span style={{ marginLeft: 4 }}>%</span>
+								<span style={{ marginLeft: 8, opacity: 0.75 }}>{Math.round(key.value * 100)}%</span>
+								<button
+									type="button"
+									aria-label={t("opacity.goToKey")}
+									onClick={() => seekToKey(key.at)}
+									style={{ marginLeft: "auto", marginRight: 4 }}
+								>
+									→
+								</button>
 								<select
 									aria-label={t("keyframeEasing.label")}
 									value={key.easing ?? "linear"}

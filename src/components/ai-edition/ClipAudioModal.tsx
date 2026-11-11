@@ -18,6 +18,7 @@ import {
 } from "@/lib/ai-edition/store/editorSettings";
 import {
 	KEY_EASINGS,
+	moveKey,
 	type OpacityEasing,
 	removeOpacityKey,
 	sampleOpacity,
@@ -38,6 +39,7 @@ export function ClipAudioModal({
 	clip,
 	playheadSec,
 	onChange,
+	onSeek,
 }: {
 	open: boolean;
 	onClose: () => void;
@@ -45,6 +47,8 @@ export function ClipAudioModal({
 	/** Timeline seconds; a volume key is captured at this position inside the clip. */
 	playheadSec: number;
 	onChange: (patch: ClipAudioPatch) => void;
+	/** Jump the playhead to a key (timeline seconds). Omitted in tests/no-player contexts. */
+	onSeek?: (sec: number) => void;
 }) {
 	const t = useScopedT("settings");
 	const tc = useScopedT("common");
@@ -86,6 +90,11 @@ export function ClipAudioModal({
 	const captureVolume = (next: number) => {
 		if (volumeAt === null) return;
 		writeVolumeKeys(setOpacityKey(volumeKeys, volumeAt, next));
+	};
+	const seekToKey = (keyAt: number) => {
+		// The envelope `at` is output-normalised, so the way back to the ruler is the clip span.
+		if (!onSeek) return;
+		onSeek(clip.timelineStartSec + keyAt * (clip.timelineEndSec - clip.timelineStartSec));
 	};
 
 	return (
@@ -214,9 +223,41 @@ export function ClipAudioModal({
 										borderBottom: "1px solid rgba(255,255,255,0.08)",
 									}}
 								>
-									<span>
-										{Math.round(key.at * 100)}% · {Math.round(key.value * 100)}%
+									<input
+										type="number"
+										min={0}
+										max={100}
+										step={1}
+										aria-label={t("opacity.keyPosition")}
+										defaultValue={Math.round(key.at * 100)}
+										onKeyDown={(event) => {
+											if (event.key === "Enter") event.currentTarget.blur();
+										}}
+										onBlur={(event) => {
+											const pct = Number(event.target.value);
+											if (Number.isFinite(pct) && pct >= 0 && pct <= 100) {
+												const nextAt = pct / 100;
+												if (Math.abs(nextAt - key.at) > 1e-6) {
+													writeVolumeKeys(moveKey(volumeKeys, key.at, nextAt));
+												}
+											} else {
+												event.target.value = String(Math.round(key.at * 100));
+											}
+										}}
+										style={{ width: 54 }}
+									/>
+									<span style={{ marginLeft: 4 }}>%</span>
+									<span style={{ marginLeft: 8, opacity: 0.75 }}>
+										{Math.round(key.value * 100)}%
 									</span>
+									<button
+										type="button"
+										aria-label={t("opacity.goToKey")}
+										onClick={() => seekToKey(key.at)}
+										style={{ marginLeft: "auto", marginRight: 4 }}
+									>
+										→
+									</button>
 									<select
 										aria-label={t("keyframeEasing.label")}
 										value={key.easing ?? "linear"}

@@ -21,13 +21,20 @@ function clip(overrides: Partial<AxcutClip> = {}): AxcutClip {
 	} as AxcutClip;
 }
 
-function renderPanel(target: AxcutClip | null, onChange = vi.fn()) {
+function renderPanel(target: AxcutClip | null, onChange = vi.fn(), onSeek = vi.fn()) {
 	render(
 		<I18nProvider>
-			<ClipAudioModal open onClose={vi.fn()} clip={target} playheadSec={0} onChange={onChange} />
+			<ClipAudioModal
+				open
+				onClose={vi.fn()}
+				clip={target}
+				playheadSec={0}
+				onChange={onChange}
+				onSeek={onSeek}
+			/>
 		</I18nProvider>,
 	);
-	return { onChange };
+	return { onChange, onSeek };
 }
 
 describe("ClipAudioModal", () => {
@@ -94,6 +101,22 @@ describe("ClipAudioModal", () => {
 		expect(onChange).toHaveBeenLastCalledWith({
 			volumeKeys: [{ at: 0, value: 0.5, easing: "ease-in" }],
 		});
+	});
+
+	it("moves a key by its position and jumps the playhead to it", () => {
+		const onChange = vi.fn();
+		const onSeek = vi.fn();
+		renderPanel(clip({ volumeKeys: [{ at: 0.5, value: 0.4 }] }), onChange, onSeek);
+
+		const position = screen.getByLabelText("Key position (%)");
+		fireEvent.change(position, { target: { value: "80" } });
+		fireEvent.blur(position);
+		expect(onChange).toHaveBeenLastCalledWith({
+			volumeKeys: [{ at: 0.8, value: 0.4 }],
+		});
+
+		fireEvent.click(screen.getByRole("button", { name: "Go to key" }));
+		expect(onSeek).toHaveBeenCalledWith(8);
 	});
 
 	it("renders nothing without a clip", () => {

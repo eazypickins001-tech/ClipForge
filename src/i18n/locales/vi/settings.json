@@ -395,6 +395,8 @@
 		"easeInOut": "Ease in-out"
 	},
 	"opacity": {
+		"keyPosition": "Key position (%)",
+		"goToKey": "Go to key",
 		"title": "Opacity",
 		"label": "Clip opacity",
 		"add": "Add keyframe",

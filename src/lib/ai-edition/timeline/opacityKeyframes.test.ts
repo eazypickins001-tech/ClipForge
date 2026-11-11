@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
 	easeOpacityProgress,
+	moveKey,
 	opacityKeyAtFor,
 	removeOpacityKey,
 	sampleOpacity,
@@ -125,5 +126,28 @@ describe("setKeyEasing", () => {
 	it("writes linear as absent, so a linear key is byte-identical to a pre-easing one", () => {
 		const next = setKeyEasing([{ at: 0.2, value: 0.5, easing: "ease-in" }], 0.2, "linear");
 		expect(next[0]).toEqual({ at: 0.2, value: 0.5 });
+	});
+});
+
+describe("moveKey", () => {
+	it("moves the key, keeps its value and easing, and sorts", () => {
+		const keys = [
+			{ at: 0.2, value: 0.5, easing: "ease-out" as const },
+			{ at: 0.8, value: 0.9 },
+		];
+		const next = moveKey(keys, 0.8, 0.4);
+		expect(next).toEqual([
+			{ at: 0.2, value: 0.5, easing: "ease-out" },
+			{ at: 0.4, value: 0.9 },
+		]);
+	});
+
+	it("replaces a key it lands on, and is a no-op for an unknown source", () => {
+		const keys = [
+			{ at: 0.2, value: 0.5 },
+			{ at: 0.8, value: 0.9 },
+		];
+		expect(moveKey(keys, 0.8, 0.2)).toEqual([{ at: 0.2, value: 0.9 }]);
+		expect(moveKey(keys, 0.5, 0.6)).toEqual(keys);
 	});
 });
