@@ -50,7 +50,7 @@ packaged smoke test passed (export, trim/save/reopen, clip edits, transitions, t
 | F9 headless batch | `openscreen batch <manifest.json>` with `--json`, `--fail-fast`, relative paths, exit 0/1/2. Documented in `website/docs/cli.md`. |
 | OpenRouter auth | Explicit `Authorization: Bearer` header; missing keys fail before the request; Provider settings reports failed key writes. Default text model is `anthropic/claude-sonnet-4.5`. |
 | Editor features | Scene detect/split, `scriptToVideo`, transitions including programme-end fade, export blend overlap, colour grade + presets, vignette, speed ramps, 1280×720 composer. |
-| Blend audio crossfade | A boundary now dissolves over the transition's `d`, not the legacy 240 samples: the outgoing clip's untrimmed tail is decoded for audio and the plan overlaps + equal-power fades it (`4a29754`). Unit-tested; **not listened to**. |
+| Blend picture + audio | Audio crossfades over the transition's `d` (`4a29754`); the outgoing picture now **advances** through the overlap (`7bb4e9a`): the walk holds both decoder pairs, composes the outgoing clip first with its own scene/camera/cursor, clears the blend snapshot, then composes the incoming. Fail-closed to the old freeze for a shared asset, a missing decoder or an empty tail. Compile-verified (CI + Windows Build); **the dissolve has not been watched**. |
 | F4 packaged runtime | The Build asserts the mediapipe model and `onnxruntime.dll` are in the installer tree (`1f1f135`); a miss used to hide the control silently. |
 | Topbar / Studio UI | Export no longer slides under the Windows caption buttons: the five menu triggers drop their words below 1500px and Export is right-aligned inside the titlebar-area reserve (`49405b0`). Thumbnail Studio enables with an open project (not a clip) and has a project-menu entry; its **Generate prompts** action now sits in the footer beside Save (styled), so Save is never a disabled button with no visible way to produce its result. |
 | F4 primary video (Windows) | `SceneWebcamEffect.target` (`"webcam"` default, `"screen"` for the primary video), editor setting + UI, and the flat screen path draws the same mask/effect (`2ea450d`). macOS ignores `"screen"`; tilted screen and trail are not covered. **Picture not watched.** |
@@ -63,11 +63,12 @@ packaged smoke test passed (export, trim/save/reopen, clip edits, transitions, t
    **macOS is out of scope** — the macOS build is not planned (product decision, 2026-11-10). Still
    open: the **tilted screen (mode 8)** and the **trail (mode 18)** shader modes, and the picture was
    never watched. `custom` falls back to cutout on Linux.
-2. **Phase-B blend leftovers.** Audio done (`4a29754`); the outgoing frame is still a freeze. The fix
-   is a walk restructure, designed but not written: per overlap frame, advance the outgoing decoder,
-   compose the outgoing clip into the RT, refresh `blend_from`, then compose the incoming clip — two
-   composes per frame, a `clear_blend_source` on the compositor, and both decoders held. Blocked on a
-   GPU watch. The live preview not shortening is deliberate.
+2. **Phase-B blend leftovers.** Audio done (`4a29754`); the picture advance is written (`7bb4e9a`).
+   Per overlap frame the walk advances the outgoing decoder, composes the outgoing clip with its own
+   scene/camera/cursor, calls `clear_blend_source`, then composes the incoming. Fail-closed to the
+   freeze for a shared asset (the two halves of a Split), a missing decoder, or a clamped/absent
+   tail. The live preview not shortening is deliberate. Compile-verified; **still needs a GPU watch**
+   — the one remaining blend check is a dissolve in an export.
 3. **F6–F8.** F6 is a **spike outcome** (do not ship yet; candidates, licences and the RTF protocol
    are in `docs/ROADMAP.md`). F8's general-keyframe design is recorded; its first slice is `opacity`,
    then `volume`, both needing a GPU watch. F7 depends on F8.
