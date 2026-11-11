@@ -387,6 +387,13 @@
 		"cropVideo": "裁剪影片",
 		"lockAspectRatio": "鎖定長寬比"
 	},
+	"keyframeEasing": {
+		"label": "Easing",
+		"linear": "Linear",
+		"easeIn": "Ease in",
+		"easeOut": "Ease out",
+		"easeInOut": "Ease in-out"
+	},
 	"opacity": {
 		"title": "Opacity",
 		"label": "Clip opacity",

@@ -387,6 +387,13 @@
 		"cropVideo": "اقتصاص الفيديو",
 		"lockAspectRatio": "قفل نسبة العرض إلى الارتفاع"
 	},
+	"keyframeEasing": {
+		"label": "Easing",
+		"linear": "Linear",
+		"easeIn": "Ease in",
+		"easeOut": "Ease out",
+		"easeInOut": "Ease in-out"
+	},
 	"opacity": {
 		"title": "Opacity",
 		"label": "Clip opacity",

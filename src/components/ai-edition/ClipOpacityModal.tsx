@@ -8,9 +8,12 @@ import { useEffect, useState } from "react";
 import { useScopedT } from "@/contexts/I18nContext";
 import type { AxcutClip, AxcutClipPropertyKey } from "@/lib/ai-edition/schema";
 import {
+	KEY_EASINGS,
+	type OpacityEasing,
 	opacityKeyAtFor,
 	removeOpacityKey,
 	sampleOpacity,
+	setKeyEasing,
 	setOpacityKey,
 } from "@/lib/ai-edition/timeline/opacityKeyframes";
 import { type SpeedRegion, screenTimeMs } from "@/lib/ai-edition/timeline/speed";
@@ -126,6 +129,28 @@ export function ClipOpacityModal({
 								<span>
 									{Math.round(key.at * 100)}% · {Math.round(key.value * 100)}%
 								</span>
+								<select
+									aria-label={t("keyframeEasing.label")}
+									value={key.easing ?? "linear"}
+									onChange={(event) =>
+										write(setKeyEasing(keys, key.at, event.target.value as OpacityEasing))
+									}
+									style={{ marginLeft: 8, marginRight: 8 }}
+								>
+									{KEY_EASINGS.map((easing) => (
+										<option key={easing} value={easing}>
+											{t(
+												easing === "linear"
+													? "keyframeEasing.linear"
+													: easing === "ease-in"
+														? "keyframeEasing.easeIn"
+														: easing === "ease-out"
+															? "keyframeEasing.easeOut"
+															: "keyframeEasing.easeInOut",
+											)}
+										</option>
+									))}
+								</select>
 								<button
 									type="button"
 									aria-label={t("opacity.remove")}

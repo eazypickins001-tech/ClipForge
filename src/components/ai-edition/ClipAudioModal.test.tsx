@@ -86,6 +86,16 @@ describe("ClipAudioModal", () => {
 		expect(onChange).toHaveBeenLastCalledWith({ volumeKeys: [{ at: 0, value: 1 }] });
 	});
 
+	it("changes a volume key's easing without touching its value", () => {
+		const { onChange } = renderPanel(clip({ volumeKeys: [{ at: 0, value: 0.5 }] }));
+		fireEvent.change(screen.getByRole("combobox", { name: "Easing" }), {
+			target: { value: "ease-in" },
+		});
+		expect(onChange).toHaveBeenLastCalledWith({
+			volumeKeys: [{ at: 0, value: 0.5, easing: "ease-in" }],
+		});
+	});
+
 	it("renders nothing without a clip", () => {
 		renderPanel(null);
 		expect(screen.queryByTestId("clip-audio-mute")).toBeNull();

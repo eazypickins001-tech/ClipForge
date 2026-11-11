@@ -17,8 +17,11 @@ import {
 	AUDIO_TRACK_GAIN_DB_MIN,
 } from "@/lib/ai-edition/store/editorSettings";
 import {
+	KEY_EASINGS,
+	type OpacityEasing,
 	removeOpacityKey,
 	sampleOpacity,
+	setKeyEasing,
 	setOpacityKey,
 } from "@/lib/ai-edition/timeline/opacityKeyframes";
 import { ModalShell } from "./Modals";
@@ -214,6 +217,30 @@ export function ClipAudioModal({
 									<span>
 										{Math.round(key.at * 100)}% · {Math.round(key.value * 100)}%
 									</span>
+									<select
+										aria-label={t("keyframeEasing.label")}
+										value={key.easing ?? "linear"}
+										onChange={(event) =>
+											writeVolumeKeys(
+												setKeyEasing(volumeKeys, key.at, event.target.value as OpacityEasing),
+											)
+										}
+										style={{ marginLeft: 8, marginRight: 8 }}
+									>
+										{KEY_EASINGS.map((easing) => (
+											<option key={easing} value={easing}>
+												{t(
+													easing === "linear"
+														? "keyframeEasing.linear"
+														: easing === "ease-in"
+															? "keyframeEasing.easeIn"
+															: easing === "ease-out"
+																? "keyframeEasing.easeOut"
+																: "keyframeEasing.easeInOut",
+												)}
+											</option>
+										))}
+									</select>
 									<button
 										type="button"
 										aria-label={t("opacity.remove")}

@@ -387,6 +387,13 @@
 		"cropVideo": "Cortar Vídeo",
 		"lockAspectRatio": "Bloquear proporção"
 	},
+	"keyframeEasing": {
+		"label": "Easing",
+		"linear": "Linear",
+		"easeIn": "Ease in",
+		"easeOut": "Ease out",
+		"easeInOut": "Ease in-out"
+	},
 	"opacity": {
 		"title": "Opacity",
 		"label": "Clip opacity",

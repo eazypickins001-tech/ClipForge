@@ -231,6 +231,11 @@ envelope (`audio_jobs::apply_volume_keys`), and the preview applies the same val
 the editor playback and the export agree. Unit-tested (`audio_jobs::volume_envelope_tests`);
 **not listened to**. The GIF exporter is a separate renderer and ignores it.
 
+**Easing controls.** Both clip panels give every key an easing menu (linear, ease-in, ease-out,
+ease-in-out); `linear` is stored as absent, so such a key is byte-identical to a pre-easing one.
+The segment uses the easing of the key that STARTS it, in both the TS sampler and the Rust one. No
+graph editor yet — that is the remaining half of "editable easing graphs".
+
 ### F9 — Headless / batch render and agent surface · done (2026-11-09)
 
 ClipForge has an MCP server (`electron/mcp/`) with project, media, transcribe, `renderFrames` and

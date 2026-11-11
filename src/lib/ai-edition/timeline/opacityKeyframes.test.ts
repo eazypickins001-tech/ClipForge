@@ -4,6 +4,7 @@ import {
 	opacityKeyAtFor,
 	removeOpacityKey,
 	sampleOpacity,
+	setKeyEasing,
 	setOpacityKey,
 } from "./opacityKeyframes";
 
@@ -107,5 +108,22 @@ describe("removeOpacityKey", () => {
 			{ at: 0.8, value: 0.5 },
 		];
 		expect(removeOpacityKey(keys, 0.8)).toHaveLength(1);
+	});
+});
+
+describe("setKeyEasing", () => {
+	it("changes only the key at that instant", () => {
+		const keys = [
+			{ at: 0.2, value: 0.5 },
+			{ at: 0.8, value: 0.5 },
+		];
+		const next = setKeyEasing(keys, 0.8, "ease-out");
+		expect(next[0].easing).toBeUndefined();
+		expect(next[1].easing).toBe("ease-out");
+	});
+
+	it("writes linear as absent, so a linear key is byte-identical to a pre-easing one", () => {
+		const next = setKeyEasing([{ at: 0.2, value: 0.5, easing: "ease-in" }], 0.2, "linear");
+		expect(next[0]).toEqual({ at: 0.2, value: 0.5 });
 	});
 });

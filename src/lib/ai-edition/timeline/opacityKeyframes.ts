@@ -93,3 +93,19 @@ export function removeOpacityKey(
 ): AxcutClipPropertyKey[] {
 	return (keys ?? []).filter((key) => Math.abs(key.at - at) > SAME_OPACITY_KEY_EPSILON);
 }
+
+/** The four easings a key can start, in menu order. `linear` is what an absent value means. */
+export const KEY_EASINGS = ["linear", "ease-in", "ease-out", "ease-in-out"] as const;
+
+/** Give the key at `at` a different easing. The value and position are untouched. */
+export function setKeyEasing(
+	keys: readonly AxcutClipPropertyKey[] | undefined,
+	at: number,
+	easing: OpacityEasing,
+): AxcutClipPropertyKey[] {
+	return (keys ?? []).map((key) =>
+		Math.abs(key.at - at) <= SAME_OPACITY_KEY_EPSILON
+			? { ...key, easing: easing === "linear" ? undefined : easing }
+			: key,
+	);
+}
