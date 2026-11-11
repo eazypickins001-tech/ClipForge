@@ -1884,8 +1884,8 @@ unsafe fn run_multi_inner(
                 // F8: the scene's clip list is in the same order as `clips` (both come from
                 // the visible timeline). The mixer reads the envelope from there.
                 let volume_keys = scene
-                    .clips
-                    .get(clip_index)
+                    .as_ref()
+                    .and_then(|scene| scene.clips.get(clip_index))
                     .map(|clip| clip.volume_keys.clone())
                     .unwrap_or_default();
                 let segments = audio_speed_segments.to_vec();
