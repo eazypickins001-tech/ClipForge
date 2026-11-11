@@ -15,6 +15,7 @@ import type {
 	AxcutTrimRange,
 } from "../schema";
 import { createAudioTrack } from "../schema";
+import { sampleOpacity } from "../timeline/opacityKeyframes";
 
 /**
  * What `resolvePlaybackSegments` returns: a clip-shaped slice of playable film.
@@ -1282,10 +1283,15 @@ export function splitClip(
 	if (!(atSec >= sourceStart + MIN_SPLIT_SEC) || !(atSec <= sourceEnd - MIN_SPLIT_SEC)) {
 		return document;
 	}
+	const cutAt = (atSec - sourceStart) / (sourceEnd - sourceStart);
+	const opacitySplit = splitPropertyKeys(clip.opacityKeys, cutAt);
+	const volumeSplit = splitPropertyKeys(clip.volumeKeys, cutAt);
 	const left: AxcutClip = {
 		...clip,
 		sourceEndSec: atSec,
 		timelineEndSec: clip.timelineStartSec + (atSec - sourceStart),
+		opacityKeys: opacitySplit.left,
+		volumeKeys: volumeSplit.left,
 		origin,
 		reason: reason || clip.reason,
 	};
@@ -1294,6 +1300,8 @@ export function splitClip(
 		id: createId("clip"),
 		sourceStartSec: atSec,
 		timelineStartSec: left.timelineEndSec,
+		opacityKeys: opacitySplit.right,
+		volumeKeys: volumeSplit.right,
 		wordRefs: [],
 		detached: true,
 		origin,
@@ -1562,6 +1570,49 @@ function normaliseClipKeys(keys: readonly AxcutClipPropertyKey[]): AxcutClipProp
 		}))
 		.sort((a, b) => a.at - b.at)
 		.filter((key, index, all) => index === 0 || key.at - all[index - 1].at > 1e-6);
+}
+
+/** Two keys this close are the same instant when a track is cut. */
+const KEY_SPLIT_EPSILON = 1e-6;
+
+/**
+ * Cut one property track at `cut` (0..1 of the clip). Each half gets the keys that belong to it,
+ * re-normalized, plus a boundary key holding the value AT the cut so the animation does not jump
+ * across the new join. The right half's boundary key keeps the easing of the segment the cut landed
+ * in — the easing of the key that STARTED that segment, which is the rule the sampler uses.
+ *
+ * Without this, `splitClip`'s object spread handed the whole track to both halves: the left half
+ * played the entire animation compressed into its shorter span and the right repeated it.
+ */
+function splitPropertyKeys(
+	keys: readonly AxcutClipPropertyKey[] | undefined,
+	cut: number,
+): { left: AxcutClipPropertyKey[] | undefined; right: AxcutClipPropertyKey[] | undefined } {
+	if (!keys?.length) return { left: undefined, right: undefined };
+	if (!(cut > 0 && cut < 1)) return { left: normaliseClipKeys(keys), right: undefined };
+	const sorted = [...keys].sort((a, b) => a.at - b.at);
+	const valueAtCut = sampleOpacity(sorted, cut);
+	let segmentEasing: AxcutClipPropertyKey["easing"];
+	for (const key of sorted) {
+		if (key.at > cut) break;
+		segmentEasing = key.easing;
+	}
+	const left = normaliseClipKeys([
+		...sorted
+			.filter((key) => key.at < cut - KEY_SPLIT_EPSILON)
+			.map((key) => ({
+				...key,
+				at: key.at / cut,
+			})),
+		{ at: 1, value: valueAtCut },
+	]);
+	const right = normaliseClipKeys([
+		{ at: 0, value: valueAtCut, ...(segmentEasing ? { easing: segmentEasing } : {}) },
+		...sorted
+			.filter((key) => key.at > cut + KEY_SPLIT_EPSILON)
+			.map((key) => ({ ...key, at: (key.at - cut) / (1 - cut) })),
+	]);
+	return { left: left.length ? left : undefined, right: right.length ? right : undefined };
 }
 
 /**

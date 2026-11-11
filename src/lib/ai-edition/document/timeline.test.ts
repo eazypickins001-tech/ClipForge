@@ -6,6 +6,7 @@ import {
 	type AxcutTrimRange,
 	axcutSchemaVersion,
 } from "../schema";
+import { sampleOpacity } from "../timeline/opacityKeyframes";
 import { audioLanePills } from "./audioTracks";
 import {
 	buildTimelineFromIntervals,
@@ -28,6 +29,7 @@ import {
 	setClipCrop,
 	setClipOpacityKeys,
 	setClipSourceRange,
+	splitClip,
 	subtractInterval,
 	timelineIntervals,
 	withClipsChanged,
@@ -2431,5 +2433,66 @@ describe("setClipOpacityKeys", () => {
 			{ at: 0.8, value: 1 },
 		]);
 		expect(setClipOpacityKeys(written, "c1", []).timeline.clips[0].opacityKeys).toBeUndefined();
+	});
+});
+
+describe("splitClip keyframes", () => {
+	const linear = [
+		{ at: 0, value: 0 },
+		{ at: 1, value: 1 },
+	];
+	function docWith(overrides: Partial<AxcutClip>) {
+		return makeDoc({
+			timeline: {
+				...makeDoc().timeline,
+				clips: [
+					makeClip({
+						id: "c1",
+						sourceStartSec: 0,
+						sourceEndSec: 10,
+						timelineStartSec: 0,
+						timelineEndSec: 10,
+						...overrides,
+					}),
+				],
+			},
+		});
+	}
+
+	it("subdivides both tracks at the cut, keeping them continuous", () => {
+		const [left, right] = splitClip(docWith({ opacityKeys: linear, volumeKeys: linear }), "c1", 5)
+			.timeline.clips;
+		expect(left.opacityKeys).toEqual([
+			{ at: 0, value: 0 },
+			{ at: 1, value: 0.5 },
+		]);
+		expect(right.opacityKeys).toEqual([
+			{ at: 0, value: 0.5 },
+			{ at: 1, value: 1 },
+		]);
+		expect(sampleOpacity(left.opacityKeys, 1)).toBeCloseTo(0.5);
+		expect(sampleOpacity(right.opacityKeys, 0)).toBeCloseTo(0.5);
+		expect(left.volumeKeys).toEqual(left.opacityKeys);
+		expect(right.volumeKeys).toEqual(right.opacityKeys);
+	});
+
+	it("leaves the halves without a track when the clip had none", () => {
+		const [left, right] = splitClip(docWith({}), "c1", 5).timeline.clips;
+		expect(left.opacityKeys).toBeUndefined();
+		expect(right.volumeKeys).toBeUndefined();
+	});
+
+	it("keeps the segment easing on the right half's boundary key", () => {
+		const [, right] = splitClip(
+			docWith({
+				opacityKeys: [
+					{ at: 0, value: 0, easing: "ease-in" },
+					{ at: 1, value: 1 },
+				],
+			}),
+			"c1",
+			5,
+		).timeline.clips;
+		expect(right.opacityKeys?.[0]).toEqual({ at: 0, value: 0.25, easing: "ease-in" });
 	});
 });

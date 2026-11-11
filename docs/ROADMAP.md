@@ -238,6 +238,10 @@ key's position can be edited (moving onto another key replaces it), and the → 
 playhead to a key — through the speed map for opacity, straight through the clip span for volume. No
 graph editor yet — that is the remaining half of "editable easing graphs".
 
+**Split and keyframes.** Splitting a clip subdivides BOTH tracks at the cut: each half keeps only
+the keys in its own span, re-normalized, and gets a boundary key holding the value at the cut (the
+right half's keeps the segment easing), so the animation stays continuous and does not repeat.
+
 ### F9 — Headless / batch render and agent surface · done (2026-11-09)
 
 ClipForge has an MCP server (`electron/mcp/`) with project, media, transcribe, `renderFrames` and
