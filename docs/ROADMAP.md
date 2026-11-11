@@ -224,7 +224,7 @@ Unit-tested on both sides (`opacityKeyframes.test.ts`, `scene::opacity_tests`); 
 not watched**. Next: `volume`, because the mixer already applies a gain; then the remaining
 properties.
 
-**Second slice — SHIPPED (`volume`).** `clip.volumeKeys` (same key shape, 0..1 as a linear
+**Second slice — SHIPPED (`volume`, `6b1c309`).** `clip.volumeKeys` (same key shape, 0..1 as a linear
 multiplier on top of `gainDb`; `at` over the clip's OUTPUT span, which is what the mixer stretches
 to), captured in the clip **Volume** panel. The mixer multiplies the stretched PCM by the sampled
 envelope (`audio_jobs::apply_volume_keys`), and the preview applies the same value in its tick, so
