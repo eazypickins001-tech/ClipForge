@@ -60,9 +60,9 @@ packaged smoke test passed (export, trim/save/reopen, clip edits, transitions, t
 
 1. **F4 — background removal for the primary video.** Windows **flat** path (`2ea450d`) and **Linux**
    (cutout/blur, compile-checked by the new `linux-compositor-check` CI job, `45b18a3`) are done.
-   Still open: **macOS** (no macOS build in CI; the backend still ignores `"screen"`), the **tilted
-   screen (mode 8)** and the **trail (mode 18)**, and the picture was never watched. `custom` falls
-   back to cutout on Linux.
+   **macOS is out of scope** — the macOS build is not planned (product decision, 2026-11-10). Still
+   open: the **tilted screen (mode 8)** and the **trail (mode 18)** shader modes, and the picture was
+   never watched. `custom` falls back to cutout on Linux.
 2. **Phase-B blend leftovers.** Audio done (`4a29754`); the outgoing frame is still a freeze. The fix
    is a walk restructure, designed but not written: per overlap frame, advance the outgoing decoder,
    compose the outgoing clip into the RT, refresh `blend_from`, then compose the incoming clip — two
@@ -75,8 +75,11 @@ packaged smoke test passed (export, trim/save/reopen, clip edits, transitions, t
    real cost. Not a bundled platform engine.
 5. **H1** — closed as reported; its spec is excluded from the smoke step.
 
-The four native items above are blocked on *verification* (a mac/Linux build and a GPU watch), not on
-design. Writing them blind would risk breaking those platforms with no compile check to catch it.
+The native items above are blocked on *verification* (a GPU watch for the shader/walk changes), not
+on design. Writing them blind would risk breaking the render with no check to catch it.
+
+**Platform scope (2026-11-10):** **Windows** is the shipping platform and the only packaged build;
+**Linux** compiles (CI gate) and implements the primary-video effect; **macOS is not planned**.
 
 ## 4. Verification and commands
 

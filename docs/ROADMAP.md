@@ -134,7 +134,8 @@ read it) and the compositor draws it. The mask targets the camera by default and
 primary video.
 
 1. Primary video: the **Windows flat screen path** and the **Linux** backend (cutout/blur, `custom`
-   falling back to cutout) are done; **macOS** and the **tilted/trail** screen modes are not.
+   falling back to cutout) are done; the **tilted/trail** screen modes are not. **macOS is out of
+   scope** (the macOS build is not planned).
 2. The packaged runtime check (model + ONNX Runtime in the installer) is asserted by the Build.
 
 ### F5 — Thumbnail Studio · done (2026-11-08, prompt-only since 2026-11-10)
@@ -280,7 +281,7 @@ hidden editing algorithms.
 | General keyframes and graphs across properties | Zoom focus/scale only | Craft (F8) |
 | Colour wheel, LUTs, filters, presets | Sliders + seven presets; no wheel, LUTs or imported filters | Craft |
 | Browsable effects library/picker | One curated effect (vignette); the rest of the shader lane is agent-authored | Craft |
-| Body/beauty effects; background removal on primary video | Camera on all three backends; the primary video on the Windows flat-screen path (macOS/Linux and the tilted/trail paths not yet) | Craft (F4), large |
+| Body/beauty effects; background removal on primary video | Camera on Windows/Linux; the primary video on the flat path there (macOS out of scope; tilted/trail not yet) | Craft (F4), large |
 | Camera/motion tracking, subject-tracking auto-reframe | Ratio reframe + cursor-follow zooms | Craft/AI (F7) |
 | Auto beat / music-to-cut sync | None | Craft |
 | Stem separation / vocal isolation | None | Spike (F6) |
