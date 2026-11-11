@@ -1946,7 +1946,7 @@ export function useTimeline() {
 	const updateClipAudio = useCallback(
 		async (
 			clipId: string,
-			patch: Partial<Pick<AxcutClip, "gainDb" | "muted" | "fadeInMs" | "fadeOutMs">>,
+			patch: Partial<Pick<AxcutClip, "gainDb" | "muted" | "fadeInMs" | "fadeOutMs" | "volumeKeys">>,
 		) => {
 			const doc = useProjectStore.getState().document;
 			if (!doc) return;

@@ -438,6 +438,8 @@
 		}
 	},
 	"audio": {
+		"volumeKeys": "Volume over time",
+		"volumeKeysHint": "A key captures this slider at the playhead. It multiplies the clip level.",
 		"outputGain": "Уровень выхода",
 		"help": "Голос автоматически выравнивается до стандартной громкости. Настройте уровень выхода относительно неё; он одинаково применяется в предпросмотре и при экспорте.",
 		"reset": "Сбросить аудио",

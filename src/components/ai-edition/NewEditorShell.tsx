@@ -2101,6 +2101,7 @@ export function NewEditorShell() {
 				open={clipAudioTarget !== null}
 				onClose={() => setClipAudioTarget(null)}
 				clip={clipAudioTarget}
+				playheadSec={useProjectStore.getState().currentTimeSec}
 				// One gesture, one write, one undo step — the panel commits on release, so a
 				// slider sweep is not sixty saves.
 				onChange={(patch) => {

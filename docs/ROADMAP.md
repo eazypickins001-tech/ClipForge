@@ -224,6 +224,13 @@ Unit-tested on both sides (`opacityKeyframes.test.ts`, `scene::opacity_tests`); 
 not watched**. Next: `volume`, because the mixer already applies a gain; then the remaining
 properties.
 
+**Second slice — SHIPPED (`volume`).** `clip.volumeKeys` (same key shape, 0..1 as a linear
+multiplier on top of `gainDb`; `at` over the clip's OUTPUT span, which is what the mixer stretches
+to), captured in the clip **Volume** panel. The mixer multiplies the stretched PCM by the sampled
+envelope (`audio_jobs::apply_volume_keys`), and the preview applies the same value in its tick, so
+the editor playback and the export agree. Unit-tested (`audio_jobs::volume_envelope_tests`);
+**not listened to**. The GIF exporter is a separate renderer and ignores it.
+
 ### F9 — Headless / batch render and agent surface · done (2026-11-09)
 
 ClipForge has an MCP server (`electron/mcp/`) with project, media, transcribe, `renderFrames` and

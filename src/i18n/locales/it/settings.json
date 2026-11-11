@@ -438,6 +438,8 @@
 		}
 	},
 	"audio": {
+		"volumeKeys": "Volume over time",
+		"volumeKeysHint": "A key captures this slider at the playhead. It multiplies the clip level.",
 		"outputGain": "Livello di uscita",
 		"help": "Le voci vengono livellate automaticamente a un volume percepito standard. Regola il livello di uscita a partire da lì; si applica allo stesso modo nell’anteprima e nell’esportazione.",
 		"reset": "Reimposta audio",

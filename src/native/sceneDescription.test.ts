@@ -615,6 +615,26 @@ describe("buildSceneDescription.clips", () => {
 		expect("opacityKeys" in without).toBe(false);
 	});
 
+	it("carries a clip's volume envelope", () => {
+		const asset = makeAsset({ id: "a", originalPath: "/screen.mp4" });
+		const clip = makeClip({
+			id: "c1",
+			assetId: "a",
+			sourceStartSec: 0,
+			sourceEndSec: 4,
+			timelineStartSec: 0,
+			timelineEndSec: 4,
+		});
+		const volumeKeys = [
+			{ at: 0, value: 1 },
+			{ at: 1, value: 0 },
+		];
+		const emitted = buildSceneDescription(
+			makeDoc({ assets: [asset], clips: [{ ...clip, volumeKeys }] }),
+		).clips[0];
+		expect(emitted.volumeKeys).toEqual(volumeKeys);
+	});
+
 	it("carries the mute per clip, not for the whole scene", () => {
 		const asset = makeAsset({ id: "a", originalPath: "/screen.mp4" });
 		const clip1 = makeClip({

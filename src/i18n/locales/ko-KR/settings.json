@@ -438,6 +438,8 @@
 		}
 	},
 	"audio": {
+		"volumeKeys": "Volume over time",
+		"volumeKeysHint": "A key captures this slider at the playhead. It multiplies the clip level.",
 		"outputGain": "출력 레벨",
 		"help": "음성은 표준 라우드니스로 자동 조정됩니다. 거기서부터 출력 레벨을 조정하세요. 미리보기와 내보내기에 동일하게 적용됩니다.",
 		"reset": "오디오 재설정",

@@ -96,6 +96,7 @@ jobs:
           cargo test -p openscreen-compositor --lib regions::
           cargo test -p openscreen-compositor --lib audio::hold_tests
           cargo test -p openscreen-compositor --lib scene::opacity_tests
+          cargo test -p openscreen-compositor --lib audio_jobs::volume_envelope_tests
 
       # OpenScreen's build-whisper-stt.yml did not survive the fork, so nothing has produced
       # this helper since — which is why every Windows install logs "whisper-stt-server

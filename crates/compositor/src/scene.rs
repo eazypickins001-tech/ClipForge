@@ -26,12 +26,14 @@ pub struct SceneClipDip {
     pub color: String,
 }
 
-/// Une clé d'opacité (F8) : `at` normalisé DANS la fenêtre source du clip, `value` 0..1, et
-/// l'easing du segment qui COMMENCE à cette clé (absent = linéaire). Même règle que les clés de
-/// focus d'un zoom : recadrer ou couper un clip déplace l'animation avec lui.
+/// Une clé d'une propriété animée (F8) : `at` normalisé 0..1, `value` 0..1, et l'easing du segment
+/// qui COMMENCE à cette clé (absent = linéaire). Le même type sert l'opacité (normalisée sur la
+/// fenêtre SOURCE) et le volume (normalisé sur la durée de SORTIE du clip, celle que le mixeur
+/// étire). Même règle que les clés de focus d'un zoom : recadrer ou couper un clip déplace
+/// l'animation avec lui.
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct SceneOpacityKey {
+pub struct ScenePropertyKey {
     pub at: f32,
     pub value: f32,
     #[serde(default)]
@@ -54,7 +56,11 @@ pub struct SceneClip {
     /// F8 : l'opacité du clip dans le temps. `#[serde(default)]` : toute scène écrite avant ce
     /// champ se lit « aucun key » et se dessine exactement comme avant.
     #[serde(default)]
-    pub opacity_keys: Vec<SceneOpacityKey>,
+    pub opacity_keys: Vec<ScenePropertyKey>,
+    /// F8 : l'enveloppe de volume, normalisée sur la durée de SORTIE du clip. `#[serde(default)]`
+    /// pour la même raison que `opacity_keys` ; le mixeur la lit, le dessin l'ignore.
+    #[serde(default)]
+    pub volume_keys: Vec<ScenePropertyKey>,
     /// Le fondu de frontière du clip. `#[serde(default)]` comme `has_audio` : une charge utile
     /// d'une build antérieure se lit « pas de fondu », elle ne fait pas échouer la scène.
     #[serde(default)]
@@ -90,16 +96,16 @@ impl SceneClip {
         } else {
             ((source_t - self.source_start_sec) / span) as f32
         };
-        sample_opacity(&self.opacity_keys, at.clamp(0.0, 1.0))
+        sample_property(&self.opacity_keys, at.clamp(0.0, 1.0))
     }
 }
 
 /// Même règle que `sampleOpacity` (TS) : avant la première clé, sa valeur tient ; après la
 /// dernière, la sienne ; l'easing est celui de la clé qui COMMENCE le segment. Un seul parcours,
 /// sans tri par frame : on retient la plus proche clé à gauche et à droite de `at`.
-fn sample_opacity(keys: &[SceneOpacityKey], at: f32) -> f32 {
-    let mut left: Option<&SceneOpacityKey> = None;
-    let mut right: Option<&SceneOpacityKey> = None;
+pub(crate) fn sample_property(keys: &[ScenePropertyKey], at: f32) -> f32 {
+    let mut left: Option<&ScenePropertyKey> = None;
+    let mut right: Option<&ScenePropertyKey> = None;
     for key in keys {
         if key.at <= at && left.is_none_or(|l| key.at >= l.at) {
             left = Some(key);
@@ -114,14 +120,14 @@ fn sample_opacity(keys: &[SceneOpacityKey], at: f32) -> f32 {
         (Some(l), Some(r)) if (r.at - l.at).abs() <= 1e-9 => r.value,
         (Some(l), Some(r)) => {
             let t = ((at - l.at) / (r.at - l.at)).clamp(0.0, 1.0);
-            l.value + (r.value - l.value) * ease_opacity(&l.easing, t)
+            l.value + (r.value - l.value) * ease_property(&l.easing, t)
         }
         (None, None) => 1.0,
     };
     value.clamp(0.0, 1.0)
 }
 
-fn ease_opacity(easing: &str, t: f32) -> f32 {
+fn ease_property(easing: &str, t: f32) -> f32 {
     match easing {
         "ease-in" => t * t,
         "ease-out" => 1.0 - (1.0 - t) * (1.0 - t),
@@ -134,7 +140,7 @@ fn ease_opacity(easing: &str, t: f32) -> f32 {
 mod opacity_tests {
     use super::*;
 
-    fn clip(keys: Vec<SceneOpacityKey>) -> SceneClip {
+    fn clip(keys: Vec<ScenePropertyKey>) -> SceneClip {
         SceneClip {
             screen_path: "/s.mp4".into(),
             webcam_path: "/w.mp4".into(),
@@ -143,14 +149,15 @@ mod opacity_tests {
             webcam_offset_sec: 0.0,
             has_audio: false,
             opacity_keys: keys,
+            volume_keys: Vec::new(),
             video_dip: None,
             incoming_blend: None,
             programme_start_sec: None,
         }
     }
 
-    fn key(at: f32, value: f32) -> SceneOpacityKey {
-        SceneOpacityKey { at, value, easing: String::new() }
+    fn key(at: f32, value: f32) -> ScenePropertyKey {
+        ScenePropertyKey { at, value, easing: String::new() }
     }
 
     #[test]
@@ -174,7 +181,7 @@ mod opacity_tests {
     #[test]
     fn easing_belongs_to_the_starting_key() {
         let c = clip(vec![
-            SceneOpacityKey { at: 0.0, value: 0.0, easing: "ease-in".into() },
+            ScenePropertyKey { at: 0.0, value: 0.0, easing: "ease-in".into() },
             key(1.0, 1.0),
         ]);
         assert!((c.opacity_at(15.0) - 0.25).abs() < 1e-5);

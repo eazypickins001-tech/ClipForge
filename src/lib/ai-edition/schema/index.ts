@@ -223,7 +223,7 @@ export const clipPropertyKeySchema = z.object({
 	easing: z.enum(["linear", "ease-in", "ease-out", "ease-in-out"]).optional(),
 });
 
-export const MAX_CLIP_OPACITY_KEYS = 64;
+export const MAX_CLIP_PROPERTY_KEYS = 64;
 
 export const clipSchema = z
 	.object({
@@ -263,7 +263,11 @@ export const clipSchema = z
 		// this reads as fully opaque, and the compositor applies nothing. The keys are normalized
 		// inside the clip's SOURCE window (`sourceStartSec`..`sourceEndSec`) so the same list also
 		// drives the preview, which is handed source time.
-		opacityKeys: z.array(clipPropertyKeySchema).max(MAX_CLIP_OPACITY_KEYS).optional(),
+		opacityKeys: z.array(clipPropertyKeySchema).max(MAX_CLIP_PROPERTY_KEYS).optional(),
+		// F8's second property: a volume envelope, 0..1 as a linear gain multiplier on top of
+		// `gainDb`. `at` is normalized over the clip's OUTPUT span (timeline), because that is the
+		// span the audio mixer stretches to — unlike opacity, whose reader is handed source time.
+		volumeKeys: z.array(clipPropertyKeySchema).max(MAX_CLIP_PROPERTY_KEYS).optional(),
 	})
 	.refine((data) => data.timelineEndSec >= data.timelineStartSec, {
 		message: "timelineEndSec must be greater than or equal to timelineStartSec",

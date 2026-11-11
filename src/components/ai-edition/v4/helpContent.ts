@@ -49,6 +49,7 @@ export const HELP_TOPICS: readonly HelpTopic[] = [
 			"Zooms, annotations and speed pills live in the inspector. The Effects pane holds the colour grade (seven presets plus five sliders) and the vignette.",
 			"Camera background can target the camera OR the primary video: pick Cutout, Blur or Custom, then Apply to → Primary video. Cut out, blur or replace that layer's background.",
 			"The clip rail's Opacity button fades a clip over time: set the slider, then Add keyframe at the playhead. Clear removes the animation.",
+			"Audio's Volume panel has the clip level, mute and fades, plus Volume over time — a keyframed envelope on top of the level.",
 			"Remove filler words and silences from the Transcript menu.",
 		],
 	},

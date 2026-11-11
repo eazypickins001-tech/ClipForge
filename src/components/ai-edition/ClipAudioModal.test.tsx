@@ -24,7 +24,7 @@ function clip(overrides: Partial<AxcutClip> = {}): AxcutClip {
 function renderPanel(target: AxcutClip | null, onChange = vi.fn()) {
 	render(
 		<I18nProvider>
-			<ClipAudioModal open onClose={vi.fn()} clip={target} onChange={onChange} />
+			<ClipAudioModal open onClose={vi.fn()} clip={target} playheadSec={0} onChange={onChange} />
 		</I18nProvider>,
 	);
 	return { onChange };
@@ -78,6 +78,12 @@ describe("ClipAudioModal", () => {
 		expect(screen.getByRole("slider", { name: "Output level" })).toHaveValue("-6");
 		expect(screen.getByRole("slider", { name: "Fade in" })).toHaveValue("250");
 		expect(screen.getByRole("slider", { name: "Fade out" })).toHaveValue("500");
+	});
+
+	it("captures a volume key at the playhead, as a whole-list write", () => {
+		const { onChange } = renderPanel(clip());
+		fireEvent.click(screen.getByTestId("clip-volume-add"));
+		expect(onChange).toHaveBeenLastCalledWith({ volumeKeys: [{ at: 0, value: 1 }] });
 	});
 
 	it("renders nothing without a clip", () => {

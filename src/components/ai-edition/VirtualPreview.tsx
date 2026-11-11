@@ -28,6 +28,7 @@ import type {
 import { isVoiceKind } from "@/lib/ai-edition/schema";
 import { audioGainScalar } from "@/lib/ai-edition/store/editorSettings";
 import { useEditorSettings } from "@/lib/ai-edition/store/useEditorSettings";
+import { sampleOpacity } from "@/lib/ai-edition/timeline/opacityKeyframes";
 import { removedRawSpans } from "@/lib/ai-edition/timeline/programme-time";
 import { findActiveSpeedRegion, type SpeedRegion } from "@/lib/ai-edition/timeline/speed";
 import {
@@ -1062,8 +1063,13 @@ export function VirtualPreview({
 			const previewClipSpanSec = previewClip
 				? previewClip.timelineEndSec - previewClip.timelineStartSec
 				: 1;
+			// F8's volume envelope: `at` is the clip's OUTPUT progress, the same scale the mixer
+			// uses on the stretched PCM. `sampleOpacity` is value-agnostic (0..1, same easing rule).
+			const previewClipLocalSec = previewClip ? outputTimeSec - previewClip.timelineStartSec : 0;
+			const volumeAt = previewClipSpanSec > 1e-6 ? previewClipLocalSec / previewClipSpanSec : 0;
 			const clipFactor = previewClip
 				? audioGainScalar(previewClip.gainDb ?? 0) *
+					sampleOpacity(previewClip.volumeKeys, volumeAt) *
 					timelineAudioFadeAt(
 						previewClip,
 						outputTimeSec - previewClip.timelineStartSec,

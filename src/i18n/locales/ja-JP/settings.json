@@ -438,6 +438,8 @@
 		}
 	},
 	"audio": {
+		"volumeKeys": "Volume over time",
+		"volumeKeysHint": "A key captures this slider at the playhead. It multiplies the clip level.",
 		"outputGain": "出力レベル",
 		"help": "音声は標準のラウドネスに自動で揃えられます。そこから出力レベルを調整してください。プレビューと書き出しで同じように適用されます。",
 		"reset": "オーディオをリセット",

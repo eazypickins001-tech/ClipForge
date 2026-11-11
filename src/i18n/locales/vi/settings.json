@@ -438,6 +438,8 @@
 		}
 	},
 	"audio": {
+		"volumeKeys": "Volume over time",
+		"volumeKeysHint": "A key captures this slider at the playhead. It multiplies the clip level.",
 		"outputGain": "Mức đầu ra",
 		"help": "Giọng nói được tự động cân bằng về độ lớn tiêu chuẩn. Hãy điều chỉnh mức đầu ra từ đó; nó được áp dụng giống hệt nhau trong bản xem trước và khi xuất.",
 		"reset": "Đặt lại âm thanh",

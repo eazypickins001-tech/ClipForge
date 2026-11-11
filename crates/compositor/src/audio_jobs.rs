@@ -26,6 +26,7 @@ use crate::audio::{
     stretch_clip_pcm_by_speed, PlanarPcm,
 };
 use crate::regions::SpeedSegment;
+use crate::scene::{ScenePropertyKey, sample_property};
 use std::collections::VecDeque;
 use std::thread::JoinHandle;
 
@@ -57,6 +58,7 @@ pub fn decode_and_stretch_clip_audio(
     gain_db: f32,
     fade_in_sec: f64,
     fade_out_sec: f64,
+    volume_keys: &[ScenePropertyKey],
 ) -> Option<PlanarPcm> {
     match decode_clip_audio(screen_path, source_start_sec, source_end_sec) {
         Ok(Some(pcm)) => {
@@ -64,6 +66,10 @@ pub fn decode_and_stretch_clip_audio(
             apply_gain_db(&mut pcm, loudness_gain_db(screen_path));
             apply_gain_db(&mut pcm, gain_db);
             apply_clip_fades(&mut pcm, fade_in_sec, fade_out_sec);
+            // F8: the volume envelope, on the STRETCHED PCM — `at` is the clip's output progress,
+            // the same scale as the fades and the panel. Multiplied last, so a key at 0 silences
+            // the clip whatever its level or fades.
+            apply_volume_keys(&mut pcm, volume_keys);
             Some(pcm)
         }
         Ok(None) => {
@@ -98,6 +104,23 @@ fn apply_clip_fades(pcm: &mut PlanarPcm, fade_in_sec: f64, fade_out_sec: f64) {
     for channel in pcm.iter_mut() {
         for (k, sample) in channel.iter_mut().enumerate() {
             *sample *= fade_envelope(k, len, fade_in, fade_out);
+        }
+    }
+}
+
+/// F8 : l'enveloppe de volume sur la longueur **étirée** du clip. `at = k / len` est la même
+/// échelle que le panneau et que les fondus. Sans clé, ne touche rien (niveau inchangé).
+pub(crate) fn apply_volume_keys(pcm: &mut PlanarPcm, keys: &[ScenePropertyKey]) {
+    if keys.is_empty() {
+        return;
+    }
+    let len = pcm.first().map(|channel| channel.len()).unwrap_or(0);
+    if len == 0 {
+        return;
+    }
+    for channel in pcm.iter_mut() {
+        for (k, sample) in channel.iter_mut().enumerate() {
+            *sample *= sample_property(keys, k as f32 / len as f32);
         }
     }
 }
@@ -273,5 +296,29 @@ mod tests {
         jobs.spawn(0, || panic!("décodage impossible"));
         jobs.spawn(1, || 42u32);
         assert_eq!(jobs.into_results(), vec![None, Some(42)]);
+    }
+}
+
+#[cfg(test)]
+mod volume_envelope_tests {
+    use super::*;
+
+    fn key(at: f32, value: f32) -> ScenePropertyKey {
+        ScenePropertyKey { at, value, easing: String::new() }
+    }
+
+    #[test]
+    fn no_keys_leaves_the_level_alone() {
+        let mut pcm = vec![vec![0.5f32; 4]];
+        apply_volume_keys(&mut pcm, &[]);
+        assert_eq!(pcm[0], vec![0.5f32; 4]);
+    }
+
+    #[test]
+    fn a_fade_to_zero_reaches_silence_over_the_stretched_length() {
+        let mut pcm = vec![vec![1.0f32; 5]];
+        apply_volume_keys(&mut pcm, &[key(0.0, 1.0), key(1.0, 0.0)]);
+        assert!((pcm[0][0] - 1.0).abs() < 1e-6);
+        assert!(pcm[0][4] < 0.3, "dernier échantillon = {}, attendu ~0.2", pcm[0][4]);
     }
 }

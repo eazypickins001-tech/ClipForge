@@ -261,6 +261,14 @@ export interface CompositorClipInput {
 		value: number;
 		easing?: "linear" | "ease-in" | "ease-out" | "ease-in-out";
 	}>;
+	/** F8's volume envelope: the same key shape, 0..1 as a linear multiplier on top of `gainDb`.
+	 *  `at` runs over the clip's OUTPUT span, which is the span the mixer stretches its audio to.
+	 *  Absent means unity — a clip with no envelope, and every document written before F8. */
+	volumeKeys?: Array<{
+		at: number;
+		value: number;
+		easing?: "linear" | "ease-in" | "ease-out" | "ease-in-out";
+	}>;
 }
 
 /** Bilan d'un export natif (mesure enveloppante §10 : frames, durée, fps). */

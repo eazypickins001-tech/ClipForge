@@ -1541,12 +1541,27 @@ export function setClipSourceRange(
 export function setClipAudio(
 	document: AxcutDocument,
 	clipId: string,
-	patch: Partial<Pick<AxcutClip, "gainDb" | "muted" | "fadeInMs" | "fadeOutMs">>,
+	patch: Partial<Pick<AxcutClip, "gainDb" | "muted" | "fadeInMs" | "fadeOutMs" | "volumeKeys">>,
 ): AxcutDocument {
+	const clean = patch.volumeKeys
+		? { ...patch, volumeKeys: normaliseClipKeys(patch.volumeKeys) }
+		: patch;
 	return withClipsChanged(
 		document,
-		document.timeline.clips.map((clip) => (clip.id === clipId ? { ...clip, ...patch } : clip)),
+		document.timeline.clips.map((clip) => (clip.id === clipId ? { ...clip, ...clean } : clip)),
 	);
+}
+
+/** Sorted, clamped, one key per instant. Shared by every property list a panel can write. */
+function normaliseClipKeys(keys: readonly AxcutClipPropertyKey[]): AxcutClipPropertyKey[] {
+	return keys
+		.map((key) => ({
+			at: Math.min(1, Math.max(0, key.at)),
+			value: Math.min(1, Math.max(0, key.value)),
+			...(key.easing ? { easing: key.easing } : {}),
+		}))
+		.sort((a, b) => a.at - b.at)
+		.filter((key, index, all) => index === 0 || key.at - all[index - 1].at > 1e-6);
 }
 
 /**
@@ -1562,14 +1577,7 @@ export function setClipOpacityKeys(
 	clipId: string,
 	keys: readonly AxcutClipPropertyKey[],
 ): AxcutDocument {
-	const normalised = keys
-		.map((key) => ({
-			at: Math.min(1, Math.max(0, key.at)),
-			value: Math.min(1, Math.max(0, key.value)),
-			...(key.easing ? { easing: key.easing } : {}),
-		}))
-		.sort((a, b) => a.at - b.at)
-		.filter((key, index, all) => index === 0 || key.at - all[index - 1].at > 1e-6);
+	const normalised = normaliseClipKeys(keys);
 	return withClipsChanged(
 		document,
 		document.timeline.clips.map((clip) =>
@@ -1817,7 +1825,8 @@ function joinable(left: AxcutClip, right: AxcutClip): boolean {
 		(left.muted ?? false) === (right.muted ?? false) &&
 		(left.fadeInMs ?? 0) === (right.fadeInMs ?? 0) &&
 		(left.fadeOutMs ?? 0) === (right.fadeOutMs ?? 0) &&
-		JSON.stringify(left.opacityKeys ?? null) === JSON.stringify(right.opacityKeys ?? null)
+		JSON.stringify(left.opacityKeys ?? null) === JSON.stringify(right.opacityKeys ?? null) &&
+		JSON.stringify(left.volumeKeys ?? null) === JSON.stringify(right.volumeKeys ?? null)
 	);
 }
 

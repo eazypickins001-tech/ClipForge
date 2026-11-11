@@ -438,6 +438,8 @@
 		}
 	},
 	"audio": {
+		"volumeKeys": "Volume over time",
+		"volumeKeysHint": "A key captures this slider at the playhead. It multiplies the clip level.",
 		"outputGain": "Ausgangspegel",
 		"help": "Stimmen werden automatisch auf eine Standardlautheit gebracht. Passe den Ausgangspegel davon ausgehend an; er gilt in der Vorschau und im Export identisch.",
 		"reset": "Audio zurücksetzen",

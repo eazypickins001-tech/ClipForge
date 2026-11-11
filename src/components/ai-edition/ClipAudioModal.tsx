@@ -11,28 +11,36 @@ import { Volume2, VolumeX } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useScopedT } from "@/contexts/I18nContext";
 import { AUDIO_FADE_MAX_MS } from "@/lib/ai-edition/document/audioTracks";
-import type { AxcutClip } from "@/lib/ai-edition/schema";
+import type { AxcutClip, AxcutClipPropertyKey } from "@/lib/ai-edition/schema";
 import {
 	AUDIO_TRACK_GAIN_DB_MAX,
 	AUDIO_TRACK_GAIN_DB_MIN,
 } from "@/lib/ai-edition/store/editorSettings";
+import {
+	removeOpacityKey,
+	sampleOpacity,
+	setOpacityKey,
+} from "@/lib/ai-edition/timeline/opacityKeyframes";
 import { ModalShell } from "./Modals";
 import { SliderCell } from "./RightPanes";
 
-/** What the panel can write on a clip: the same four fields `setClipAudio` takes. */
+/** What the panel can write on a clip: the level, mute, fades, and F8's volume envelope. */
 export type ClipAudioPatch = Partial<
-	Pick<AxcutClip, "gainDb" | "muted" | "fadeInMs" | "fadeOutMs">
+	Pick<AxcutClip, "gainDb" | "muted" | "fadeInMs" | "fadeOutMs" | "volumeKeys">
 >;
 
 export function ClipAudioModal({
 	open,
 	onClose,
 	clip,
+	playheadSec,
 	onChange,
 }: {
 	open: boolean;
 	onClose: () => void;
 	clip: AxcutClip | null;
+	/** Timeline seconds; a volume key is captured at this position inside the clip. */
+	playheadSec: number;
 	onChange: (patch: ClipAudioPatch) => void;
 }) {
 	const t = useScopedT("settings");
@@ -41,6 +49,10 @@ export function ClipAudioModal({
 	const [liveGain, setLiveGain] = useState<number | null>(null);
 	const [liveFadeIn, setLiveFadeIn] = useState<number | null>(null);
 	const [liveFadeOut, setLiveFadeOut] = useState<number | null>(null);
+	// F8: the volume envelope is a list, so the panel owns it while open (a second capture must
+	// build on the first, not re-read the clip snapshot taken at open).
+	const [volumeKeys, setVolumeKeys] = useState<AxcutClipPropertyKey[]>(clip?.volumeKeys ?? []);
+	const [liveVolume, setLiveVolume] = useState<number | null>(null);
 	const clipId = clip?.id ?? null;
 	// Drop the live values when the panel moves to another clip: a drag released outside the
 	// input never fires its commit, so an uncommitted -10 dB would otherwise show as the next
@@ -50,10 +62,28 @@ export function ClipAudioModal({
 		setLiveGain(null);
 		setLiveFadeIn(null);
 		setLiveFadeOut(null);
+		setLiveVolume(null);
+		setVolumeKeys(clip?.volumeKeys ?? []);
 	}, [clipId]);
 
 	if (!clip) return null;
 	const muted = clip.muted === true;
+	// F8's envelope `at` runs over the clip's OUTPUT span, which is what the mixer stretches.
+	const clipSpanSec = clip.timelineEndSec - clip.timelineStartSec;
+	const clipLocalSec = playheadSec - clip.timelineStartSec;
+	const volumeAt =
+		clipSpanSec > 1e-9 && clipLocalSec >= 0 && clipLocalSec <= clipSpanSec
+			? clipLocalSec / clipSpanSec
+			: null;
+	const volumeValue = liveVolume ?? sampleOpacity(volumeKeys, volumeAt ?? 0);
+	const writeVolumeKeys = (next: AxcutClipPropertyKey[]) => {
+		setVolumeKeys(next);
+		onChange({ volumeKeys: next });
+	};
+	const captureVolume = (next: number) => {
+		if (volumeAt === null) return;
+		writeVolumeKeys(setOpacityKey(volumeKeys, volumeAt, next));
+	};
 
 	return (
 		<ModalShell
@@ -126,6 +156,84 @@ export function ClipAudioModal({
 						if (liveFadeOut !== null) onChange({ fadeOutMs: liveFadeOut });
 					}}
 				/>
+			</div>
+
+			{/* F8: the clip's volume over time, a 0..1 multiplier on its level above. */}
+			<div
+				style={{
+					marginTop: 16,
+					borderTop: "1px solid rgba(255,255,255,0.08)",
+					paddingTop: 12,
+				}}
+			>
+				<div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+					<div style={{ flex: 1 }}>
+						<SliderCell
+							label={t("audio.volumeKeys")}
+							value={Math.round(volumeValue * 100)}
+							min={0}
+							max={100}
+							step={1}
+							decimals={0}
+							suffix="%"
+							onChange={(next) => setLiveVolume(next / 100)}
+							onCommit={() => {
+								if (liveVolume !== null) captureVolume(liveVolume);
+							}}
+						/>
+					</div>
+					<button
+						type="button"
+						disabled={volumeAt === null}
+						onClick={() => captureVolume(volumeValue)}
+						data-testid="clip-volume-add"
+					>
+						{t("opacity.add")}
+					</button>
+				</div>
+				<p style={{ margin: "8px 0 0", opacity: 0.75, fontSize: 12 }}>
+					{volumeAt === null ? t("opacity.outside") : t("audio.volumeKeysHint")}
+				</p>
+				{volumeKeys.length > 0 && (
+					<>
+						<ul
+							data-testid="clip-volume-keys"
+							style={{ listStyle: "none", margin: "10px 0 0", padding: 0 }}
+						>
+							{volumeKeys.map((key) => (
+								<li
+									key={key.at}
+									style={{
+										display: "flex",
+										alignItems: "center",
+										justifyContent: "space-between",
+										padding: "4px 0",
+										borderBottom: "1px solid rgba(255,255,255,0.08)",
+									}}
+								>
+									<span>
+										{Math.round(key.at * 100)}% · {Math.round(key.value * 100)}%
+									</span>
+									<button
+										type="button"
+										aria-label={t("opacity.remove")}
+										onClick={() => writeVolumeKeys(removeOpacityKey(volumeKeys, key.at))}
+									>
+										×
+									</button>
+								</li>
+							))}
+						</ul>
+						<button
+							type="button"
+							onClick={() => writeVolumeKeys([])}
+							data-testid="clip-volume-clear"
+							style={{ marginTop: 10 }}
+						>
+							{t("opacity.clear")}
+						</button>
+					</>
+				)}
 			</div>
 		</ModalShell>
 	);

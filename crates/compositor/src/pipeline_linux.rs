@@ -1192,6 +1192,11 @@ fn run_multi_inner(
                     let gain_db = clip.gain_db;
                     let fade_in_sec = clip.fade_in_sec;
                     let fade_out_sec = clip.fade_out_sec;
+                    let volume_keys = scene
+                        .clips
+                        .get(clip_index)
+                        .map(|clip| clip.volume_keys.clone())
+                        .unwrap_or_default();
                     let segments = audio_speed_segments.to_vec();
                     audio_jobs.spawn(clip_index, move || {
                         decode_and_stretch_clip_audio(
@@ -1204,6 +1209,7 @@ fn run_multi_inner(
                             gain_db,
                             fade_in_sec,
                             fade_out_sec,
+                            &volume_keys,
                         )
                     });
                 }

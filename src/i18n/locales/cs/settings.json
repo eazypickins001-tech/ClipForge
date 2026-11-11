@@ -438,6 +438,8 @@
 		}
 	},
 	"audio": {
+		"volumeKeys": "Volume over time",
+		"volumeKeysHint": "A key captures this slider at the playhead. It multiplies the clip level.",
 		"outputGain": "Výstupní úroveň",
 		"help": "Hlas se automaticky vyrovná na standardní hlasitost. Výstupní úroveň upravte od ní; aplikuje se stejně v náhledu i při exportu.",
 		"reset": "Obnovit zvuk",
