@@ -214,14 +214,15 @@ easing }] }`, sampled in Rust with the easing helpers the zoom path already uses
 `smoothstep`, spring). The export path reads the track per frame; audio volume is sampled by the
 mixer.
 
-**First slice — SHIPPED (`opacity`).** `clip.opacityKeys` (`{ at, value, easing }`, normalized
-inside the clip's SOURCE window, like a zoom's focus path), a clip-rail **Opacity** panel (slider,
-key capture at the playhead, remove, clear), and native sampling in `SceneClip::opacity_at`. On
-Windows the screen, camera, window/device frame and screen shadow fade; the **tilted-screen pass
-(mode 8)** ignores the layer alpha, so it does not fade yet, the **GIF exporter** is a separate
-renderer and ignores the track, and annotations/cursor stay opaque. Unit-tested on both sides
-(`opacityKeyframes.test.ts`, `scene::opacity_tests`); **the picture is not watched**. Next:
-`volume`, because the mixer already applies a gain; then the remaining properties.
+**First slice — SHIPPED (`opacity`, `01fe8a5`).** `clip.opacityKeys` (`{ at, value, easing }`,
+normalized inside the clip's SOURCE window, like a zoom's focus path), a clip-rail **Opacity**
+panel (slider, key capture at the playhead, remove, clear), and native sampling in
+`SceneClip::opacity_at`. On Windows the screen, camera, window/device frame and screen shadow fade;
+the **tilted-screen pass (mode 8)** ignores the layer alpha, so it does not fade yet, the **GIF
+exporter** is a separate renderer and ignores the track, and annotations/cursor stay opaque.
+Unit-tested on both sides (`opacityKeyframes.test.ts`, `scene::opacity_tests`); **the picture is
+not watched**. Next: `volume`, because the mixer already applies a gain; then the remaining
+properties.
 
 ### F9 — Headless / batch render and agent surface · done (2026-11-09)
 
