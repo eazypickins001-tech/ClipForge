@@ -2226,6 +2226,13 @@ impl Compositor {
         *self.webcam_mask.borrow_mut() = None;
     }
 
+    /// Oublie le cliché du clip sortant, pour que la prochaine composition entrante en prenne un
+    /// neuf. Le parcours s'en sert à chaque frame d'un chevauchement : sans ça, `capture_blend_source`
+    /// verrait le même `clip_index` et garderait le cliché de la frame PRÉCÉDENTE — un gel.
+    pub fn clear_blend_source(&self) {
+        *self.blend_from.borrow_mut() = None;
+    }
+
     pub fn set_cursor(&self, track: CursorTrack) {
         *self.cursor.borrow_mut() = Some(track);
     }

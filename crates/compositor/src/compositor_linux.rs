@@ -2507,6 +2507,9 @@ impl Compositor {
         *self.webcam_mask.borrow_mut() = None;
     }
 
+    /// La passe de melange est Windows-only : ce backend n'a aucun cliche a oublier.
+    pub fn clear_blend_source(&self) {}
+
     /// Le métrage dans la dernière image composée : ses coins et son warp (`FootageQuad`).
     pub fn footage_quad(&self) -> Option<crate::frame_geometry::FootageQuad> {
         self.footage.get()

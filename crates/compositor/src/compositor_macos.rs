@@ -2455,6 +2455,9 @@ impl Compositor {
         *self.webcam_mask.borrow_mut() = None;
     }
 
+    /// La passe de mélange est Windows-only : ce backend n'a aucun cliché à oublier.
+    pub fn clear_blend_source(&self) {}
+
     /// Soumet sans attendre, et retient le buffer pour `sync`.
     fn submit(&self, cmd: &metal::CommandBufferRef) {
         cmd.commit();

@@ -324,6 +324,21 @@ unsafe fn walk_timeline(
     // donc avec le vrai arrière-plan de la webcam gravé dans le fichier.
     comp.set_segmentation_deterministic(true);
 
+    // The tail of the last emitted clip, for the BLEND pre-compose. During a dissolve the
+    // outgoing picture keeps ADVANCING through the overlap instead of being the frozen snapshot
+    // the compositor takes across the cut. `None` until a clip has been emitted.
+    struct PrevTail {
+        clip_index: usize,
+        screen: String,
+        webcam_key: String,
+        has_camera: bool,
+        webcam_offset_sec: f64,
+        source_start_sec: f64,
+        trimmed_end_sec: f64,
+        overlap_end_sec: f64,
+    }
+    let mut prev_tail: Option<PrevTail> = None;
+
     'clips: for (clip_index, clip) in clips.iter().enumerate() {
         // A completed inspection must not open or seek an unrelated later clip.
         if let Some(only) = only {
@@ -359,6 +374,37 @@ unsafe fn walk_timeline(
         let has_camera = webcam_is_real(&clip.webcam, &clip.screen);
         comp.set_has_webcam(has_camera);
         let webcam_key = if has_camera { &clip.webcam } else { &clip.screen };
+        // LE BLEND : pendant le chevauchement, l'image sortante doit AVANCER, pas rester la
+        // dernière frame tenue. On retire donc ses décodeurs de la carte pour la durée de ce
+        // clip, afin de pouvoir les avancer en parallèle des décodeurs entrants (deux emprunts
+        // mutables de la même HashMap). Un asset partagé (deux moitiés d'un même Split) ne peut
+        // pas avoir deux positions à la fois : on garde alors le gel, qui y est invisible de
+        // toute façon (les deux moitiés montrent la même source). Fail-closed partout : si un
+        // décodeur manque, on le remet et on garde le comportement d'avant.
+        let mut overlap_decs: Option<(Decoder, Decoder)> = None;
+        if clip.incoming_blend_sec.unwrap_or(0.0) > 0.0 {
+            let prev = prev_tail.as_ref().filter(|prev| {
+                prev.clip_index + 1 == clip_index
+                    && prev.screen != clip.screen
+                    && prev.overlap_end_sec > prev.trimmed_end_sec + 1e-6
+            });
+            if let Some(prev) = prev {
+                match (
+                    screen_decs.remove(&prev.screen),
+                    webcam_decs.remove(&prev.webcam_key),
+                ) {
+                    (Some(sd), Some(wd)) => overlap_decs = Some((sd, wd)),
+                    (sd, wd) => {
+                        if let Some(sd) = sd {
+                            screen_decs.insert(prev.screen.clone(), sd);
+                        }
+                        if let Some(wd) = wd {
+                            webcam_decs.insert(prev.webcam_key.clone(), wd);
+                        }
+                    }
+                }
+            }
+        }
         if !screen_decs.contains_key(&clip.screen) {
             screen_decs.insert(clip.screen.clone(), Decoder::open_for_export(&clip.screen, gpu)?);
         }
@@ -458,7 +504,7 @@ unsafe fn walk_timeline(
             speed_segments.clone()
         };
         if clip_scene.is_some() {
-            comp.set_scene(clip_scene);
+            comp.set_scene(clip_scene.clone());
         }
 
         // un seul seek keyframe, puis chaque décodeur avance selon son propre pts jusqu'aux
@@ -504,9 +550,86 @@ unsafe fn walk_timeline(
         }
 
         let frames_before_clip = frames;
+        // Combien de frames de sortie le chevauchement couvre, et la scène du clip sortant.
+        let overlap_total = if overlap_decs.is_some() {
+            let wanted =
+                ((clip.incoming_blend_sec.unwrap_or(0.0) * out_fps as f64).round()).max(0.0) as u64;
+            wanted.min(speed_segments.iter().map(|span| span.frame_count).sum())
+        } else {
+            0
+        };
+        let overlap_scene = if overlap_total > 0 {
+            prev_tail.as_ref().and_then(|prev| {
+                scene.as_ref().map(|base| {
+                    base.for_clip_window(prev.clip_index, prev.source_start_sec, prev.overlap_end_sec)
+                })
+            })
+        } else {
+            None
+        };
+        let mut overlap_done: u64 = 0;
         'clip_frames: for segment in &speed_segments {
             for segment_frame in 0..segment.frame_count {
                 let target_source_time = segment.source_time(segment_frame, out_fps as f64);
+                // The outgoing picture, advanced to this frame's overlap instant, composed
+                // BEFORE the incoming clip so `capture_blend_source` snapshots it. Fail-closed:
+                // a decoder that cannot produce a frame leaves the old freeze in place.
+                let overlap_t = if overlap_done < overlap_total {
+                    prev_tail.as_ref().map(|prev| {
+                        let span = prev.overlap_end_sec - prev.trimmed_end_sec;
+                        prev.trimmed_end_sec + span * (overlap_done as f64 / overlap_total as f64)
+                    })
+                } else {
+                    None
+                };
+                overlap_done += 1;
+                if let (Some((out_sdec, out_wdec)), Some(out_t), Some(prev), Some(out_scene)) = (
+                    overlap_decs.as_mut(),
+                    overlap_t,
+                    prev_tail.as_ref(),
+                    overlap_scene.as_ref(),
+                ) {
+                    let advanced = advance_decoder_to(out_sdec, out_t, 0.0)
+                        .and_then(|ok| {
+                            if ok {
+                                advance_decoder_to(out_wdec, out_t - prev.webcam_offset_sec, 0.0)
+                            } else {
+                                Ok(false)
+                            }
+                        })
+                        .unwrap_or(false);
+                    let osf = if advanced { out_sdec.cur_frame() } else { std::ptr::null() };
+                    let owf = if advanced { out_wdec.cur_frame() } else { std::ptr::null() };
+                    if !osf.is_null() && !owf.is_null() {
+                        comp.set_has_webcam(prev.has_camera);
+                        comp.set_scene(Some(out_scene.clone()));
+                        comp.set_timeline_time(Some(out_t as f32));
+                        comp.set_programme_time(Some((frames as f64 / out_fps as f64) as f32));
+                        if cursor_enabled {
+                            if let Some(track) = cursor_tracks.get(&prev.screen) {
+                                comp.set_cursor(track.clone());
+                                comp.set_cursor_time(Some(out_t as f32));
+                            } else {
+                                comp.clear_cursor();
+                                comp.set_cursor_time(None);
+                            }
+                        }
+                        comp.compose_frame(osf, owf, frames as f32, cfg)?;
+                        // Forget the snapshot so the incoming compose copies THIS frame, not the
+                        // previous overlap frame (`capture_blend_source` skips a repeat index).
+                        comp.clear_blend_source();
+                        // Restore the incoming clip's scene, camera and cursor for the real compose.
+                        comp.set_has_webcam(has_camera);
+                        comp.set_scene(clip_scene.clone());
+                        if cursor_enabled {
+                            if let Some(track) = cursor_tracks.get(&clip.screen) {
+                                comp.set_cursor(track.clone());
+                            } else {
+                                comp.clear_cursor();
+                            }
+                        }
+                    }
+                }
                 if let Some(only) = only {
                     if only.last().is_none_or(|&last| frames > last) {
                         break 'clips;
@@ -557,6 +680,15 @@ unsafe fn walk_timeline(
             }
         }
 
+        // Le clip sortant n'est plus dans la carte pendant ce clip : on l'y remet, à sa position
+        // de fin de chevauchement, pour les clips suivants du même asset.
+        if let Some((sd, wd)) = overlap_decs.take() {
+            if let Some(prev) = prev_tail.as_ref() {
+                screen_decs.insert(prev.screen.clone(), sd);
+                webcam_decs.insert(prev.webcam_key.clone(), wd);
+            }
+        }
+
         let planned: u64 = speed_segments.iter().map(|s| s.frame_count).sum();
         // Un clip coupé court (décodeur vide) laisse la grille en avance sur le compteur : le
         // clip suivant repart du compteur réel.
@@ -573,6 +705,17 @@ unsafe fn walk_timeline(
             audio_end_sec,
             &audio_speed_segments,
         )?;
+
+        prev_tail = Some(PrevTail {
+            clip_index,
+            screen: clip.screen.clone(),
+            webcam_key: webcam_key.clone(),
+            has_camera,
+            webcam_offset_sec: clip.webcam_offset_sec,
+            source_start_sec: clip.source_start_sec,
+            trimmed_end_sec: source_end_sec,
+            overlap_end_sec: audio_end_sec,
+        });
     }
 
     comp.set_cursor_time(None);
