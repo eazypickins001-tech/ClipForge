@@ -48,6 +48,7 @@ import {
 	removeRegion as removeRegionInDocument,
 	resequenceClips,
 	setClipAudio,
+	setClipOpacityKeys,
 	setClipSourceRange,
 	splitClipAtTimes as splitClipAtTimesInDocument,
 	splitClip as splitClipInDocument,
@@ -56,6 +57,7 @@ import type {
 	AxcutAudioTrack,
 	AxcutClip,
 	AxcutClipCropRegion,
+	AxcutClipPropertyKey,
 	AxcutDocument,
 	AxcutShaderEffectRange,
 	AxcutTransition,
@@ -1953,6 +1955,16 @@ export function useTimeline() {
 		[saveDocument],
 	);
 
+	/** The opacity panel's write: the clip's whole key list. One gesture, one save, one undo step. */
+	const updateClipOpacity = useCallback(
+		async (clipId: string, keys: readonly AxcutClipPropertyKey[]) => {
+			const doc = useProjectStore.getState().document;
+			if (!doc) return;
+			await saveDocument(setClipOpacityKeys(doc, clipId, keys), { history: true });
+		},
+		[saveDocument],
+	);
+
 	// Turning loop ON fills the rest of the programme with the track.
 	//
 	// Looping only means anything when the span EXCEEDS the source, so a toggle
@@ -2047,6 +2059,7 @@ export function useTimeline() {
 		removeAudioTrack,
 		updateAudioTrack,
 		updateClipAudio,
+		updateClipOpacity,
 		setAudioTrackLoop,
 		placeAudioTrack,
 		setAudioTrackGain,

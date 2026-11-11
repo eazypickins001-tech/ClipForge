@@ -252,6 +252,15 @@ export interface CompositorClipInput {
 	 *  clip list: the export ARGUMENT list never reaches the draw path, and unlike `videoDip` /
 	 *  `incomingBlend` this number needs the projected speed spans, which only the scene builds. */
 	programmeStartSec?: number;
+	/** F8's opacity track: keys normalised inside this clip's SOURCE window, sorted, `at` 0..1.
+	 *  Absent means fully opaque — which is every document written before F8, and a project that
+	 *  never animated opacity emits no field at all. The compositor multiplies the screen and
+	 *  camera draws by the sampled value; a build that does not know the field ignores it. */
+	opacityKeys?: Array<{
+		at: number;
+		value: number;
+		easing?: "linear" | "ease-in" | "ease-out" | "ease-in-out";
+	}>;
 }
 
 /** Bilan d'un export natif (mesure enveloppante §10 : frames, durée, fps). */

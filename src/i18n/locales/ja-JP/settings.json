@@ -387,6 +387,15 @@
 		"cropVideo": "動画をクロップ",
 		"lockAspectRatio": "アスペクト比を固定"
 	},
+	"opacity": {
+		"title": "Opacity",
+		"label": "Clip opacity",
+		"add": "Add keyframe",
+		"remove": "Remove keyframe",
+		"clear": "Clear opacity keys",
+		"outside": "Put the playhead inside the clip to add a keyframe",
+		"hint": "Fade this clip in or out. A key captures the slider value at the playhead."
+	},
 	"zoom": {
 		"position": {
 			"y": "Y (%)",

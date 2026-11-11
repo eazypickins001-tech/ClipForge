@@ -783,6 +783,9 @@ export function buildNativeClipList(document: AxcutDocument): CompositorClipInpu
 				gainDb: clip.gainDb ?? 0,
 				fadeInSec: (clip.fadeInMs ?? 0) / 1000,
 				fadeOutSec: (clip.fadeOutMs ?? 0) / 1000,
+				// F8's first property: opacity keys, normalised inside this clip's source window.
+				// Absent means fully opaque, which is every document written before it.
+				...(clip.opacityKeys?.length ? { opacityKeys: clip.opacityKeys } : {}),
 				// The boundary dip. `napi` ignores fields `ClipInput` does not declare, so on the
 				// export ARGUMENT this rides along unused; the scene's clip list is the copy the
 				// compositor actually reads.
@@ -1249,6 +1252,9 @@ export function buildSceneDescription(
 				gainDb: clip.gainDb ?? 0,
 				fadeInSec: (clip.fadeInMs ?? 0) / 1000,
 				fadeOutSec: (clip.fadeOutMs ?? 0) / 1000,
+				// F8's first property: opacity keys, normalised inside this clip's source window.
+				// Absent means fully opaque, which is every document written before it.
+				...(clip.opacityKeys?.length ? { opacityKeys: clip.opacityKeys } : {}),
 				// The boundary dip — what the compositor ramps this clip's composed frame through
 				// at its edges. Absent on a clip with no transition on either side, which is what
 				// keeps a project that never used one rendering exactly as it did before.

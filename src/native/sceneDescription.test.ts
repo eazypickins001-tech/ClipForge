@@ -593,6 +593,28 @@ describe("buildSceneDescription.clips", () => {
 		expect(emitted.fadeOutSec).toBe(0.25);
 	});
 
+	it("carries a clip's opacity keys, and omits the field when there are none", () => {
+		const asset = makeAsset({ id: "a", originalPath: "/screen.mp4" });
+		const clip = makeClip({
+			id: "c1",
+			assetId: "a",
+			sourceStartSec: 0,
+			sourceEndSec: 4,
+			timelineStartSec: 0,
+			timelineEndSec: 4,
+		});
+		const keys = [
+			{ at: 0, value: 0.2 },
+			{ at: 1, value: 1 },
+		];
+		const withKeys = buildSceneDescription(
+			makeDoc({ assets: [asset], clips: [{ ...clip, opacityKeys: keys }] }),
+		).clips[0];
+		expect(withKeys.opacityKeys).toEqual(keys);
+		const without = buildSceneDescription(makeDoc({ assets: [asset], clips: [clip] })).clips[0];
+		expect("opacityKeys" in without).toBe(false);
+	});
+
 	it("carries the mute per clip, not for the whole scene", () => {
 		const asset = makeAsset({ id: "a", originalPath: "/screen.mp4" });
 		const clip1 = makeClip({

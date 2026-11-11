@@ -2527,6 +2527,14 @@ impl Compositor {
         let mb_taps = g.mb_taps;
         let mb_amount = g.mb_amount;
         let source_t = g.source_t;
+        // F8: the active clip's opacity at this source instant. No keys → 1.0, so a scene written
+        // before the field draws exactly as before. Applied to the screen and camera draws (and
+        // their frame/shadow); annotations and the cursor stay opaque for now.
+        let clip_opacity = scene_ref
+            .as_ref()
+            .and_then(|s| s.clips.get(s.active_clip_index))
+            .map(|clip| clip.opacity_at(source_t as f64))
+            .unwrap_or(1.0);
         let _padding_scale = g.padding_scale;
         let cut = g.cut;
         let s_dst = g.s_dst;
@@ -2706,7 +2714,7 @@ impl Compositor {
         if cfg.shadow {
             let spread = SCREEN_SHADOW_SPREAD_FRAC * g.screen_unit_px;
             let offset = g.screen_shadow_offset();
-            let opacity = 0.45 * lp.shadow_scale;
+            let opacity = 0.45 * lp.shadow_scale * clip_opacity;
             // Un appareil porte l'ombre de sa silhouette 3D (mode 17), pas celle d'un quad.
             if let Some(cb) = g.device_shadow_cb(render_px, spread, offset, opacity) {
                 self.draw_solid(&cb);
@@ -2723,7 +2731,10 @@ impl Compositor {
         }
         // Le cadre (mode 14) passe SOUS l'écran : l'écran le recouvre, ne laissant voir que la
         // barre de titre, le filet et les coins bas entre les deux arrondis.
-        if let Some(cb) = g.window_frame_cb(render_px) {
+        if let Some(mut cb) = g.window_frame_cb(render_px) {
+            // The frame is part of the clip's picture: fade it with the media so a transparent
+            // clip does not leave a floating title bar.
+            cb.color[3] *= clip_opacity;
             self.draw_solid(&cb);
         }
         let square_top = g.screen_square_top();
@@ -2804,7 +2815,7 @@ impl Compositor {
                     quad_px,
                     radius_px,
                     mode: 0.0,
-                    color: [0.0, 0.0, 0.0, 1.0],
+                    color: [0.0, 0.0, 0.0, clip_opacity],
                     fx: screen_fx,
                     src_prev: [su0_p, sv0_p, su0_p + 2.0 * hu_p, sv0_p + 2.0 * hv_p],
                     dst_prev: s_dst_prev,
@@ -2821,7 +2832,8 @@ impl Compositor {
         // L'appareil modelé (mode 17) passe APRÈS l'écran, et non sous lui comme le chrome plat :
         // son socle vient DEVANT le plan du métrage et sa lunette mord dessus. Le shader s'arrête
         // au plan du métrage dans l'ouverture, donc il ne recouvre jamais l'image.
-        if let Some(cb) = g.device_frame_cb(render_px) {
+        if let Some(mut cb) = g.device_frame_cb(render_px) {
+            cb.color[3] *= clip_opacity;
             self.draw_solid(&cb);
         }
         if trail {
@@ -3051,8 +3063,9 @@ impl Compositor {
                     radius_px: w_radius,
                     mode: 0.0,
                     // `color.a` porte l'alpha du découpage (`color.a * personne`) ; le RGB n'est
-                    // plus lu, le fond ayant déjà été peint sous la caméra.
-                    color: [0.0, 0.0, 0.0, 1.0],
+                    // plus lu, le fond ayant déjà été peint sous la caméra. F8 multiplie ce même
+                    // alpha par l'opacité du clip.
+                    color: [0.0, 0.0, 0.0, clip_opacity],
                     fx: [w_valid[0], w_valid[1], effect_code, blur_intensity],
                     src_prev: [u0, sv0, u1, sv1], // src fixe (pas de zoom webcam)
                     dst_prev: w_dst_prev,

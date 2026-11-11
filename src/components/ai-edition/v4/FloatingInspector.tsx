@@ -8,6 +8,7 @@ import {
 	ArrowUpLeft,
 	ArrowUpRight,
 	AudioLines,
+	Blend,
 	Camera,
 	ChevronRight,
 	Copy,
@@ -141,6 +142,8 @@ interface FloatingInspectorProps {
 	 *  Same clip resolution as Split and Extract audio: the selection wins, otherwise the clip
 	 *  under the playhead. */
 	onEditClipAudio: (clip: AxcutClip) => void;
+	/** Opens the clip's opacity panel — F8's first keyframed property. */
+	onEditClipOpacity: (clip: AxcutClip) => void;
 	/** The razor. Lane-aware — an audio take selected means the take is cut, otherwise the picture
 	 *  — so it lives with the shell that knows both, rather than being re-derived here. */
 	onSplit: () => void;
@@ -160,6 +163,7 @@ export function FloatingInspector({
 	clips,
 	onEditClip,
 	onEditClipAudio,
+	onEditClipOpacity,
 	onSplit,
 	transcriptProps,
 	tl,
@@ -292,8 +296,27 @@ export function FloatingInspector({
 						<Volume2 size={17} />
 					</button>
 				</Tooltip>
-				{/* A portal, like the timeline's menus: drawn inside the stage, the list was clipped by
-				    the stage's edge, and the rows past it sat under the timeline, out of reach. */}
+				{/* Opacity, the first general property track (F8). Same clip resolution as the two
+				    buttons above: the selection wins, otherwise the clip under the playhead. */}
+				<Tooltip content={ts("opacity.title")} {...RAIL_TOOLTIP}>
+					<button
+						type="button"
+						aria-label={ts("opacity.title")}
+						disabled={clips.length === 0}
+						onClick={() => {
+							if (selection) tl.clearSelection();
+							const playhead = useProjectStore.getState().currentTimeSec;
+							const target = clipAtPlayhead(clips, playhead);
+							if (!target) {
+								toast.info(te("inspector.splitClipHint"));
+								return;
+							}
+							onEditClipOpacity(target);
+						}}
+					>
+						<Blend size={17} />
+					</button>
+				</Tooltip>
 				<Popover open={clipPickerOpen && clips.length > 1} onOpenChange={setClipPickerOpen}>
 					<Tooltip content={te("inspector.editClipTip")} {...RAIL_TOOLTIP}>
 						<PopoverTrigger asChild>

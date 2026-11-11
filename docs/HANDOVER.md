@@ -51,6 +51,7 @@ packaged smoke test passed (export, trim/save/reopen, clip edits, transitions, t
 | OpenRouter auth | Explicit `Authorization: Bearer` header; missing keys fail before the request; Provider settings reports failed key writes. Default text model is `anthropic/claude-sonnet-4.5`. |
 | Editor features | Scene detect/split, `scriptToVideo`, transitions including programme-end fade, export blend overlap, colour grade + presets, vignette, speed ramps, 1280×720 composer. |
 | Blend picture + audio | Audio crossfades over the transition's `d` (`4a29754`); the outgoing picture now **advances** through the overlap (`7bb4e9a`): the walk holds both decoder pairs, composes the outgoing clip first with its own scene/camera/cursor, clears the blend snapshot, then composes the incoming. Fail-closed to the old freeze for a shared asset, a missing decoder or an empty tail. Compile-verified (CI + Windows Build); **the dissolve has not been watched**. |
+| F8 opacity keys | `clip.opacityKeys` (`{ at, value, easing }`, normalized inside the clip's SOURCE window) plus a clip-rail **Opacity** panel (slider, key capture, remove, clear) and native `SceneClip::opacity_at`. Windows fades the screen, camera, window/device frame and screen shadow; the tilted-screen pass (mode 8) ignores layer alpha, the GIF exporter ignores the track, and annotations/cursor stay opaque. Unit-tested both sides; **picture not watched**. |
 | F4 packaged runtime | The Build asserts the mediapipe model and `onnxruntime.dll` are in the installer tree (`1f1f135`); a miss used to hide the control silently. |
 | Topbar / Studio UI | Export no longer slides under the Windows caption buttons: the five menu triggers drop their words below 1500px and Export is right-aligned inside the titlebar-area reserve (`49405b0`). Thumbnail Studio enables with an open project (not a clip) and has a project-menu entry; its **Generate prompts** action now sits in the footer beside Save (styled), so Save is never a disabled button with no visible way to produce its result. |
 | F4 primary video (Windows) | `SceneWebcamEffect.target` (`"webcam"` default, `"screen"` for the primary video), editor setting + UI, and the flat screen path draws the same mask/effect (`2ea450d`). macOS ignores `"screen"`; tilted screen and trail are not covered. **Picture not watched.** |
@@ -69,9 +70,11 @@ packaged smoke test passed (export, trim/save/reopen, clip edits, transitions, t
    freeze for a shared asset (the two halves of a Split), a missing decoder, or a clamped/absent
    tail. The live preview not shortening is deliberate. Compile-verified; **still needs a GPU watch**
    — the one remaining blend check is a dissolve in an export.
-3. **F6–F8.** F6 is a **spike outcome** (do not ship yet; candidates, licences and the RTF protocol
-   are in `docs/ROADMAP.md`). F8's general-keyframe design is recorded; its first slice is `opacity`,
-   then `volume`, both needing a GPU watch. F7 depends on F8.
+3. **F8 — general keyframes.** First slice **done**: `opacity` on a clip (see the table). Keys are
+   normalized inside the clip's source window; the native sampler and the TS panel are unit-tested.
+   Next: `volume` (the mixer already applies a gain), then the remaining properties. F7 depends on
+   F8. F6 remains a **spike outcome** (do not ship yet; candidates, licences and the RTF protocol
+   are in `docs/ROADMAP.md`).
 4. **TTS** — **decision recorded**: defer; if it ships, it is BYOK hosted, opt-in, with consent and a
    real cost. Not a bundled platform engine.
 5. **H1** — closed as reported; its spec is excluded from the smoke step.

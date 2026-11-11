@@ -69,6 +69,7 @@ import type { AiEditionProjectSummary } from "@/native/contracts";
 import { resolveVisibleClips } from "@/native/sceneDescription";
 import { useNativePlaybackSync } from "@/native/useNativePlaybackSync";
 import { ClipAudioModal } from "./ClipAudioModal";
+import { ClipOpacityModal } from "./ClipOpacityModal";
 import { ExportDialog } from "./ExportDialog";
 import { importProjectFile } from "./importProjectFile";
 import { insertionsEnabled } from "./insertionsEnabled";
@@ -302,6 +303,8 @@ export function NewEditorShell() {
 	// The clip's own audio panel (volume, mute, fades) — CapCut's Volume sheet. Same shape as
 	// `editClipTarget` above: one shell-level instance, opened from the inspector's rail.
 	const [clipAudioTarget, setClipAudioTarget] = useState<AxcutClip | null>(null);
+	// F8's opacity panel. One shell-level instance, like the audio sheet above.
+	const [clipOpacityTarget, setClipOpacityTarget] = useState<AxcutClip | null>(null);
 	// The boundary dip sheet — CapCut's transition panel. It names the clip whose LEFT edge the dip
 	// sits on (a boundary belongs to the clip that follows it), so the state is an id rather than a
 	// clip object: the row itself lives in the document and arrives back through the store.
@@ -2027,6 +2030,7 @@ export function NewEditorShell() {
 								clips={tl.clips}
 								onEditClip={setEditClipTarget}
 								onEditClipAudio={setClipAudioTarget}
+								onEditClipOpacity={setClipOpacityTarget}
 								onSplit={splitAtPlayhead}
 								transcriptProps={transcriptProps}
 							/>
@@ -2103,6 +2107,18 @@ export function NewEditorShell() {
 					if (!clipAudioTarget) return;
 					const clipId = clipAudioTarget.id;
 					void enqueueTimelineWrite(() => tl.updateClipAudio(clipId, patch));
+				}}
+			/>
+			<ClipOpacityModal
+				open={clipOpacityTarget !== null}
+				onClose={() => setClipOpacityTarget(null)}
+				clip={clipOpacityTarget}
+				playheadSec={useProjectStore.getState().currentTimeSec}
+				speedRegions={tl.speedRegions}
+				onChange={(keys) => {
+					if (!clipOpacityTarget) return;
+					const clipId = clipOpacityTarget.id;
+					void enqueueTimelineWrite(() => tl.updateClipOpacity(clipId, keys));
 				}}
 			/>
 			<SceneDetectModal

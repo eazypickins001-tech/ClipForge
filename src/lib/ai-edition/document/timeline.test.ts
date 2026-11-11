@@ -26,6 +26,7 @@ import {
 	resolvePlaybackSegments,
 	restoreFullTimeline,
 	setClipCrop,
+	setClipOpacityKeys,
 	setClipSourceRange,
 	subtractInterval,
 	timelineIntervals,
@@ -2413,5 +2414,22 @@ describe("setClipCrop", () => {
 		expect(setClipCrop(doc, "clip_b", crop).timeline.clips).toMatchObject([
 			{ id: "clip_a", sourceStartSec: 0, sourceEndSec: 9, cropRegion: crop },
 		]);
+	});
+});
+
+describe("setClipOpacityKeys", () => {
+	it("sorts and clamps the keys, and removes the field when the list is empty", () => {
+		const doc = makeDoc({
+			timeline: { ...makeDoc().timeline, clips: [makeClip({ id: "c1" })] },
+		});
+		const written = setClipOpacityKeys(doc, "c1", [
+			{ at: 0.8, value: 2 },
+			{ at: 0.2, value: -1 },
+		]);
+		expect(written.timeline.clips[0].opacityKeys).toEqual([
+			{ at: 0.2, value: 0 },
+			{ at: 0.8, value: 1 },
+		]);
+		expect(setClipOpacityKeys(written, "c1", []).timeline.clips[0].opacityKeys).toBeUndefined();
 	});
 });

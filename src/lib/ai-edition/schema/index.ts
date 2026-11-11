@@ -210,6 +210,21 @@ export const clipCropRegionSchema = z.object({
 	height: z.number().min(0).max(1),
 });
 
+/**
+ * A general property key for a clip — the first slice of F8. `at` is normalized INSIDE the clip's
+ * source window, the same anchoring rule as `zoomKeyframeSchema`: a clip trimmed or split moves its
+ * keys with it instead of needing them rewritten. `value` is already in the property's own units
+ * (opacity is 0..1), so a reader does not need a table of ranges. `easing` shapes the segment that
+ * STARTS at this key; absent means linear, which is what every document written before F8 reads.
+ */
+export const clipPropertyKeySchema = z.object({
+	at: z.number().min(0).max(1),
+	value: z.number().min(0).max(1),
+	easing: z.enum(["linear", "ease-in", "ease-out", "ease-in-out"]).optional(),
+});
+
+export const MAX_CLIP_OPACITY_KEYS = 64;
+
 export const clipSchema = z
 	.object({
 		id: z.string().min(1),
@@ -244,6 +259,11 @@ export const clipSchema = z
 		muted: z.boolean().optional(),
 		fadeInMs: z.number().int().nonnegative().optional(),
 		fadeOutMs: z.number().int().nonnegative().optional(),
+		// F8's first property. Optional and additive, exactly like `gainDb`: a clip written before
+		// this reads as fully opaque, and the compositor applies nothing. The keys are normalized
+		// inside the clip's SOURCE window (`sourceStartSec`..`sourceEndSec`) so the same list also
+		// drives the preview, which is handed source time.
+		opacityKeys: z.array(clipPropertyKeySchema).max(MAX_CLIP_OPACITY_KEYS).optional(),
 	})
 	.refine((data) => data.timelineEndSec >= data.timelineStartSec, {
 		message: "timelineEndSec must be greater than or equal to timelineStartSec",
@@ -1534,6 +1554,7 @@ export type AxcutTranscript = z.infer<typeof transcriptSchema>;
 export type AxcutAsset = z.infer<typeof assetSchema>;
 export type AxcutAssetTranscriptionFailure = z.infer<typeof assetTranscriptionFailureSchema>;
 export type AxcutClip = z.infer<typeof clipSchema>;
+export type AxcutClipPropertyKey = z.infer<typeof clipPropertyKeySchema>;
 export type AxcutClipCropRegion = z.infer<typeof clipCropRegionSchema>;
 export type AxcutGap = z.infer<typeof gapSchema>;
 export type AxcutTrimRange = z.infer<typeof trimRangeSchema>;

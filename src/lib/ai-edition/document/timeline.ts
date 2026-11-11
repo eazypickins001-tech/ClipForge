@@ -8,6 +8,7 @@ import type {
 	AxcutAudioTrack,
 	AxcutClip,
 	AxcutClipCropRegion,
+	AxcutClipPropertyKey,
 	AxcutDocument,
 	AxcutTranscript,
 	AxcutTransition,
@@ -1549,6 +1550,37 @@ export function setClipAudio(
 }
 
 /**
+ * F8's first property track: the clip's opacity keys, whole-list. The panel edits a list (capture,
+ * remove, clear) rather than a single field, so the write is the list — `undefined` when it becomes
+ * empty, which keeps an un-animated clip byte-identical to one written before F8.
+ *
+ * Sanitised here rather than trusted from the UI: sorted, one key per instant, values clamped. A
+ * key outside 0..1 or a duplicate would otherwise reach the compositor through a hand-edited file.
+ */
+export function setClipOpacityKeys(
+	document: AxcutDocument,
+	clipId: string,
+	keys: readonly AxcutClipPropertyKey[],
+): AxcutDocument {
+	const normalised = keys
+		.map((key) => ({
+			at: Math.min(1, Math.max(0, key.at)),
+			value: Math.min(1, Math.max(0, key.value)),
+			...(key.easing ? { easing: key.easing } : {}),
+		}))
+		.sort((a, b) => a.at - b.at)
+		.filter((key, index, all) => index === 0 || key.at - all[index - 1].at > 1e-6);
+	return withClipsChanged(
+		document,
+		document.timeline.clips.map((clip) =>
+			clip.id === clipId
+				? { ...clip, opacityKeys: normalised.length ? normalised : undefined }
+				: clip,
+		),
+	);
+}
+
+/**
  * The single mutator for "delete a region by id" — the edit the UI's delete key and the
  * LLM's `removeTrim` / `removeModifier` tools all perform. Extracted here (like
  * `setClipSourceRange`) so the recipe lives in one place: EVERY kind deletes the whole
@@ -1784,7 +1816,8 @@ function joinable(left: AxcutClip, right: AxcutClip): boolean {
 		(left.gainDb ?? 0) === (right.gainDb ?? 0) &&
 		(left.muted ?? false) === (right.muted ?? false) &&
 		(left.fadeInMs ?? 0) === (right.fadeInMs ?? 0) &&
-		(left.fadeOutMs ?? 0) === (right.fadeOutMs ?? 0)
+		(left.fadeOutMs ?? 0) === (right.fadeOutMs ?? 0) &&
+		JSON.stringify(left.opacityKeys ?? null) === JSON.stringify(right.opacityKeys ?? null)
 	);
 }
 

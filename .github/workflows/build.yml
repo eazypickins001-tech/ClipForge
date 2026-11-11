@@ -95,6 +95,7 @@ jobs:
           $env:PATH = "${{ github.workspace }}\electron\native\bin\win32-x64;$env:PATH"
           cargo test -p openscreen-compositor --lib regions::
           cargo test -p openscreen-compositor --lib audio::hold_tests
+          cargo test -p openscreen-compositor --lib scene::opacity_tests
 
       # OpenScreen's build-whisper-stt.yml did not survive the fork, so nothing has produced
       # this helper since — which is why every Windows install logs "whisper-stt-server

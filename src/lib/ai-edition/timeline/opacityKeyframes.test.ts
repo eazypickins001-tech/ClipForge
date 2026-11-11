@@ -1,0 +1,111 @@
+import { describe, expect, it } from "vitest";
+import {
+	easeOpacityProgress,
+	opacityKeyAtFor,
+	removeOpacityKey,
+	sampleOpacity,
+	setOpacityKey,
+} from "./opacityKeyframes";
+
+describe("sampleOpacity", () => {
+	it("is fully opaque with no keys", () => {
+		expect(sampleOpacity(undefined, 0.5)).toBe(1);
+		expect(sampleOpacity([], 0.5)).toBe(1);
+	});
+
+	it("holds the first value before the first key and the last after the last", () => {
+		const keys = [
+			{ at: 0.25, value: 0.2 },
+			{ at: 0.75, value: 0.8 },
+		];
+		expect(sampleOpacity(keys, 0)).toBe(0.2);
+		expect(sampleOpacity(keys, 0.25)).toBe(0.2);
+		expect(sampleOpacity(keys, 0.75)).toBe(0.8);
+		expect(sampleOpacity(keys, 1)).toBe(0.8);
+	});
+
+	it("interpolates linearly by default", () => {
+		expect(
+			sampleOpacity(
+				[
+					{ at: 0, value: 0 },
+					{ at: 1, value: 1 },
+				],
+				0.25,
+			),
+		).toBeCloseTo(0.25);
+	});
+
+	it("uses the easing of the key that starts the segment", () => {
+		const keys = [
+			{ at: 0, value: 0, easing: "ease-in" as const },
+			{ at: 1, value: 1 },
+		];
+		expect(sampleOpacity(keys, 0.5)).toBeCloseTo(0.25);
+	});
+
+	it("is a constant for a single key", () => {
+		expect(sampleOpacity([{ at: 0.4, value: 0.3 }], 0)).toBe(0.3);
+		expect(sampleOpacity([{ at: 0.4, value: 0.3 }], 1)).toBe(0.3);
+	});
+
+	it("tolerates unsorted keys", () => {
+		const keys = [
+			{ at: 0.8, value: 0.9 },
+			{ at: 0.2, value: 0.1 },
+		];
+		expect(sampleOpacity(keys, 0.5)).toBeCloseTo(0.5);
+	});
+});
+
+describe("easeOpacityProgress", () => {
+	it("pins both ends for every easing", () => {
+		for (const easing of ["linear", "ease-in", "ease-out", "ease-in-out"] as const) {
+			expect(easeOpacityProgress(easing, 0)).toBeCloseTo(0);
+			expect(easeOpacityProgress(easing, 1)).toBeCloseTo(1);
+		}
+	});
+});
+
+describe("setOpacityKey", () => {
+	it("replaces a key at the same instant instead of stacking", () => {
+		const first = setOpacityKey(undefined, 0.5, 0.2);
+		const second = setOpacityKey(first, 0.503, 0.9);
+		expect(second).toHaveLength(1);
+		expect(second[0].value).toBeCloseTo(0.9);
+	});
+
+	it("keeps the easing a key already had", () => {
+		const keys = setOpacityKey([{ at: 0, value: 1, easing: "ease-out" }], 0, 0.2);
+		expect(keys[0].easing).toBe("ease-out");
+	});
+
+	it("sorts by position", () => {
+		const keys = setOpacityKey(setOpacityKey(undefined, 0.8, 0.1), 0.2, 0.9);
+		expect(keys.map((key) => key.at)).toEqual([0.2, 0.8]);
+	});
+});
+
+describe("opacityKeyAtFor", () => {
+	const clip = { sourceStartSec: 10, sourceEndSec: 20 };
+
+	it("maps a source second inside the clip to 0..1", () => {
+		expect(opacityKeyAtFor(clip, 15)).toBeCloseTo(0.5);
+	});
+
+	it("is null outside the window or with no span", () => {
+		expect(opacityKeyAtFor(clip, 9)).toBeNull();
+		expect(opacityKeyAtFor(clip, 21)).toBeNull();
+		expect(opacityKeyAtFor({ sourceStartSec: 5, sourceEndSec: 5 }, 5)).toBeNull();
+	});
+});
+
+describe("removeOpacityKey", () => {
+	it("drops the key at that instant", () => {
+		const keys = [
+			{ at: 0.2, value: 0.5 },
+			{ at: 0.8, value: 0.5 },
+		];
+		expect(removeOpacityKey(keys, 0.8)).toHaveLength(1);
+	});
+});
