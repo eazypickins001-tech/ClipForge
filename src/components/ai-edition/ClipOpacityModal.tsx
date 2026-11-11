@@ -36,16 +36,24 @@ export function ClipOpacityModal({
 	const t = useScopedT("settings");
 	const tc = useScopedT("common");
 	const [live, setLive] = useState<number | null>(null);
+	// The panel writes a WHOLE list, so it has to own it while open: re-reading `clip.opacityKeys`
+	// from the snapshot taken at open would make a second capture forget the first. A reopen
+	// (another clip, or the same one later) reseeds from the document.
+	const [keys, setKeys] = useState<AxcutClipPropertyKey[]>(clip?.opacityKeys ?? []);
 	const clipId = clip?.id ?? null;
 	// A drag released outside the input never fires its commit; dropping the live value on a clip
 	// change makes sure an uncommitted 20 % does not show up on the next clip.
-	// biome-ignore lint/correctness/useExhaustiveDependencies: clipId is the trigger, not a read.
+	// biome-ignore lint/correctness/useExhaustiveDependencies: clipId is the trigger; `clip` is the value it selects.
 	useEffect(() => {
 		setLive(null);
+		setKeys(clip?.opacityKeys ?? []);
 	}, [clipId]);
 
 	if (!clip) return null;
-	const keys = clip.opacityKeys ?? [];
+	const write = (next: AxcutClipPropertyKey[]) => {
+		setKeys(next);
+		onChange(next);
+	};
 	// The compositor samples with SOURCE time (`set_timeline_time`), so a key captured while a
 	// speed region runs lands where the picture is, not where the ruler is.
 	const sourceSec = screenTimeMs(speedRegions, playheadSec * 1000) / 1000;
@@ -53,7 +61,7 @@ export function ClipOpacityModal({
 	const value = live ?? sampleOpacity(keys, at ?? 0);
 	const capture = (next: number) => {
 		if (at === null) return;
-		onChange(setOpacityKey(keys, at, next));
+		write(setOpacityKey(keys, at, next));
 	};
 
 	return (
@@ -121,7 +129,7 @@ export function ClipOpacityModal({
 								<button
 									type="button"
 									aria-label={t("opacity.remove")}
-									onClick={() => onChange(removeOpacityKey(keys, key.at))}
+									onClick={() => write(removeOpacityKey(keys, key.at))}
 								>
 									×
 								</button>
@@ -130,7 +138,7 @@ export function ClipOpacityModal({
 					</ul>
 					<button
 						type="button"
-						onClick={() => onChange([])}
+						onClick={() => write([])}
 						data-testid="clip-opacity-clear"
 						style={{ marginTop: 10 }}
 					>
