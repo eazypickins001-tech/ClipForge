@@ -9,14 +9,42 @@
 // against: before the first key the first value holds, after the last the last value holds, and a
 // single key is a constant.
 
-import type { AxcutClipPropertyKey } from "../schema";
+import type { AxcutClipPropertyKey, AxcutEasing } from "../schema";
 
-export type OpacityEasing = NonNullable<AxcutClipPropertyKey["easing"]>;
+export type OpacityEasing = AxcutEasing;
 
 const clamp01 = (value: number): number => Math.min(1, Math.max(0, value));
 
+/**
+ * CSS `cubic-bezier` progress: solve x(u) = t, return y(u). Bisection rather than Newton — 24
+ * iterations are exact enough for a 0..1 curve and cannot diverge the way a Newton step can on a
+ * flat control polygon.
+ */
+function cubicBezierProgress(x1: number, y1: number, x2: number, y2: number, t: number): number {
+	const x = clamp01(t);
+	if (x <= 0) return 0;
+	if (x >= 1) return 1;
+	const xAt = (u: number) => {
+		const v = 1 - u;
+		return 3 * v * v * u * x1 + 3 * v * u * u * x2 + u * u * u;
+	};
+	let lo = 0;
+	let hi = 1;
+	let u = 0.5;
+	for (let i = 0; i < 24; i++) {
+		u = (lo + hi) / 2;
+		if (xAt(u) < x) lo = u;
+		else hi = u;
+	}
+	const v = 1 - u;
+	return 3 * v * v * u * y1 + 3 * v * u * u * y2 + u * u * u;
+}
+
 /** Progress through a segment, shaped by the key that starts it. */
 export function easeOpacityProgress(easing: OpacityEasing | undefined, t: number): number {
+	if (easing && typeof easing === "object") {
+		return cubicBezierProgress(easing.x1, easing.y1, easing.x2, easing.y2, t);
+	}
 	switch (easing) {
 		case "ease-in":
 			return t * t;

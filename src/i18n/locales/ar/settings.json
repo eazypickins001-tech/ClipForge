@@ -388,6 +388,8 @@
 		"lockAspectRatio": "قفل نسبة العرض إلى الارتفاع"
 	},
 	"keyframeEasing": {
+		"custom": "Custom…",
+		"curve": "Easing curve",
 		"label": "Easing",
 		"linear": "Linear",
 		"easeIn": "Ease in",

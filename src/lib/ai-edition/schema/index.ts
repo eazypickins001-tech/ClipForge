@@ -217,10 +217,24 @@ export const clipCropRegionSchema = z.object({
  * (opacity is 0..1), so a reader does not need a table of ranges. `easing` shapes the segment that
  * STARTS at this key; absent means linear, which is what every document written before F8 reads.
  */
+/** A custom easing curve, as CSS `cubic-bezier(x1, y1, x2, y2)` control points in 0..1. */
+export const bezierEasingSchema = z.object({
+	x1: z.number().min(0).max(1),
+	y1: z.number().min(0).max(1),
+	x2: z.number().min(0).max(1),
+	y2: z.number().min(0).max(1),
+});
+
+/** The named easings, or a custom bezier. A named value is what every pre-F8 document carries. */
+export const clipEasingSchema = z.union([
+	z.enum(["linear", "ease-in", "ease-out", "ease-in-out"]),
+	bezierEasingSchema,
+]);
+
 export const clipPropertyKeySchema = z.object({
 	at: z.number().min(0).max(1),
 	value: z.number().min(0).max(1),
-	easing: z.enum(["linear", "ease-in", "ease-out", "ease-in-out"]).optional(),
+	easing: clipEasingSchema.optional(),
 });
 
 export const MAX_CLIP_PROPERTY_KEYS = 64;
@@ -1559,6 +1573,8 @@ export type AxcutAsset = z.infer<typeof assetSchema>;
 export type AxcutAssetTranscriptionFailure = z.infer<typeof assetTranscriptionFailureSchema>;
 export type AxcutClip = z.infer<typeof clipSchema>;
 export type AxcutClipPropertyKey = z.infer<typeof clipPropertyKeySchema>;
+export type AxcutEasing = z.infer<typeof clipEasingSchema>;
+export type AxcutBezierEasing = z.infer<typeof bezierEasingSchema>;
 export type AxcutClipCropRegion = z.infer<typeof clipCropRegionSchema>;
 export type AxcutGap = z.infer<typeof gapSchema>;
 export type AxcutTrimRange = z.infer<typeof trimRangeSchema>;

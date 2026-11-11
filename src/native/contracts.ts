@@ -259,7 +259,12 @@ export interface CompositorClipInput {
 	opacityKeys?: Array<{
 		at: number;
 		value: number;
-		easing?: "linear" | "ease-in" | "ease-out" | "ease-in-out";
+		easing?:
+			| "linear"
+			| "ease-in"
+			| "ease-out"
+			| "ease-in-out"
+			| { x1: number; y1: number; x2: number; y2: number };
 	}>;
 	/** F8's volume envelope: the same key shape, 0..1 as a linear multiplier on top of `gainDb`.
 	 *  `at` runs over the clip's OUTPUT span, which is the span the mixer stretches its audio to.
@@ -267,7 +272,12 @@ export interface CompositorClipInput {
 	volumeKeys?: Array<{
 		at: number;
 		value: number;
-		easing?: "linear" | "ease-in" | "ease-out" | "ease-in-out";
+		easing?:
+			| "linear"
+			| "ease-in"
+			| "ease-out"
+			| "ease-in-out"
+			| { x1: number; y1: number; x2: number; y2: number };
 	}>;
 }
 

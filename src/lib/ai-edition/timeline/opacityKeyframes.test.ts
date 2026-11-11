@@ -67,6 +67,17 @@ describe("easeOpacityProgress", () => {
 			expect(easeOpacityProgress(easing, 1)).toBeCloseTo(1);
 		}
 	});
+
+	it("solves a custom cubic-bezier like CSS", () => {
+		const linear = { x1: 0, y1: 0, x2: 1, y2: 1 };
+		expect(easeOpacityProgress(linear, 0.25)).toBeCloseTo(0.25, 4);
+		expect(easeOpacityProgress(linear, 0.75)).toBeCloseTo(0.75, 4);
+
+		const symmetric = { x1: 0.42, y1: 0, x2: 0.58, y2: 1 };
+		expect(easeOpacityProgress(symmetric, 0.5)).toBeCloseTo(0.5, 2);
+		expect(easeOpacityProgress(symmetric, 0)).toBe(0);
+		expect(easeOpacityProgress(symmetric, 1)).toBe(1);
+	});
 });
 
 describe("setOpacityKey", () => {
@@ -126,6 +137,12 @@ describe("setKeyEasing", () => {
 	it("writes linear as absent, so a linear key is byte-identical to a pre-easing one", () => {
 		const next = setKeyEasing([{ at: 0.2, value: 0.5, easing: "ease-in" }], 0.2, "linear");
 		expect(next[0]).toEqual({ at: 0.2, value: 0.5 });
+	});
+
+	it("stores a custom bezier as the curve itself", () => {
+		const curve = { x1: 0.2, y1: 0, x2: 0.8, y2: 1 };
+		const next = setKeyEasing([{ at: 0.5, value: 0.3 }], 0.5, curve);
+		expect(next[0].easing).toEqual(curve);
 	});
 });
 

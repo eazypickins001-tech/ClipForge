@@ -234,9 +234,11 @@ the editor playback and the export agree. Unit-tested (`audio_jobs::volume_envel
 **Easing controls.** Both clip panels give every key an easing menu (linear, ease-in, ease-out,
 ease-in-out); `linear` is stored as absent, so such a key is byte-identical to a pre-easing one.
 The segment uses the easing of the key that STARTS it, in both the TS sampler and the Rust one. A
-key's position can be edited (moving onto another key replaces it), and the → button jumps the
-playhead to a key — through the speed map for opacity, straight through the clip span for volume. No
-graph editor yet — that is the remaining half of "editable easing graphs".
+key can also take a **custom cubic-bezier**, edited on a small graph (two draggable handles, one write
+on release); both samplers solve it by bisection, so preview and export agree. A key's position can be
+edited (moving onto another key replaces it), and the → button jumps the playhead to a key — through
+the speed map for opacity, straight through the clip span for volume. A keyframe VALUE graph (several
+properties curving together) is still open.
 
 **Split and keyframes.** Splitting a clip subdivides BOTH tracks at the cut: each half keeps only
 the keys in its own span, re-normalized, and gets a boundary key holding the value at the cut (the

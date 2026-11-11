@@ -103,6 +103,16 @@ describe("ClipAudioModal", () => {
 		});
 	});
 
+	it("writes a custom bezier when the menu asks for one", () => {
+		const { onChange } = renderPanel(clip({ volumeKeys: [{ at: 0, value: 0.5 }] }));
+		fireEvent.change(screen.getByRole("combobox", { name: "Easing" }), {
+			target: { value: "custom" },
+		});
+		expect(onChange).toHaveBeenLastCalledWith({
+			volumeKeys: [{ at: 0, value: 0.5, easing: { x1: 0.42, y1: 0, x2: 0.58, y2: 1 } }],
+		});
+	});
+
 	it("moves a key by its position and jumps the playhead to it", () => {
 		const onChange = vi.fn();
 		const onSeek = vi.fn();

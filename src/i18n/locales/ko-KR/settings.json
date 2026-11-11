@@ -388,6 +388,8 @@
 		"lockAspectRatio": "화면 비율 고정"
 	},
 	"keyframeEasing": {
+		"custom": "Custom…",
+		"curve": "Easing curve",
 		"label": "Easing",
 		"linear": "Linear",
 		"easeIn": "Ease in",

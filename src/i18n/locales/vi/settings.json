@@ -388,6 +388,8 @@
 		"lockAspectRatio": "Khóa tỷ lệ khung hình"
 	},
 	"keyframeEasing": {
+		"custom": "Custom…",
+		"curve": "Easing curve",
 		"label": "Easing",
 		"linear": "Linear",
 		"easeIn": "Ease in",

@@ -304,7 +304,7 @@ mod volume_envelope_tests {
     use super::*;
 
     fn key(at: f32, value: f32) -> ScenePropertyKey {
-        ScenePropertyKey { at, value, easing: String::new() }
+        ScenePropertyKey { at, value, easing: crate::scene::SceneEasing::default() }
     }
 
     #[test]

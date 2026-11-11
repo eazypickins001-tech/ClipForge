@@ -26,6 +26,22 @@ pub struct SceneClipDip {
     pub color: String,
 }
 
+/// L'easing d'une clé : un nom, ou une courbe `cubic-bezier` custom (les quatre points de contrôle
+/// CSS, 0..1). `untagged` : une chaîne se lit comme un nom, un objet comme une courbe — les deux
+/// formes vivent dans le même champ, sans version de schéma.
+#[derive(Debug, Clone, Deserialize)]
+#[serde(untagged)]
+pub enum SceneEasing {
+    Named(String),
+    Bezier { x1: f32, y1: f32, x2: f32, y2: f32 },
+}
+
+impl Default for SceneEasing {
+    fn default() -> Self {
+        SceneEasing::Named(String::new())
+    }
+}
+
 /// Une clé d'une propriété animée (F8) : `at` normalisé 0..1, `value` 0..1, et l'easing du segment
 /// qui COMMENCE à cette clé (absent = linéaire). Le même type sert l'opacité (normalisée sur la
 /// fenêtre SOURCE) et le volume (normalisé sur la durée de SORTIE du clip, celle que le mixeur
@@ -37,7 +53,7 @@ pub struct ScenePropertyKey {
     pub at: f32,
     pub value: f32,
     #[serde(default)]
-    pub easing: String,
+    pub easing: SceneEasing,
 }
 
 /// Un clip de la timeline (fichiers screen+webcam + fenêtre source). = `CompositorClipInput` (TS).
@@ -127,13 +143,44 @@ pub(crate) fn sample_property(keys: &[ScenePropertyKey], at: f32) -> f32 {
     value.clamp(0.0, 1.0)
 }
 
-fn ease_property(easing: &str, t: f32) -> f32 {
+fn ease_property(easing: &SceneEasing, t: f32) -> f32 {
     match easing {
-        "ease-in" => t * t,
-        "ease-out" => 1.0 - (1.0 - t) * (1.0 - t),
-        "ease-in-out" => t * t * (3.0 - 2.0 * t),
-        _ => t,
+        SceneEasing::Bezier { x1, y1, x2, y2 } => cubic_bezier(*x1, *y1, *x2, *y2, t),
+        SceneEasing::Named(name) => match name.as_str() {
+            "ease-in" => t * t,
+            "ease-out" => 1.0 - (1.0 - t) * (1.0 - t),
+            "ease-in-out" => t * t * (3.0 - 2.0 * t),
+            _ => t,
+        },
     }
+}
+
+/// Même résolution que `cubicBezierProgress` (TS) : bisection sur x(u) = t, puis y(u). 24 itérations
+/// suffisent pour une courbe 0..1 et ne peuvent pas diverger comme une étape de Newton.
+fn cubic_bezier(x1: f32, y1: f32, x2: f32, y2: f32, t: f32) -> f32 {
+    let x = t.clamp(0.0, 1.0);
+    if x <= 0.0 {
+        return 0.0;
+    }
+    if x >= 1.0 {
+        return 1.0;
+    }
+    let x_at = |u: f32| {
+        let v = 1.0 - u;
+        3.0 * v * v * u * x1 + 3.0 * v * u * u * x2 + u * u * u
+    };
+    let (mut lo, mut hi) = (0.0f32, 1.0f32);
+    let mut u = 0.5f32;
+    for _ in 0..24 {
+        u = (lo + hi) / 2.0;
+        if x_at(u) < x {
+            lo = u;
+        } else {
+            hi = u;
+        }
+    }
+    let v = 1.0 - u;
+    3.0 * v * v * u * y1 + 3.0 * v * u * u * y2 + u * u * u
 }
 
 #[cfg(test)]
@@ -157,7 +204,7 @@ mod opacity_tests {
     }
 
     fn key(at: f32, value: f32) -> ScenePropertyKey {
-        ScenePropertyKey { at, value, easing: String::new() }
+        ScenePropertyKey { at, value, easing: SceneEasing::default() }
     }
 
     #[test]
@@ -181,7 +228,11 @@ mod opacity_tests {
     #[test]
     fn easing_belongs_to_the_starting_key() {
         let c = clip(vec![
-            ScenePropertyKey { at: 0.0, value: 0.0, easing: "ease-in".into() },
+            ScenePropertyKey {
+                at: 0.0,
+                value: 0.0,
+                easing: SceneEasing::Named("ease-in".into()),
+            },
             key(1.0, 1.0),
         ]);
         assert!((c.opacity_at(15.0) - 0.25).abs() < 1e-5);
@@ -191,6 +242,22 @@ mod opacity_tests {
     fn tolerates_unsorted_keys() {
         let c = clip(vec![key(0.8, 0.9), key(0.2, 0.1)]);
         assert!((c.opacity_at(15.0) - 0.5).abs() < 1e-5);
+    }
+
+    #[test]
+    fn a_custom_bezier_is_solved_like_the_ts_sampler() {
+        let c = clip(vec![
+            ScenePropertyKey {
+                at: 0.0,
+                value: 0.0,
+                easing: SceneEasing::Bezier { x1: 0.42, y1: 0.0, x2: 0.58, y2: 1.0 },
+            },
+            key(1.0, 1.0),
+        ]);
+        // The symmetric curve passes through (0.5, 0.5).
+        assert!((c.opacity_at(15.0) - 0.5).abs() < 1e-3);
+        assert_eq!(c.opacity_at(10.0), 0.0);
+        assert_eq!(c.opacity_at(20.0), 1.0);
     }
 }
 
