@@ -260,6 +260,11 @@
 		"tint": "色合い",
 		"preset": "プリセット",
 		"presets": {
+			"golden": "Golden",
+			"teal": "Teal",
+			"noir": "Noir",
+			"pastel": "Pastel",
+			"forest": "Forest",
 			"neutral": "ニュートラル",
 			"warm": "暖色",
 			"cool": "寒色",

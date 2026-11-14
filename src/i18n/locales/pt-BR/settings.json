@@ -260,6 +260,11 @@
 		"tint": "Matiz",
 		"preset": "Predefinição",
 		"presets": {
+			"golden": "Golden",
+			"teal": "Teal",
+			"noir": "Noir",
+			"pastel": "Pastel",
+			"forest": "Forest",
 			"neutral": "Neutro",
 			"warm": "Quente",
 			"cool": "Frio",

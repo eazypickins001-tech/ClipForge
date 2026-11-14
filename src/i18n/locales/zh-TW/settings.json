@@ -260,6 +260,11 @@
 		"tint": "色調",
 		"preset": "預設",
 		"presets": {
+			"golden": "Golden",
+			"teal": "Teal",
+			"noir": "Noir",
+			"pastel": "Pastel",
+			"forest": "Forest",
 			"neutral": "中性",
 			"warm": "暖色",
 			"cool": "冷色",

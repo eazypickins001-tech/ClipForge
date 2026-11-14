@@ -260,6 +260,11 @@
 		"tint": "틴트",
 		"preset": "프리셋",
 		"presets": {
+			"golden": "Golden",
+			"teal": "Teal",
+			"noir": "Noir",
+			"pastel": "Pastel",
+			"forest": "Forest",
 			"neutral": "중립",
 			"warm": "따뜻함",
 			"cool": "차가움",

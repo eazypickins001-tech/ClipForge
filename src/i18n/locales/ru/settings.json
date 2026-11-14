@@ -260,6 +260,11 @@
 		"tint": "Оттенок",
 		"preset": "Пресет",
 		"presets": {
+			"golden": "Golden",
+			"teal": "Teal",
+			"noir": "Noir",
+			"pastel": "Pastel",
+			"forest": "Forest",
 			"neutral": "Нейтральный",
 			"warm": "Тёплый",
 			"cool": "Холодный",

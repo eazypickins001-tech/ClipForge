@@ -260,6 +260,11 @@
 		"tint": "Renk tonu",
 		"preset": "Ön ayar",
 		"presets": {
+			"golden": "Golden",
+			"teal": "Teal",
+			"noir": "Noir",
+			"pastel": "Pastel",
+			"forest": "Forest",
 			"neutral": "Nötr",
 			"warm": "Sıcak",
 			"cool": "Soğuk",

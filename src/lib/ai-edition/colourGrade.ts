@@ -105,6 +105,28 @@ export const COLOUR_PRESETS: ColourPreset[] = [
 		id: "mono",
 		grade: { exposure: 0, contrast: 1.05, saturation: 0, temperature: 0, tint: 0 },
 	},
+	// Five more looks on the same axes. Each stays inside the slider ranges, so choosing one never
+	// writes a value the panel would clamp away.
+	{
+		id: "golden",
+		grade: { exposure: 0.12, contrast: 1.05, saturation: 1.15, temperature: 30, tint: 8 },
+	},
+	{
+		id: "teal",
+		grade: { exposure: -0.02, contrast: 1.18, saturation: 1.05, temperature: -18, tint: 6 },
+	},
+	{
+		id: "noir",
+		grade: { exposure: -0.05, contrast: 1.35, saturation: 0, temperature: -5, tint: 0 },
+	},
+	{
+		id: "pastel",
+		grade: { exposure: 0.18, contrast: 0.82, saturation: 1.15, temperature: 8, tint: 4 },
+	},
+	{
+		id: "forest",
+		grade: { exposure: -0.02, contrast: 1.1, saturation: 1.1, temperature: -12, tint: -18 },
+	},
 ];
 
 const COLOUR_AXES = Object.keys(DEFAULT_COLOUR_GRADE) as Array<keyof ColourGrade>;

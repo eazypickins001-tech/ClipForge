@@ -260,6 +260,11 @@
 		"tint": "الصبغة",
 		"preset": "إعداد مسبق",
 		"presets": {
+			"golden": "Golden",
+			"teal": "Teal",
+			"noir": "Noir",
+			"pastel": "Pastel",
+			"forest": "Forest",
 			"neutral": "محايد",
 			"warm": "دافئ",
 			"cool": "بارد",

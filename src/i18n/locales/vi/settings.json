@@ -260,6 +260,11 @@
 		"tint": "Sắc độ",
 		"preset": "Cài đặt sẵn",
 		"presets": {
+			"golden": "Golden",
+			"teal": "Teal",
+			"noir": "Noir",
+			"pastel": "Pastel",
+			"forest": "Forest",
 			"neutral": "Trung tính",
 			"warm": "Ấm",
 			"cool": "Lạnh",

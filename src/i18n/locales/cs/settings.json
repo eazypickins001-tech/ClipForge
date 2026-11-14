@@ -260,6 +260,11 @@
 		"tint": "Odstín",
 		"preset": "Předvolba",
 		"presets": {
+			"golden": "Golden",
+			"teal": "Teal",
+			"noir": "Noir",
+			"pastel": "Pastel",
+			"forest": "Forest",
 			"neutral": "Neutrální",
 			"warm": "Teplé",
 			"cool": "Studené",

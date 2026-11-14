@@ -260,6 +260,11 @@
 		"tint": "Tinta",
 		"preset": "Preset",
 		"presets": {
+			"golden": "Golden",
+			"teal": "Teal",
+			"noir": "Noir",
+			"pastel": "Pastel",
+			"forest": "Forest",
 			"neutral": "Neutro",
 			"warm": "Caldo",
 			"cool": "Freddo",
