@@ -44,6 +44,8 @@ const APPEARANCE: StylePresetAppearance = {
 	cursorShow: true,
 	cursorAutoHide: false,
 	cursorTheme: "default",
+	colourGrade: { exposure: 0, contrast: 1, saturation: 1, temperature: 0, tint: 0 },
+	vignetteAmount: 0,
 };
 
 const presets = nativeBridgeClient.presets;

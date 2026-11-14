@@ -76,6 +76,17 @@ export interface StylePresetAppearance {
 	cursorShow: boolean;
 	cursorAutoHide: boolean;
 	cursorTheme: string;
+	/** The colour grade, on the editor's five bounded axes. Presets saved before this carry the
+	 *  neutral grade, which is exactly what "no grade" means. */
+	colourGrade: {
+		exposure: number;
+		contrast: number;
+		saturation: number;
+		temperature: number;
+		tint: number;
+	};
+	/** Vignette strength 0..1. Absent in old files, which read as 0 (off). */
+	vignetteAmount: number;
 }
 
 export interface StylePreset {
@@ -159,6 +170,17 @@ function readBoolean(source: Fields, key: string, at = ""): boolean {
 		throw new TypeError(`Style preset ${at}${key} must be true or false.`);
 	}
 	return value;
+}
+
+/** A number that a preset written before the field existed does not carry, read as `fallback`. */
+function readOptionalNumber(
+	source: Fields,
+	key: string,
+	bound: SettingBound,
+	fallback: number,
+	at = "",
+): number {
+	return source[key] === undefined ? fallback : readNumber(source, key, bound, at);
 }
 
 function readEnum<T extends string>(source: Fields, key: string, allowed: readonly T[]): T {
@@ -303,6 +325,7 @@ export function parseStylePresetAppearance(value: unknown): StylePresetAppearanc
 	if (typeof value.cursorTheme !== "string") {
 		throw new TypeError("Style preset cursorTheme must be a string.");
 	}
+	const grade = isRecord(value.colourGrade) ? value.colourGrade : {};
 	return {
 		wallpaper: parseStylePresetWallpaper(value.wallpaper),
 		wallpaperMotion:
@@ -356,6 +379,14 @@ export function parseStylePresetAppearance(value: unknown): StylePresetAppearanc
 		cursorTheme: CURSOR_THEME_IDS.has(value.cursorTheme)
 			? value.cursorTheme
 			: DEFAULT_CURSOR_THEME_ID,
+		colourGrade: {
+			exposure: readOptionalNumber(grade, "exposure", "colourExposure", 0),
+			contrast: readOptionalNumber(grade, "contrast", "colourContrast", 1),
+			saturation: readOptionalNumber(grade, "saturation", "colourSaturation", 1),
+			temperature: readOptionalNumber(grade, "temperature", "colourTemperature", 0),
+			tint: readOptionalNumber(grade, "tint", "colourTint", 0),
+		},
+		vignetteAmount: readOptionalNumber(value, "vignetteAmount", "vignetteAmount", 0),
 	};
 }
 
@@ -450,13 +481,25 @@ export const LOOK_LEGACY_EDITOR_KEYS = [
 	"cursorShow",
 	"cursorAutoHide",
 	"cursorTheme",
+	"colourExposure",
+	"colourContrast",
+	"colourSaturation",
+	"colourTemperature",
+	"colourTint",
+	"vignetteAmount",
 ] as const;
 
 /** A preset's appearance as `legacyEditor` fields, format left out. */
 export function stylePresetLegacyEditor(appearance: StylePresetAppearance): Fields {
-	const { aspectRatio: _format, cursor, ...rest } = appearance;
+	const { aspectRatio: _format, cursor, colourGrade, vignetteAmount, ...rest } = appearance;
 	return {
 		...rest,
+		colourExposure: colourGrade.exposure,
+		colourContrast: colourGrade.contrast,
+		colourSaturation: colourGrade.saturation,
+		colourTemperature: colourGrade.temperature,
+		colourTint: colourGrade.tint,
+		vignetteAmount,
 		cursorSize: cursor.size,
 		cursorSmoothing: cursor.smoothing,
 		cursorMotionBlur: cursor.motionBlur,

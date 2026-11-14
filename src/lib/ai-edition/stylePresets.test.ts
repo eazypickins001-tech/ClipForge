@@ -50,6 +50,8 @@ function appearance(overrides: Partial<StylePresetAppearance> = {}): StylePreset
 		cursorShow: true,
 		cursorAutoHide: false,
 		cursorTheme: "default",
+		colourGrade: { exposure: 0, contrast: 1, saturation: 1, temperature: 0, tint: 0 },
+		vignetteAmount: 0,
 		...overrides,
 	};
 }
@@ -116,6 +118,35 @@ describe("parseStylePresetAppearance", () => {
 		const { backgroundBlur: _amount, ...rest } = appearance();
 		expect(parseStylePresetAppearance({ ...rest, showBlur: true }).backgroundBlur).toBe(0.5);
 		expect(parseStylePresetAppearance({ ...rest, showBlur: false }).backgroundBlur).toBe(0);
+	});
+
+	it("reads a preset saved before the grade and vignette existed as neutral", () => {
+		const { colourGrade: _grade, vignetteAmount: _vignette, ...older } = appearance();
+		const parsed = parseStylePresetAppearance(older);
+		expect(parsed.colourGrade).toEqual({
+			exposure: 0,
+			contrast: 1,
+			saturation: 1,
+			temperature: 0,
+			tint: 0,
+		});
+		expect(parsed.vignetteAmount).toBe(0);
+	});
+
+	it("clamps a stored grade and vignette into the editor's ranges", () => {
+		const parsed = parseStylePresetAppearance({
+			...appearance(),
+			colourGrade: { exposure: 9, contrast: 0, saturation: 9, temperature: -999, tint: 999 },
+			vignetteAmount: 5,
+		});
+		expect(parsed.colourGrade).toEqual({
+			exposure: 2,
+			contrast: 0.5,
+			saturation: 2,
+			temperature: -100,
+			tint: 100,
+		});
+		expect(parsed.vignetteAmount).toBe(1);
 	});
 
 	it("rejects non-numbers, wrong types and unknown enum values", () => {

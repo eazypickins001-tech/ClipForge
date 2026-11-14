@@ -302,6 +302,9 @@ hidden editing algorithms.
   proof points, platform format), 1280x720 composer/export, publishing title/body/tags.
 - **Auto-beat:** **Clip → Cut to the beat** splits the clip under the playhead on the first music
   track's onsets, detected from the same native, disk-cached waveform peaks. One write, one undo.
+- **Style presets:** the top-bar **Presets** menu saves and applies the whole look — wallpaper,
+  frame, layout, webcam, cursor, and now the **colour grade and vignette** — as one undo step. A
+  preset file saved before the grade existed reads as neutral grade/off vignette.
 - **Differences worth protecting:** fully local core, no watermark, no subscription/paywall, AI
   optional and BYOK, an agent/MCP surface that edits the real document, and screen-recording craft
   (cursor themes, click effects, auto-zoom, screen+webcam) that CapCut treats as secondary.

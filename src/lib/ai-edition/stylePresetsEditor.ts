@@ -48,6 +48,8 @@ export function stylePresetAppearanceFromSettings(
 		cursorShow: settings.cursorShow,
 		cursorAutoHide: settings.cursorAutoHide,
 		cursorTheme: settings.cursorTheme,
+		colourGrade: { ...settings.colourGrade },
+		vignetteAmount: settings.vignetteAmount,
 	};
 }
 
@@ -116,5 +118,7 @@ export function stylePresetPatch(appearance: StylePresetAppearance): EditorSetti
 			autoHide: appearance.cursorAutoHide,
 		},
 		cursorAutoHide: appearance.cursorAutoHide,
+		colourGrade: { ...appearance.colourGrade },
+		vignetteAmount: appearance.vignetteAmount,
 	};
 }
