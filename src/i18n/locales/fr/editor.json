@@ -233,6 +233,11 @@
 		"screenUnreadable": "Impossible d’exporter le clip {{clip}} : la vidéo de l’écran est illisible au début du clip. Vérifiez l’enregistrement ou ajustez le clip avant de réessayer."
 	},
 	"inspector": {
+		"cutToBeat": "Cut to the beat",
+		"cutToBeatDone": "Cut to the beat",
+		"cutToBeatNone": "No beats fall inside this clip",
+		"cutToBeatNoMusic": "Add a music track first",
+		"cutToBeatUnavailable": "Beat detection is unavailable on this build",
 		"resetFocusPoint": "Réinitialiser le point de focus",
 		"setColor": "Définir la couleur {{color}}",
 		"trimHiddenDuration": "{{duration}} s de média source masqués de la timeline éditée.",

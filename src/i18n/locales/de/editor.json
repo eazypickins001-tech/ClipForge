@@ -233,6 +233,11 @@
 		"screenUnreadable": "Clip {{clip}} kann nicht exportiert werden: Das Bildschirmvideo ist am Clipanfang nicht lesbar. Prüfe die Aufnahme oder passe den Clip vor dem erneuten Export an."
 	},
 	"inspector": {
+		"cutToBeat": "Cut to the beat",
+		"cutToBeatDone": "Cut to the beat",
+		"cutToBeatNone": "No beats fall inside this clip",
+		"cutToBeatNoMusic": "Add a music track first",
+		"cutToBeatUnavailable": "Beat detection is unavailable on this build",
 		"resetFocusPoint": "Fokuspunkt zurücksetzen",
 		"setColor": "Farbe {{color}} festlegen",
 		"trimHiddenDuration": "{{duration}} s des Quellmaterials sind in der bearbeiteten Timeline ausgeblendet.",

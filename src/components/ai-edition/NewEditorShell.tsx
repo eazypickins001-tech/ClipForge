@@ -46,6 +46,7 @@ import { useChatPromptBus } from "@/lib/ai-edition/store/useChatPromptBus";
 import { useSequentialTimelineOps } from "@/lib/ai-edition/store/useSequentialTimelineOps";
 import { useTimeline } from "@/lib/ai-edition/store/useTimeline";
 import { readThumbnailStudio } from "@/lib/ai-edition/thumbnailStudio";
+import { beatsForClip, detectBeats } from "@/lib/ai-edition/timeline/beats";
 import { isGeneratedAssetId } from "@/lib/ai-edition/timeline/clip-parts";
 import { clipAtPlayhead, transitionTargetClip } from "@/lib/ai-edition/timeline/clipTargets";
 import { mergeCloseCuts } from "@/lib/ai-edition/timeline/cut-breath";
@@ -520,6 +521,64 @@ export function NewEditorShell() {
 		},
 		[tl, te],
 	);
+
+	/**
+	 * Cut the clip under the playhead on the first music track's beats. The peaks are the same
+	 * native, disk-cached waveform decode the lane already uses (200 blocks/s), so detection costs
+	 * no extra decode; the mapping and the split are one write through `splitClipAtTimesAt`, which
+	 * is already on the write audit. No music track or no beats inside the clip is reported, not
+	 * silently ignored.
+	 */
+	const handleCutToBeat = useCallback(async () => {
+		const state = useProjectStore.getState();
+		const doc = state.document;
+		const target = clipAtPlayhead(clips, state.currentTimeSec);
+		if (!doc || !target) {
+			toast.info(te("inspector.splitClipHint"));
+			return;
+		}
+		const track = doc.audioTracks.find((candidate) => candidate.kind === "music");
+		if (!track) {
+			toast.info(te("inspector.cutToBeatNoMusic"));
+			return;
+		}
+		const asset = doc.assets.find((candidate) => candidate.id === track.assetId);
+		const durationSec = asset?.durationSec ?? track.durationSec;
+		if (!asset?.originalPath || !durationSec || !window.electronAPI?.getAudioPeaks) {
+			toast.error(te("inspector.cutToBeatUnavailable"));
+			return;
+		}
+		const result = await window.electronAPI.getAudioPeaks(asset.originalPath, durationSec);
+		if (!result.success || !result.peaks || result.peaks.length === 0) {
+			toast.info(te("inspector.cutToBeatNoMusic"));
+			return;
+		}
+		const { beats } = detectBeats(result.peaks, durationSec);
+		const sourceEnd =
+			target.sourceEndSec ??
+			target.sourceStartSec + (target.timelineEndSec - target.timelineStartSec);
+		const times = beatsForClip(
+			beats,
+			{
+				startSec: track.startMs / 1000,
+				endSec: track.endMs / 1000,
+				offsetSec: track.offsetMs / 1000,
+			},
+			{
+				timelineStartSec: target.timelineStartSec,
+				timelineEndSec: target.timelineEndSec,
+				sourceStartSec: target.sourceStartSec,
+				sourceEndSec: sourceEnd,
+			},
+		);
+		if (times.length === 0) {
+			toast.info(te("inspector.cutToBeatNone"));
+			return;
+		}
+		const pieces = await tl.splitClipAtTimesAt(target.id, times, "Beat cut");
+		if (pieces > 0) toast.success(te("inspector.cutToBeatDone"));
+		else toast.info(te("inspector.cutToBeatNone"));
+	}, [clips, tl, te]);
 
 	// Thumbnail Studio's evidence: the project title is local; the transcript, when there is one,
 	// is the project's first non-empty transcript. Both are read at open time by the panel.
@@ -1860,6 +1919,7 @@ export function NewEditorShell() {
 					// menu and the rail cannot disagree about what Split means.
 					split: splitAtPlayhead,
 					detectScenes: handleDetectScenes,
+					autoBeat: handleCutToBeat,
 					thumbnailStudio: () => setThumbnailStudioOpen(true),
 					extractAudio: () => {
 						const state = useProjectStore.getState();

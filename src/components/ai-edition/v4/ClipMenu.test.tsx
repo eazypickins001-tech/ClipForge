@@ -27,6 +27,7 @@ function makeActions(over: Partial<ClipMenuActions> = {}): ClipMenuActions {
 		canOpenStudio: true,
 		split: vi.fn(),
 		detectScenes: vi.fn(),
+		autoBeat: vi.fn(),
 		thumbnailStudio: vi.fn(),
 		extractAudio: vi.fn(),
 		openClipAudio: vi.fn(),
@@ -93,6 +94,7 @@ describe("Clip menu in the editor top bar", () => {
 		expect(rows.map((row) => row.textContent)).toEqual([
 			"Split",
 			"Detect scenes",
+			"Cut to the beat",
 			"Thumbnail Studio",
 			"Extract audio",
 			"Audio",
@@ -122,6 +124,16 @@ describe("Clip menu in the editor top bar", () => {
 		fireEvent.click(within(menu).getByRole("menuitem", { name: "Detect scenes" }));
 
 		expect(actions.detectScenes).toHaveBeenCalledTimes(1);
+	});
+
+	it("runs the beat cut from its row", async () => {
+		const actions = makeActions();
+		renderBar(actions);
+		const menu = await openMenu();
+
+		fireEvent.click(within(menu).getByRole("menuitem", { name: "Cut to the beat" }));
+
+		expect(actions.autoBeat).toHaveBeenCalledTimes(1);
 	});
 
 	it("opens Thumbnail Studio from its row", async () => {

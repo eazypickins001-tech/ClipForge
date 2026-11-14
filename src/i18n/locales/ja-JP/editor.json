@@ -233,6 +233,11 @@
 		"screenUnreadable": "クリップ {{clip}} を書き出せません。クリップの開始位置の画面動画を読み取れません。録画を確認するか、クリップを調整してから再度書き出してください。"
 	},
 	"inspector": {
+		"cutToBeat": "Cut to the beat",
+		"cutToBeatDone": "Cut to the beat",
+		"cutToBeatNone": "No beats fall inside this clip",
+		"cutToBeatNoMusic": "Add a music track first",
+		"cutToBeatUnavailable": "Beat detection is unavailable on this build",
 		"resetFocusPoint": "フォーカスポイントをリセット",
 		"setColor": "色を設定 {{color}}",
 		"trimHiddenDuration": "編集済みタイムラインから{{duration}}秒のソースメディアが非表示になっています。",

@@ -233,6 +233,11 @@
 		"screenUnreadable": "Impossibile esportare la clip {{clip}}: il video dello schermo non è leggibile all’inizio della clip. Controlla la registrazione o modifica la clip prima di esportare di nuovo."
 	},
 	"inspector": {
+		"cutToBeat": "Cut to the beat",
+		"cutToBeatDone": "Cut to the beat",
+		"cutToBeatNone": "No beats fall inside this clip",
+		"cutToBeatNoMusic": "Add a music track first",
+		"cutToBeatUnavailable": "Beat detection is unavailable on this build",
 		"resetFocusPoint": "Reimposta punto di messa a fuoco",
 		"setColor": "Imposta colore {{color}}",
 		"trimHiddenDuration": "{{duration}}s di media sorgente nascosti dalla timeline modificata.",

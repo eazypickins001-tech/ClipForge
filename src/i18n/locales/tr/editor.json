@@ -233,6 +233,11 @@
 		"screenUnreadable": "{{clip}} numaralı klip dışa aktarılamıyor: klibin başlangıcındaki ekran videosu okunamıyor. Yeniden dışa aktarmadan önce kaydı kontrol edin veya klibi ayarlayın."
 	},
 	"inspector": {
+		"cutToBeat": "Cut to the beat",
+		"cutToBeatDone": "Cut to the beat",
+		"cutToBeatNone": "No beats fall inside this clip",
+		"cutToBeatNoMusic": "Add a music track first",
+		"cutToBeatUnavailable": "Beat detection is unavailable on this build",
 		"resetFocusPoint": "Odak noktasını sıfırla",
 		"setColor": "Rengi ayarla {{color}}",
 		"trimHiddenDuration": "Düzenlenen zaman çizelgesinden {{duration}} sn kaynak medya gizlendi.",

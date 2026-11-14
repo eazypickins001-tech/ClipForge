@@ -233,6 +233,11 @@
 		"screenUnreadable": "無法匯出第 {{clip}} 個片段：無法讀取片段起點的螢幕影片。請檢查螢幕錄影或調整片段後再匯出。"
 	},
 	"inspector": {
+		"cutToBeat": "Cut to the beat",
+		"cutToBeatDone": "Cut to the beat",
+		"cutToBeatNone": "No beats fall inside this clip",
+		"cutToBeatNoMusic": "Add a music track first",
+		"cutToBeatUnavailable": "Beat detection is unavailable on this build",
 		"resetFocusPoint": "重設焦點",
 		"setColor": "設定顏色 {{color}}",
 		"trimHiddenDuration": "已編輯的時間軸中隱藏了 {{duration}} 秒的來源媒體。",

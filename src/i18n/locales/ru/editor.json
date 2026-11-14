@@ -233,6 +233,11 @@
 		"screenUnreadable": "Не удалось экспортировать клип {{clip}}: невозможно прочитать видео экрана в начале клипа. Проверьте запись или измените клип перед повторным экспортом."
 	},
 	"inspector": {
+		"cutToBeat": "Cut to the beat",
+		"cutToBeatDone": "Cut to the beat",
+		"cutToBeatNone": "No beats fall inside this clip",
+		"cutToBeatNoMusic": "Add a music track first",
+		"cutToBeatUnavailable": "Beat detection is unavailable on this build",
 		"resetFocusPoint": "Сбросить точку фокуса",
 		"setColor": "Задать цвет {{color}}",
 		"trimHiddenDuration": "{{duration}} с исходного медиа скрыто из отредактированной таймлинии.",

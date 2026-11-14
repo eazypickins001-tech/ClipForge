@@ -233,6 +233,11 @@
 		"screenUnreadable": "클립 {{clip}}을(를) 내보낼 수 없습니다. 클립 시작 지점의 화면 동영상을 읽을 수 없습니다. 녹화 파일을 확인하거나 클립을 조정한 후 다시 내보내세요."
 	},
 	"inspector": {
+		"cutToBeat": "Cut to the beat",
+		"cutToBeatDone": "Cut to the beat",
+		"cutToBeatNone": "No beats fall inside this clip",
+		"cutToBeatNoMusic": "Add a music track first",
+		"cutToBeatUnavailable": "Beat detection is unavailable on this build",
 		"resetFocusPoint": "포커스 지점 재설정",
 		"setColor": "색상 설정 {{color}}",
 		"trimHiddenDuration": "편집된 타임라인에서 {{duration}}초의 원본 미디어가 숨겨졌습니다.",

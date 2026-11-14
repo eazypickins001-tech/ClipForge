@@ -233,6 +233,11 @@
 		"screenUnreadable": "无法导出第 {{clip}} 个片段：无法读取片段起点的屏幕视频。请检查录屏或调整片段后再导出。"
 	},
 	"inspector": {
+		"cutToBeat": "Cut to the beat",
+		"cutToBeatDone": "Cut to the beat",
+		"cutToBeatNone": "No beats fall inside this clip",
+		"cutToBeatNoMusic": "Add a music track first",
+		"cutToBeatUnavailable": "Beat detection is unavailable on this build",
 		"resetFocusPoint": "重置焦点",
 		"setColor": "设置颜色 {{color}}",
 		"trimHiddenDuration": "编辑后的时间轴中隐藏了 {{duration}} 秒的源媒体。",

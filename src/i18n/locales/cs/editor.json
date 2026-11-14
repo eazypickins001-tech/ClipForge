@@ -233,6 +233,11 @@
 		"screenUnreadable": "Klip {{clip}} nelze exportovat: video obrazovky nelze na začátku klipu přečíst. Před dalším exportem zkontrolujte nahrávku nebo upravte klip."
 	},
 	"inspector": {
+		"cutToBeat": "Cut to the beat",
+		"cutToBeatDone": "Cut to the beat",
+		"cutToBeatNone": "No beats fall inside this clip",
+		"cutToBeatNoMusic": "Add a music track first",
+		"cutToBeatUnavailable": "Beat detection is unavailable on this build",
 		"resetFocusPoint": "Obnovit bod zaostření",
 		"setColor": "Nastavit barvu {{color}}",
 		"trimHiddenDuration": "{{duration}}s zdrojového média skryto z upravené časové osy.",

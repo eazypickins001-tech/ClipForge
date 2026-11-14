@@ -300,6 +300,8 @@ hidden editing algorithms.
   silence removal, scene detection -> split, ratio reframe, script-to-video via the agent.
 - **Thumbnail Studio:** a context-aware, prompt-only thumbnail prompt (transcript quote, subjects,
   proof points, platform format), 1280x720 composer/export, publishing title/body/tags.
+- **Auto-beat:** **Clip → Cut to the beat** splits the clip under the playhead on the first music
+  track's onsets, detected from the same native, disk-cached waveform peaks. One write, one undo.
 - **Differences worth protecting:** fully local core, no watermark, no subscription/paywall, AI
   optional and BYOK, an agent/MCP surface that edits the real document, and screen-recording craft
   (cursor themes, click effects, auto-zoom, screen+webcam) that CapCut treats as secondary.
@@ -315,7 +317,7 @@ hidden editing algorithms.
 | Browsable effects library/picker | One curated effect (vignette); the rest of the shader lane is agent-authored | Craft |
 | Body/beauty effects; background removal on primary video | Camera on Windows/Linux; the primary video on the flat path there (macOS out of scope; tilted/trail not yet) | Craft (F4), large |
 | Camera/motion tracking, subject-tracking auto-reframe | Ratio reframe + cursor-follow zooms | Craft/AI (F7) |
-| Auto beat / music-to-cut sync | None | Craft |
+| Auto beat / music-to-cut sync | **Cut to the beat** on the clip under the playhead, from the first music track's detected onsets (native waveform peaks). No beat grid, no multi-track choice | Craft |
 | Stem separation / vocal isolation | None | Spike (F6) |
 | Reverse, stabilisation, denoise | None | Craft |
 | TTS, voice cloning, AI dubbing, avatars/presenter | None | Decision/hosted |

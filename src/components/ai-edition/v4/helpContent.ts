@@ -46,6 +46,7 @@ export const HELP_TOPICS: readonly HelpTopic[] = [
 			"Split at the playhead with Ctrl/Cmd+B, the rail's Slice button, or Clip → Split.",
 			"Trim a clip's edges in Edit clip; a cut inside a clip is a non-destructive trim.",
 			"Click the +/◑ button on a junction for a transition; Clip → Fade out ending fades the programme.",
+			"Clip → Cut to the beat splits the clip under the playhead on the first music track's beats. Add a music track first.",
 			"Zooms, annotations and speed pills live in the inspector. The Effects pane holds the colour grade (twelve presets plus five sliders) and the vignette.",
 			"Camera background can target the camera OR the primary video: pick Cutout, Blur or Custom, then Apply to → Primary video. Cut out, blur or replace that layer's background.",
 			"The clip rail's Opacity button fades a clip over time: set the slider, then Add keyframe at the playhead. Each key has an easing menu (four presets or a custom curve) and a position you can edit; → jumps the playhead to it; Clear removes the animation.",

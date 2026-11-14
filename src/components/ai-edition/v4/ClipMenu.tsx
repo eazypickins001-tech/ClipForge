@@ -29,6 +29,7 @@ export interface ClipMenuActions {
 	canOpenStudio: boolean;
 	split: () => void;
 	detectScenes: () => void;
+	autoBeat: () => void;
 	thumbnailStudio: () => void;
 	extractAudio: () => void;
 	openClipAudio: () => void;
@@ -58,6 +59,12 @@ export function ClipMenu({ actions }: { actions: ClipMenuActions }) {
 					label: te("inspector.detectScenes"),
 					disabled: !actions.hasClips,
 					onSelect: actions.detectScenes,
+				},
+				{
+					id: "beat-cut",
+					label: te("inspector.cutToBeat"),
+					disabled: !actions.hasClips,
+					onSelect: actions.autoBeat,
 				},
 				{
 					id: "thumbnail-studio",

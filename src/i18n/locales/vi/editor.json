@@ -233,6 +233,11 @@
 		"screenUnreadable": "Không thể xuất đoạn {{clip}}: không thể đọc video màn hình ở đầu đoạn. Hãy kiểm tra bản ghi hoặc điều chỉnh đoạn trước khi xuất lại."
 	},
 	"inspector": {
+		"cutToBeat": "Cut to the beat",
+		"cutToBeatDone": "Cut to the beat",
+		"cutToBeatNone": "No beats fall inside this clip",
+		"cutToBeatNoMusic": "Add a music track first",
+		"cutToBeatUnavailable": "Beat detection is unavailable on this build",
 		"resetFocusPoint": "Đặt lại điểm lấy nét",
 		"setColor": "Đặt màu {{color}}",
 		"trimHiddenDuration": "{{duration}}s media gốc bị ẩn khỏi dòng thời gian đã chỉnh sửa.",

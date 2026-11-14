@@ -233,6 +233,11 @@
 		"screenUnreadable": "تعذّر تصدير المقطع {{clip}}: لا يمكن قراءة فيديو الشاشة عند بداية المقطع. تحقق من التسجيل أو عدّل المقطع قبل إعادة التصدير."
 	},
 	"inspector": {
+		"cutToBeat": "Cut to the beat",
+		"cutToBeatDone": "Cut to the beat",
+		"cutToBeatNone": "No beats fall inside this clip",
+		"cutToBeatNoMusic": "Add a music track first",
+		"cutToBeatUnavailable": "Beat detection is unavailable on this build",
 		"resetFocusPoint": "إعادة تعيين نقطة التركيز",
 		"setColor": "تعيين اللون {{color}}",
 		"trimHiddenDuration": "تم إخفاء {{duration}} ثانية من الوسائط المصدر عن الجدول الزمني المحرر.",
