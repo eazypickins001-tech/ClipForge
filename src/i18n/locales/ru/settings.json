@@ -244,6 +244,10 @@
 		"textColor": "Цвет текста",
 		"style": "Стиль",
 		"styles": {
+			"pop": "Pop",
+			"soft": "Soft",
+			"mono": "Mono",
+			"editorial": "Editorial",
 			"classic": "Классический",
 			"bold": "Жирный",
 			"minimal": "Минимальный",

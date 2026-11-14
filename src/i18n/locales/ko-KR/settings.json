@@ -244,6 +244,10 @@
 		"textColor": "글자 색",
 		"style": "스타일",
 		"styles": {
+			"pop": "Pop",
+			"soft": "Soft",
+			"mono": "Mono",
+			"editorial": "Editorial",
 			"classic": "클래식",
 			"bold": "굵게",
 			"minimal": "미니멀",

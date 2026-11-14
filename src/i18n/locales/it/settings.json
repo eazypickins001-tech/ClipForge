@@ -244,6 +244,10 @@
 		"textColor": "Colore del testo",
 		"style": "Stile",
 		"styles": {
+			"pop": "Pop",
+			"soft": "Soft",
+			"mono": "Mono",
+			"editorial": "Editorial",
 			"classic": "Classico",
 			"bold": "Grassetto",
 			"minimal": "Minimale",

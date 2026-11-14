@@ -244,6 +244,10 @@
 		"textColor": "文字顏色",
 		"style": "樣式",
 		"styles": {
+			"pop": "Pop",
+			"soft": "Soft",
+			"mono": "Mono",
+			"editorial": "Editorial",
 			"classic": "經典",
 			"bold": "粗體",
 			"minimal": "簡約",

@@ -220,6 +220,44 @@ export const CAPTION_STYLES = {
 		backgroundColor: CAPTION_PLATES.light,
 		backgroundOpacity: 0.9,
 	},
+	// Four more looks on the same seven fields. Each pair clears the readability floor the test
+	// asserts, and every opacity stays inside the plate bounds.
+	pop: {
+		fontFamily: "Oswald",
+		fontWeight: "bold",
+		fontSize: 58,
+		color: "#ffffff",
+		backgroundEnabled: true,
+		backgroundColor: CAPTION_PLATES.dark,
+		backgroundOpacity: 0.9,
+	},
+	soft: {
+		fontFamily: "Inter",
+		fontWeight: "normal",
+		fontSize: 44,
+		color: "#111111",
+		backgroundEnabled: true,
+		backgroundColor: CAPTION_PLATES.light,
+		backgroundOpacity: 0.9,
+	},
+	mono: {
+		fontFamily: "IBM Plex Mono",
+		fontWeight: "bold",
+		fontSize: 42,
+		color: "#fde047",
+		backgroundEnabled: true,
+		backgroundColor: CAPTION_PLATES.dark,
+		backgroundOpacity: 0.85,
+	},
+	editorial: {
+		fontFamily: "Lora",
+		fontWeight: "bold",
+		fontSize: 50,
+		color: "#ffffff",
+		backgroundEnabled: true,
+		backgroundColor: CAPTION_PLATES.dark,
+		backgroundOpacity: 0.6,
+	},
 } as const satisfies Record<string, CaptionLook>;
 
 export type CaptionStyleId = keyof typeof CAPTION_STYLES;
