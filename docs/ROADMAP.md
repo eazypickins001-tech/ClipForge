@@ -294,7 +294,8 @@ hidden editing algorithms.
 ### Where we match or lead
 
 - **Core craft:** multi-track editing, crop/trim/split/resize, transitions (dips, dissolve, wipe,
-  slide, programme-end fade), speed ramps/curves, colour grade + twelve presets + hue wheel, vignette, zoom
+  slide, programme-end fade), speed ramps/curves, colour grade + twelve presets + hue wheel, `.cube`
+  LUT import (9³, strength), vignette, zoom
   keyframes/scale.
 - **Local AI:** on-device Whisper auto captions with styles and 15-language translation, filler/
   silence removal, scene detection -> split, ratio reframe, script-to-video via the agent.
@@ -317,7 +318,7 @@ hidden editing algorithms.
 | 4K/60fps + HDR export tier | 720p/1080p/1440p/2160p/Source and 24/30/60fps; no HDR | HDR is future craft |
 | Premium assets: templates, effects, transitions, fonts, music/SFX, stickers, graphic suite | None | Business decision (non-goal) |
 | General keyframes and graphs across properties | Zoom focus/scale only | Craft (F8) |
-| Hue wheel, LUTs, filters, presets | Sliders + hue wheel + twelve presets; no LUTs or imported filters | Craft |
+| Hue wheel, LUTs, filters, presets | Sliders + hue wheel + twelve presets + `.cube` LUT import (9³, strength); no imported filters or preset-carried LUTs | Craft |
 | Browsable effects library/picker | One curated effect (vignette); the rest of the shader lane is agent-authored | Craft |
 | Body/beauty effects; background removal on primary video | Camera on Windows/Linux; the primary video on the flat path there (macOS out of scope; tilted/trail not yet) | Craft (F4), large |
 | Camera/motion tracking, subject-tracking auto-reframe | Ratio reframe + cursor-follow zooms | Craft/AI (F7) |

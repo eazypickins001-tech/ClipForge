@@ -62,6 +62,7 @@ import {
 	DEFAULT_COLOUR_GRADE,
 	matchingColourPreset,
 } from "@/lib/ai-edition/colourGrade";
+import { colourLutSettings, importCubeLut } from "@/lib/ai-edition/colourLut";
 import {
 	AUDIO_FADE_MAX_MS,
 	collapseTracksToPills,
@@ -2413,6 +2414,29 @@ export function VideoEffectsPane() {
 	const ts = useScopedT("settings");
 	const { settings, set, setLive, commit, hasDocument } = useEditorSettings();
 	const document = useProjectStore((s) => s.document);
+	const lut = useMemo(() => colourLutSettings(document ?? {}), [document]);
+	const lutInput = useRef<HTMLInputElement>(null);
+	const [lutError, setLutError] = useState<string | null>(null);
+
+	const importLut = async (file: File | null) => {
+		if (!file) return;
+		if (!file.name.toLowerCase().endsWith(".cube")) {
+			setLutError(ts("colour.lutCubeOnly"));
+			return;
+		}
+		try {
+			const text = await file.text();
+			const imported = importCubeLut(text, file.name.replace(/\.cube$/i, ""));
+			setLutError(null);
+			await set({
+				colourLut: imported.data,
+				colourLutName: imported.name,
+				colourLutStrength: 1,
+			});
+		} catch (error) {
+			setLutError(error instanceof Error ? error.message : String(error));
+		}
+	};
 
 	// The footage's own shapes for the Original row, the one most clips are in first.
 	const nativeFormats = useMemo(() => (document ? collectNativeFormats(document) : []), [document]);
@@ -2812,6 +2836,65 @@ export function VideoEffectsPane() {
 					onCommit={() => void commit()}
 				/>
 			</div>
+			<div className={styles.sectionLabel}>{ts("colour.lut")}</div>
+			<div className={styles.paneRow}>
+				<span className={styles.label}>{lut.name ?? ts("colour.lutNone")}</span>
+				<button
+					type="button"
+					className={styles.rowAction}
+					disabled={!hasDocument}
+					onClick={() => lutInput.current?.click()}
+				>
+					{ts("colour.lutImport")}
+				</button>
+				{lut.lut ? (
+					<button
+						type="button"
+						className={styles.rowAction}
+						disabled={!hasDocument}
+						onClick={() =>
+							void set({
+								colourLut: null,
+								colourLutName: null,
+								colourLutStrength: 0,
+							})
+						}
+					>
+						{ts("colour.lutRemove")}
+					</button>
+				) : null}
+				<input
+					ref={lutInput}
+					type="file"
+					accept=".cube"
+					style={{ display: "none" }}
+					onChange={(event) => {
+						const file = event.target.files?.[0] ?? null;
+						event.target.value = "";
+						void importLut(file);
+					}}
+				/>
+			</div>
+			{lutError ? (
+				<div style={{ padding: "0 var(--sp-4) 8px", fontSize: 12, opacity: 0.8 }}>{lutError}</div>
+			) : null}
+			{lut.lut ? (
+				<div className={styles.sliderGrid}>
+					<SliderCell
+						label={ts("colour.lutStrength")}
+						value={lut.strength}
+						min={0}
+						max={1}
+						step={0.01}
+						decimals={2}
+						showValue
+						defaultValue={1}
+						disabled={!hasDocument}
+						onChange={(colourLutStrength) => setLive({ colourLutStrength })}
+						onCommit={() => void commit()}
+					/>
+				</div>
+			) : null}
 			{/* Next to motion blur because it is the other blur of the RECORDING. It only ever
 			    acts on a 3D-tilted zoom, so with none in the project it is not offered. */}
 			{hasTiltedZoom ? (

@@ -1013,6 +1013,25 @@ mod tests {
     const VIGNETTE: &str = "fn effect(uv: vec2<f32>) -> vec4<f32> {\n    let c = frame(uv);\n    let d = distance(uv, vec2<f32>(0.5));\n    return vec4<f32>(c.rgb * (1.0 - d * params.strength * ctx.region.x), c.a);\n}\n";
 
     #[test]
+    fn a_constant_array_may_be_indexed_at_runtime() {
+        // The colour-grade LUT is a generated const table sampled trilinearly; naga must accept
+        // a runtime index into it, or the grade would fail to compile only on a machine with a
+        // LUT imported.
+        let code = "const TABLE = array<vec3<f32>, 8>(\
+            vec3<f32>(0.0), vec3<f32>(0.1), vec3<f32>(0.2), vec3<f32>(0.3), \
+            vec3<f32>(0.4), vec3<f32>(0.5), vec3<f32>(0.6), vec3<f32>(0.7));\n\
+            fn effect(uv: vec2<f32>) -> vec4<f32> {\n\
+                let i = clamp(i32(uv.x * 7.0), 0, 7);\n\
+                let j = clamp(i32(uv.y * 7.0), 0, 7);\n\
+                return vec4<f32>(mix(TABLE[i], TABLE[j], 0.5), 1.0);\n\
+            }\n";
+        let parsed = analyze(code, &[]).expect("naga accepts a runtime-indexed const array");
+        assert!(!to_hlsl(&parsed).expect("hlsl").is_empty());
+        #[cfg(windows)]
+        compile_dxbc(code, &[]).expect("FXC accepts a runtime-indexed const array");
+    }
+
+    #[test]
     fn a_valid_effect_becomes_hlsl_that_d3d11_accepts() {
         let parsed = analyze(VIGNETTE, &[decl("strength", ShaderParamType::Number)]).expect("analyze");
         let hlsl = to_hlsl(&parsed).expect("translate");

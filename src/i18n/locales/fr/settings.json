@@ -256,6 +256,12 @@
 		"customize": "Personnaliser"
 	},
 	"colour": {
+		"lut": "LUT",
+		"lutImport": "Import .cube",
+		"lutRemove": "Remove",
+		"lutNone": "None imported",
+		"lutStrength": "LUT strength",
+		"lutCubeOnly": "Choose a .cube LUT.",
 		"hue": "Hue",
 		"title": "Couleur",
 		"exposure": "Exposition",

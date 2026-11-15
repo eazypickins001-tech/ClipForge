@@ -3509,12 +3509,42 @@ describe("buildSceneDescription.colourGrade", () => {
 			makeDoc({
 				assets: [asset],
 				clips: [clip1, clip2],
-				legacyEditor: { colourExposure: 0.5, colourSaturation: 1.2 },
+				legacyEditor: { colourExposure: 0.5, colourSaturation: 1.2, colourHue: 40 },
 			}),
 		);
 		expect(shaderEffects?.map((fragment) => fragment.clipIndex)).toEqual([0, 1]);
-		expect(shaderEffects?.[0]?.values).toMatchObject({ exposure: 0.5, saturation: 1.2 });
+		expect(shaderEffects?.[0]?.values).toMatchObject({
+			exposure: 0.5,
+			saturation: 1.2,
+			hue: 40,
+		});
 		expect(shaderEffects?.[0]?.target).toBe("image");
+	});
+
+	it("emits the grade for a LUT alone and carries its strength", () => {
+		const asset = makeAsset({ id: "a", originalPath: "/a.mp4" });
+		const clip = makeClip({
+			id: "c1",
+			assetId: "a",
+			sourceStartSec: 0,
+			sourceEndSec: 4,
+			timelineStartSec: 0,
+			timelineEndSec: 4,
+		});
+		const { shaderEffects } = buildSceneDescription(
+			makeDoc({
+				assets: [asset],
+				clips: [clip],
+				legacyEditor: {
+					colourLut: new Array(9 ** 3 * 3).fill(0.5),
+					colourLutName: "Kodak",
+					colourLutStrength: 0.7,
+				},
+			}),
+		);
+		expect(shaderEffects).toHaveLength(1);
+		expect(shaderEffects?.[0]?.values).toMatchObject({ lutStrength: 0.7 });
+		expect(shaderEffects?.[0]?.code).toContain("fn fx_lut");
 	});
 });
 

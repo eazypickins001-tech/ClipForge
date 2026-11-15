@@ -29,6 +29,7 @@ import {
 } from "@/lib/ai-edition/captions";
 import { clickSoundForDocument } from "@/lib/ai-edition/clickSound";
 import { colourGradeEffect, isNeutralColourGrade } from "@/lib/ai-edition/colourGrade";
+import { colourLutSettings, hasColourLut } from "@/lib/ai-edition/colourLut";
 import { takesByHeadFragment } from "@/lib/ai-edition/document/audioTracks";
 import { createId } from "@/lib/ai-edition/document/ids";
 import { legacyCameraRegions, materializeLayouts } from "@/lib/ai-edition/document/layout";
@@ -1409,8 +1410,9 @@ export function buildSceneDescription(
 	// touches colour keeps its payload and render exactly as before. One fragment per visible clip:
 	// a clip-indexed fragment survives `for_clip_window`, the same idiom the speed/zoom regions use.
 	const gradeFragments: SceneShaderEffect[] = [];
-	if (!isNeutralColourGrade(settings.colourGrade)) {
-		const grade = colourGradeEffect(settings.colourGrade);
+	const lut = colourLutSettings(document);
+	if (!isNeutralColourGrade(settings.colourGrade) || hasColourLut(lut.lut, lut.strength)) {
+		const grade = colourGradeEffect(settings.colourGrade, lut.lut, lut.strength);
 		if (grade) {
 			for (const [index, clip] of visibleClips.entries()) {
 				const sourceEndSec = resolveClipSourceEndSec(clip, assetById.get(clip.assetId));
@@ -1431,6 +1433,8 @@ export function buildSceneDescription(
 						saturation: settings.colourGrade.saturation,
 						temperature: settings.colourGrade.temperature,
 						tint: settings.colourGrade.tint,
+						hue: settings.colourGrade.hue,
+						lutStrength: lut.strength,
 					},
 				});
 			}

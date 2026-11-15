@@ -256,6 +256,12 @@
 		"customize": "사용자 지정"
 	},
 	"colour": {
+		"lut": "LUT",
+		"lutImport": "Import .cube",
+		"lutRemove": "Remove",
+		"lutNone": "None imported",
+		"lutStrength": "LUT strength",
+		"lutCubeOnly": "Choose a .cube LUT.",
 		"hue": "Hue",
 		"title": "색상",
 		"exposure": "노출",

@@ -9,9 +9,12 @@ import {
 	isNeutralColourGrade,
 	matchingColourPreset,
 } from "./colourGrade";
+import { type ColourLut, LUT_VALUES } from "./colourLut";
 import { SHADER_EFFECT_CONTRACT } from "./shaderEffects";
 
 const grade = (patch: Partial<ColourGrade>): ColourGrade => ({ ...DEFAULT_COLOUR_GRADE, ...patch });
+
+const lut = (): ColourLut => ({ name: "Test", data: new Array(LUT_VALUES).fill(0.5) });
 
 describe("isNeutralColourGrade", () => {
 	it("is true at the defaults and false when any axis moves", () => {
@@ -32,6 +35,20 @@ describe("isNeutralColourGrade", () => {
 describe("colourGradeEffect", () => {
 	it("returns null for a neutral grade, so nothing is emitted", () => {
 		expect(colourGradeEffect(DEFAULT_COLOUR_GRADE)).toBeNull();
+	});
+
+	it("folds an active LUT into the same shader and its params", () => {
+		const effect = colourGradeEffect(DEFAULT_COLOUR_GRADE, lut(), 0.8);
+		expect(effect).not.toBeNull();
+		expect(effect?.code).toContain("fn fx_lut");
+		expect(effect?.code).toContain("params.lutStrength");
+		expect(effect?.params.map((param) => param.name)).toContain("lutStrength");
+	});
+
+	it("does not emit a LUT at zero strength, and keeps the old code without one", () => {
+		expect(colourGradeEffect(DEFAULT_COLOUR_GRADE, lut(), 0)).toBeNull();
+		const plain = colourGradeEffect(grade({ saturation: 1.2 }));
+		expect(plain?.code).not.toContain("fx_lut");
 	});
 
 	it("declares exactly the six params the shader reads, on the compositor's contract", () => {

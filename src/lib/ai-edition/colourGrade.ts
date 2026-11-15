@@ -12,6 +12,7 @@
 // returns null for it, so a project that never touches colour emits exactly the payload it always
 // did.
 
+import { type ColourLut, hasColourLut, lutShaderBody } from "./colourLut";
 import type { AxcutShaderEffect, AxcutShaderEffectParam } from "./schema";
 import { SHADER_EFFECT_CONTRACT } from "./shaderEffects";
 
@@ -71,6 +72,7 @@ export const COLOUR_GRADE_WGSL = `fn effect(uv: vec2<f32>) -> vec4<f32> {
         );
     }
     rgb = rgb + vec3<f32>(params.temperature, params.tint, -params.temperature) * 0.01;
+    // LUT_APPLY
     return vec4<f32>(rgb, c.a);
 }
 `;
@@ -183,16 +185,41 @@ export function matchingColourPreset(grade: ColourGrade): string | null {
 	return null;
 }
 
-/** The effect definition the scene emits when the grade is not neutral, else null. */
-export function colourGradeEffect(grade: ColourGrade): AxcutShaderEffect | null {
-	if (isNeutralColourGrade(grade)) return null;
+/** The effect definition the scene emits when the grade is not neutral or a LUT is active.
+ *  `lutStrength` is folded into the same shader, so a LUT is one effect and one cache entry. */
+export function colourGradeEffect(
+	grade: ColourGrade,
+	lut: ColourLut | null = null,
+	lutStrength = 0,
+): AxcutShaderEffect | null {
+	const lutOn = hasColourLut(lut, lutStrength);
+	if (isNeutralColourGrade(grade) && !lutOn) return null;
+	const apply = lutOn ? "rgb = mix(rgb, fx_lut(rgb), params.lutStrength);" : "";
+	const params: AxcutShaderEffectParam[] = [
+		...COLOUR_GRADE_PARAMS,
+		...(lutOn
+			? [
+					{
+						type: "number" as const,
+						name: "lutStrength",
+						label: "",
+						default: 1,
+						min: 0,
+						max: 1,
+					},
+				]
+			: []),
+	];
 	return {
 		id: "__colourGrade",
 		name: "Colour grade",
 		description: "",
 		contract: SHADER_EFFECT_CONTRACT,
-		code: COLOUR_GRADE_WGSL,
-		params: COLOUR_GRADE_PARAMS,
+		code: `${lutOn ? lutShaderBody(lut as ColourLut) : ""}${COLOUR_GRADE_WGSL.replace(
+			"    // LUT_APPLY",
+			`    ${apply}`,
+		)}`,
+		params,
 		origin: "user",
 	};
 }

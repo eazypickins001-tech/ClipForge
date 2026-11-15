@@ -177,6 +177,10 @@ interface LegacyShape {
 	colourTemperature?: number;
 	colourTint?: number;
 	colourHue?: number;
+	/** An imported LUT's 9³ RGB table, its display name, and its strength 0..1. */
+	colourLut?: number[] | null;
+	colourLutName?: string | null;
+	colourLutStrength?: number;
 	cropRegion?: CropRegion;
 	webcamLayoutPreset?: WebcamLayoutPreset;
 	webcamMaskShape?: WebcamMaskShape;
@@ -415,6 +419,9 @@ export interface EditorSettingsPatch {
 	webcamWallpaper?: string;
 	webcamBlurIntensity?: number;
 	vignetteAmount?: number;
+	colourLut?: number[] | null;
+	colourLutName?: string | null;
+	colourLutStrength?: number;
 	cursor?: Partial<CursorVisualSettings> & { theme?: string; show?: boolean; autoHide?: boolean };
 	cursorAutoHide?: boolean;
 	autoFocusAll?: boolean;
