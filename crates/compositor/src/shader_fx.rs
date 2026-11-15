@@ -1032,6 +1032,31 @@ mod tests {
     }
 
     #[test]
+    fn a_nine_cubed_lut_table_compiles_at_its_real_size() {
+        // The grade's LUT is generated at 9³ (729 vec3 literals); this compiles that exact size,
+        // with a runtime index, rather than only the small pattern above.
+        let mut entries = String::new();
+        for i in 0..729 {
+            let r = (i % 9) as f32 / 8.0;
+            let g = ((i / 9) % 9) as f32 / 8.0;
+            let b = (i / 81) as f32 / 8.0;
+            entries.push_str(&format!("vec3<f32>({r:.3}, {g:.3}, {b:.3}),"));
+        }
+        let code = format!(
+            "const TABLE = array<vec3<f32>, 729>({entries});\n\
+             fn effect(uv: vec2<f32>) -> vec4<f32> {{\n\
+                 let i = clamp(i32(uv.x * 8.0), 0, 8);\n\
+                 let j = clamp(i32(uv.y * 8.0), 0, 8);\n\
+                 return vec4<f32>(TABLE[(j * 9 + i) * 9], 1.0);\n\
+             }}\n"
+        );
+        let parsed = analyze(&code, &[]).expect("naga accepts the 9³ LUT table");
+        assert!(!to_hlsl(&parsed).expect("hlsl").is_empty());
+        #[cfg(windows)]
+        compile_dxbc(&code, &[]).expect("FXC accepts the 9³ LUT table");
+    }
+
+    #[test]
     fn a_valid_effect_becomes_hlsl_that_d3d11_accepts() {
         let parsed = analyze(VIGNETTE, &[decl("strength", ShaderParamType::Number)]).expect("analyze");
         let hlsl = to_hlsl(&parsed).expect("translate");
