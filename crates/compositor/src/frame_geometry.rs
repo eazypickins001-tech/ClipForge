@@ -3373,7 +3373,8 @@ pub fn plan_frame(input: &FrameGeometryInput) -> FrameGeometry {
         let screen_transform = scene
             .map(|s| crate::scene::clip_transform_at(s, source_t as f64))
             .unwrap_or([1.0, 0.0, 0.0]);
-        let s_box = place_screen_box(fit_screen(p.screen.dst), screen_transform);
+        let s_ann_box = fit_screen(p.screen.dst);
+        let s_box = place_screen_box(s_ann_box, screen_transform);
         let s_box_prev = place_screen_box(fit_screen(pp.screen.dst), screen_transform);
         // Le cadre ne touche PAS à la boîte écran : il pousse vers l'extérieur, dans la place que
         // le layout de l'app lui a faite (le padding se mesure depuis son bord extérieur,
@@ -3745,7 +3746,7 @@ pub fn plan_frame(input: &FrameGeometryInput) -> FrameGeometry {
         // La boîte écran telle qu'elle serait sans zoom : `remap_box` n'est PAS appliqué. C'est
         // le rect du CONTENU, celui où l'overlay web pose ses poignées : `layout.screenRect` tel
         // quel, puisqu'un cadre ne rétrécit plus le métrage.
-        s_ann: s_base,
+        s_ann: s_ann_box,
         s_radius,
         frame_min_px,
         screen_unit_px,
