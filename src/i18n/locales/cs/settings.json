@@ -256,6 +256,7 @@
 		"customize": "Upravit"
 	},
 	"colour": {
+		"hue": "Hue",
 		"title": "Barva",
 		"exposure": "Expozice",
 		"contrast": "Kontrast",

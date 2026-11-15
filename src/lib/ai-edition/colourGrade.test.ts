@@ -34,7 +34,7 @@ describe("colourGradeEffect", () => {
 		expect(colourGradeEffect(DEFAULT_COLOUR_GRADE)).toBeNull();
 	});
 
-	it("declares exactly the five params the shader reads, on the compositor's contract", () => {
+	it("declares exactly the six params the shader reads, on the compositor's contract", () => {
 		const effect = colourGradeEffect(grade({ saturation: 1.5 }));
 		expect(effect).not.toBeNull();
 		expect(effect?.contract).toBe(SHADER_EFFECT_CONTRACT);
@@ -44,6 +44,7 @@ describe("colourGradeEffect", () => {
 			"saturation",
 			"temperature",
 			"tint",
+			"hue",
 		]);
 		// The shader references every declared param, so the two cannot drift.
 		for (const param of COLOUR_GRADE_PARAMS) {

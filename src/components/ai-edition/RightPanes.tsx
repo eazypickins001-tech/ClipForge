@@ -162,6 +162,7 @@ import { useClickSound } from "../../hooks/useClickSound";
 import { useCanSegmentCamera } from "../../native/hooks/useSegmentationSupport";
 import { CaptionsPane } from "./CaptionsPane";
 import { ColorField } from "./ColorField";
+import { HueWheel } from "./HueWheel";
 import { insertionsEnabled } from "./insertionsEnabled";
 import styles from "./NewEditorShell.module.css";
 import { useRecordedCursorTypes } from "./recordedCursorTypes";
@@ -2699,7 +2700,7 @@ export function VideoEffectsPane() {
 			    shader-effect path and needs no scalar native param. Neutral emits nothing; each slider
 			    patches only its own axis. */}
 			<div className={styles.sectionLabel}>{ts("colour.title")}</div>
-			{/* A preset is a starting look, not a separate pipeline: it writes the same five axes the
+			{/* A preset is a starting look, not a separate pipeline: it writes the same six axes the
 			    sliders edit, in one save. Choosing Neutral emits no effect at all. */}
 			<div style={{ padding: "0 var(--sp-4) 12px" }}>
 				<ChoiceRow<string>
@@ -2716,6 +2717,21 @@ export function VideoEffectsPane() {
 						if (preset) void set({ colourGrade: { ...preset.grade } });
 					}}
 				/>
+			</div>
+			<div className={styles.sectionLabel}>{ts("colour.hue")}</div>
+			<div
+				style={{ display: "flex", alignItems: "center", gap: 12, padding: "0 var(--sp-4) 12px" }}
+			>
+				<HueWheel
+					label={ts("colour.hue")}
+					value={settings.colourGrade.hue}
+					disabled={!hasDocument}
+					onChange={(hue) => setLive({ colourGrade: { hue } })}
+					onCommit={() => void commit()}
+				/>
+				<span style={{ color: "var(--muted)", fontVariantNumeric: "tabular-nums" }}>
+					{Math.round(settings.colourGrade.hue)}°
+				</span>
 			</div>
 			<div className={styles.sliderGrid}>
 				<SliderCell

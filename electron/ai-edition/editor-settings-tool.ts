@@ -131,7 +131,7 @@ export const setEditorSettingsArgs = z
 		webcamBlurIntensity: bounded("webcamBlurIntensity"),
 		audioGainDb: z.number().min(-AUDIO_GAIN_DB_LIMIT).max(AUDIO_GAIN_DB_LIMIT),
 		autoFocusAll: z.boolean(),
-		/** The whole grade is five bounded axes; a partial object changes only those axes. */
+		/** The whole grade is six bounded axes; a partial object changes only those axes. */
 		colourGrade: z
 			.object({
 				exposure: bounded("colourExposure"),
@@ -139,6 +139,7 @@ export const setEditorSettingsArgs = z
 				saturation: bounded("colourSaturation"),
 				temperature: bounded("colourTemperature"),
 				tint: bounded("colourTint"),
+				hue: bounded("colourHue"),
 			})
 			.partial()
 			.strict(),

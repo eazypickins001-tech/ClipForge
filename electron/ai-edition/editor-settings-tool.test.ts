@@ -106,10 +106,18 @@ describe("setEditorSettings", () => {
 			saturation: 0.8,
 			temperature: 25,
 			tint: -10,
+			hue: 0,
 		});
 		expect(getEditorSettings(document).vignetteAmount).toBe(0.4);
 		expect(read(document).settings).toMatchObject({
-			colourGrade: { exposure: 0.3, contrast: 1.2, saturation: 0.8, temperature: 25, tint: -10 },
+			colourGrade: {
+				exposure: 0.3,
+				contrast: 1.2,
+				saturation: 0.8,
+				temperature: 25,
+				tint: -10,
+				hue: 0,
+			},
 			vignetteAmount: 0.4,
 		});
 	});

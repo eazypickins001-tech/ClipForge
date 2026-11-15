@@ -52,7 +52,7 @@ function appearance(overrides: Partial<StylePresetAppearance> = {}): StylePreset
 		cursorShow: true,
 		cursorAutoHide: false,
 		cursorTheme: "default",
-		colourGrade: { exposure: 0, contrast: 1, saturation: 1, temperature: 0, tint: 0 },
+		colourGrade: { exposure: 0, contrast: 1, saturation: 1, temperature: 0, tint: 0, hue: 0 },
 		vignetteAmount: 0,
 		captionLook: { ...DEFAULT_CAPTION_LOOK },
 		...overrides,
@@ -132,6 +132,7 @@ describe("parseStylePresetAppearance", () => {
 			saturation: 1,
 			temperature: 0,
 			tint: 0,
+			hue: 0,
 		});
 		expect(parsed.vignetteAmount).toBe(0);
 	});
@@ -148,6 +149,7 @@ describe("parseStylePresetAppearance", () => {
 			saturation: 2,
 			temperature: -100,
 			tint: 100,
+			hue: 0,
 		});
 		expect(parsed.vignetteAmount).toBe(1);
 	});

@@ -256,6 +256,7 @@
 		"customize": "自訂"
 	},
 	"colour": {
+		"hue": "Hue",
 		"title": "顏色",
 		"exposure": "曝光",
 		"contrast": "對比度",

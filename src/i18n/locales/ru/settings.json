@@ -256,6 +256,7 @@
 		"customize": "Настроить"
 	},
 	"colour": {
+		"hue": "Hue",
 		"title": "Цвет",
 		"exposure": "Экспозиция",
 		"contrast": "Контраст",

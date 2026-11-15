@@ -256,6 +256,7 @@
 		"customize": "カスタマイズ"
 	},
 	"colour": {
+		"hue": "Hue",
 		"title": "カラー",
 		"exposure": "露出",
 		"contrast": "コントラスト",

@@ -333,6 +333,7 @@ export const SETTING_BOUNDS = {
 	colourSaturation: [0, 2],
 	colourTemperature: [-100, 100],
 	colourTint: [-100, 100],
+	colourHue: [-180, 180],
 } as const satisfies Record<string, readonly [number, number]>;
 
 export type SettingBound = keyof typeof SETTING_BOUNDS;

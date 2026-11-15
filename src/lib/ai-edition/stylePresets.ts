@@ -114,7 +114,7 @@ export interface StylePresetAppearance {
 	cursorShow: boolean;
 	cursorAutoHide: boolean;
 	cursorTheme: string;
-	/** The colour grade, on the editor's five bounded axes. Presets saved before this carry the
+	/** The colour grade, on the editor's six bounded axes. Presets saved before this carry the
 	 *  neutral grade, which is exactly what "no grade" means. */
 	colourGrade: {
 		exposure: number;
@@ -122,6 +122,7 @@ export interface StylePresetAppearance {
 		saturation: number;
 		temperature: number;
 		tint: number;
+		hue: number;
 	};
 	/** Vignette strength 0..1. Absent in old files, which read as 0 (off). */
 	vignetteAmount: number;
@@ -454,6 +455,7 @@ export function parseStylePresetAppearance(value: unknown): StylePresetAppearanc
 			saturation: readOptionalNumber(grade, "saturation", "colourSaturation", 1),
 			temperature: readOptionalNumber(grade, "temperature", "colourTemperature", 0),
 			tint: readOptionalNumber(grade, "tint", "colourTint", 0),
+			hue: readOptionalNumber(grade, "hue", "colourHue", 0),
 		},
 		vignetteAmount: readOptionalNumber(value, "vignetteAmount", "vignetteAmount", 0),
 		captionLook: {
@@ -588,6 +590,7 @@ export const LOOK_LEGACY_EDITOR_KEYS = [
 	"colourSaturation",
 	"colourTemperature",
 	"colourTint",
+	"colourHue",
 	"vignetteAmount",
 ] as const;
 
@@ -608,6 +611,7 @@ export function stylePresetLegacyEditor(appearance: StylePresetAppearance): Fiel
 		colourSaturation: colourGrade.saturation,
 		colourTemperature: colourGrade.temperature,
 		colourTint: colourGrade.tint,
+		colourHue: colourGrade.hue,
 		vignetteAmount,
 		captions: captionLook,
 		cursorSize: cursor.size,

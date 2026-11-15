@@ -256,6 +256,7 @@
 		"customize": "사용자 지정"
 	},
 	"colour": {
+		"hue": "Hue",
 		"title": "색상",
 		"exposure": "노출",
 		"contrast": "대비",

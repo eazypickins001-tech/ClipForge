@@ -176,6 +176,7 @@ interface LegacyShape {
 	colourSaturation?: number;
 	colourTemperature?: number;
 	colourTint?: number;
+	colourHue?: number;
 	cropRegion?: CropRegion;
 	webcamLayoutPreset?: WebcamLayoutPreset;
 	webcamMaskShape?: WebcamMaskShape;
@@ -335,6 +336,7 @@ export function getEditorSettings(doc: AxcutDocument | null | undefined): Editor
 				defaults.colourGrade.temperature,
 			),
 			tint: readBounded(legacy?.colourTint, "colourTint", defaults.colourGrade.tint),
+			hue: readBounded(legacy?.colourHue, "colourHue", defaults.colourGrade.hue),
 		},
 		cropRegion: legacy?.cropRegion ?? DEFAULT_EDITOR_SETTINGS.cropRegion,
 		webcamLayoutPreset: legacy?.webcamLayoutPreset ?? DEFAULT_EDITOR_SETTINGS.webcamLayoutPreset,
@@ -461,6 +463,7 @@ function nextLegacy(current: LegacyShape | null, patch: EditorSettingsPatch): Le
 		if (colourGrade.saturation !== undefined) next.colourSaturation = colourGrade.saturation;
 		if (colourGrade.temperature !== undefined) next.colourTemperature = colourGrade.temperature;
 		if (colourGrade.tint !== undefined) next.colourTint = colourGrade.tint;
+		if (colourGrade.hue !== undefined) next.colourHue = colourGrade.hue;
 	}
 	if (patch.cursor) {
 		const c = patch.cursor;

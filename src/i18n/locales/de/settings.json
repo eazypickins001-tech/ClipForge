@@ -256,6 +256,7 @@
 		"customize": "Anpassen"
 	},
 	"colour": {
+		"hue": "Hue",
 		"title": "Farbe",
 		"exposure": "Belichtung",
 		"contrast": "Kontrast",

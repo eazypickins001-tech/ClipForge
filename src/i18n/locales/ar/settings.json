@@ -256,6 +256,7 @@
 		"customize": "تخصيص"
 	},
 	"colour": {
+		"hue": "Hue",
 		"title": "اللون",
 		"exposure": "التعريض",
 		"contrast": "التباين",

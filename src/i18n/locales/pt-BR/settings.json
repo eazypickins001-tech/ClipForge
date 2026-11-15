@@ -256,6 +256,7 @@
 		"customize": "Personalizar"
 	},
 	"colour": {
+		"hue": "Hue",
 		"title": "Cor",
 		"exposure": "Exposição",
 		"contrast": "Contraste",

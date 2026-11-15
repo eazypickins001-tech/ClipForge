@@ -256,6 +256,7 @@
 		"customize": "Özelleştir"
 	},
 	"colour": {
+		"hue": "Hue",
 		"title": "Renk",
 		"exposure": "Pozlama",
 		"contrast": "Kontrast",

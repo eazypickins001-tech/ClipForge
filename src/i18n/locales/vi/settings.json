@@ -256,6 +256,7 @@
 		"customize": "Tùy chỉnh"
 	},
 	"colour": {
+		"hue": "Hue",
 		"title": "Màu sắc",
 		"exposure": "Phơi sáng",
 		"contrast": "Tương phản",

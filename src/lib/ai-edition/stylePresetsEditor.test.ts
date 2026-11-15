@@ -70,7 +70,14 @@ function styledSettings(): EditorSettingsSnapshot {
 		cursorShow: false,
 		cursorAutoHide: true,
 		cursorTheme: "default",
-		colourGrade: { exposure: 0.3, contrast: 1.2, saturation: 0.8, temperature: 25, tint: -10 },
+		colourGrade: {
+			exposure: 0.3,
+			contrast: 1.2,
+			saturation: 0.8,
+			temperature: 25,
+			tint: -10,
+			hue: 15,
+		},
 		vignetteAmount: 0.4,
 	};
 }
@@ -116,7 +123,14 @@ describe("stylePresetsEditor", () => {
 	it("writes the grade and vignette as flat legacy keys, not a nested object", () => {
 		const preset = {
 			...factoryStylePresetAppearance(),
-			colourGrade: { exposure: 0.3, contrast: 1.2, saturation: 0.8, temperature: 25, tint: -10 },
+			colourGrade: {
+				exposure: 0.3,
+				contrast: 1.2,
+				saturation: 0.8,
+				temperature: 25,
+				tint: -10,
+				hue: 15,
+			},
 			vignetteAmount: 0.4,
 		};
 		const legacy = stylePresetLegacyEditor(preset);
@@ -126,6 +140,7 @@ describe("stylePresetsEditor", () => {
 			colourSaturation: 0.8,
 			colourTemperature: 25,
 			colourTint: -10,
+			colourHue: 15,
 			vignetteAmount: 0.4,
 		});
 		expect(legacy).not.toHaveProperty("colourGrade");
@@ -135,6 +150,7 @@ describe("stylePresetsEditor", () => {
 			"colourSaturation",
 			"colourTemperature",
 			"colourTint",
+			"colourHue",
 			"vignetteAmount",
 		]) {
 			expect(LOOK_LEGACY_EDITOR_KEYS).toContain(key);
