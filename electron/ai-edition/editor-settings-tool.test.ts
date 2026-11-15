@@ -93,6 +93,36 @@ describe("setEditorSettings", () => {
 		expect(set(document, snapshot.settings).ok).toBe(true);
 	});
 
+	it("writes the colour grade and vignette, and reads them back", () => {
+		const result = set(fixture(), {
+			colourGrade: { exposure: 0.3, contrast: 1.2, saturation: 0.8, temperature: 25, tint: -10 },
+			vignetteAmount: 0.4,
+		});
+		expect(result.ok).toBe(true);
+		const document = result.document as AxcutDocument;
+		expect(getEditorSettings(document).colourGrade).toEqual({
+			exposure: 0.3,
+			contrast: 1.2,
+			saturation: 0.8,
+			temperature: 25,
+			tint: -10,
+		});
+		expect(getEditorSettings(document).vignetteAmount).toBe(0.4);
+		expect(read(document).settings).toMatchObject({
+			colourGrade: { exposure: 0.3, contrast: 1.2, saturation: 0.8, temperature: 25, tint: -10 },
+			vignetteAmount: 0.4,
+		});
+	});
+
+	it("lets a partial grade change one axis and refuses an unknown one", () => {
+		const document = set(fixture(), { colourGrade: { saturation: 0.5 } }).document as AxcutDocument;
+		expect(getEditorSettings(document).colourGrade.saturation).toBe(0.5);
+		expect(getEditorSettings(document).colourGrade.exposure).toBe(0);
+		expect(set(fixture(), { colourGrade: { gamma: 1 } }).ok).toBe(false);
+		expect(set(fixture(), { colourGrade: { exposure: 9 } }).ok).toBe(false);
+		expect(set(fixture(), { vignetteAmount: 2 }).ok).toBe(false);
+	});
+
 	it("refuses a wallpaper that reaches outside the project, a value out of range and an unknown key", () => {
 		const document = fixture();
 		for (const args of [

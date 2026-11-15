@@ -72,6 +72,7 @@ export const HELP_TOPICS: readonly HelpTopic[] = [
 		body: [
 			"Chat is optional. Add an OpenRouter (or another provider) key in AI settings.",
 			"Ask for edits in plain language: the agent uses the same document tools as the UI, and each turn is undoable.",
+			"The agent can set the look too: colour grade, vignette, layout, wallpaper, cursor and the rest of the editor settings.",
 			"Scene detection, Automatic zooms, Auto-reframe and script-to-video are available as agent tools.",
 			"Core editing stays local; only a request that uses AI reaches a provider.",
 		],

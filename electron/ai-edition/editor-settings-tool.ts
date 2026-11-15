@@ -131,6 +131,18 @@ export const setEditorSettingsArgs = z
 		webcamBlurIntensity: bounded("webcamBlurIntensity"),
 		audioGainDb: z.number().min(-AUDIO_GAIN_DB_LIMIT).max(AUDIO_GAIN_DB_LIMIT),
 		autoFocusAll: z.boolean(),
+		/** The whole grade is five bounded axes; a partial object changes only those axes. */
+		colourGrade: z
+			.object({
+				exposure: bounded("colourExposure"),
+				contrast: bounded("colourContrast"),
+				saturation: bounded("colourSaturation"),
+				temperature: bounded("colourTemperature"),
+				tint: bounded("colourTint"),
+			})
+			.partial()
+			.strict(),
+		vignetteAmount: bounded("vignetteAmount"),
 		cursor: z
 			.object({
 				show: z.boolean(),
@@ -192,6 +204,8 @@ function settingsForModel(document: AxcutDocument) {
 		webcamBlurIntensity: s.webcamBlurIntensity,
 		audioGainDb: s.audioGainDb,
 		autoFocusAll: s.autoFocusAll,
+		colourGrade: { ...s.colourGrade },
+		vignetteAmount: s.vignetteAmount,
 		cursor: {
 			show: s.cursorShow,
 			autoHide: s.cursorAutoHide,
@@ -343,11 +357,13 @@ function aspectRatioError(document: AxcutDocument, value: string): string | null
 /** The parsed args as the editor would write them, with what its pane does around each pick. */
 function editorPatch(document: AxcutDocument, args: SetEditorSettingsArgs): EditorSettingsPatch {
 	const current = getEditorSettings(document);
-	const { webcamCropRegion, webcamCropPan, wallpaper, webcamWallpaper, ...rest } = args;
+	const { webcamCropRegion, webcamCropPan, wallpaper, webcamWallpaper, colourGrade, ...rest } =
+		args;
 	const patch: EditorSettingsPatch = {
 		...(rest as Omit<EditorSettingsPatch, "aspectRatio">),
 		aspectRatio: args.aspectRatio as AspectRatio | undefined,
 	};
+	if (colourGrade !== undefined) patch.colourGrade = colourGrade;
 	if (wallpaper !== undefined) patch.wallpaper = parseStylePresetWallpaper(wallpaper);
 	if (webcamWallpaper !== undefined) {
 		patch.webcamWallpaper = parseStylePresetWallpaper(webcamWallpaper, "webcamWallpaper");
