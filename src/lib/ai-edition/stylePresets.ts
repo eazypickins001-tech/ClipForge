@@ -6,9 +6,10 @@
 // preset out of the editor settings and patching it back in — is stylePresetsEditor.ts.
 //
 // A preset is the project's LOOK, never its content: nothing here depends on the footage
-// (crop, webcam framing or position, audio gain, captions, timeline). Such a preset can be
-// applied to any project, and shared as a file, without dragging one recording's framing
-// into another.
+// (crop, webcam framing or position, audio gain, timeline) or on a caption's text, language,
+// placement or on/off — only its font, size, colour and plate. Such a preset can be applied to
+// any project, and shared as a file, without dragging one recording's framing or one project's
+// captions into another.
 
 import type {
 	CursorVisualSettings,
@@ -37,6 +38,7 @@ import {
 	type SettingBound,
 	type WebcamMask,
 } from "../projectDefaults";
+import type { TextFontFamily } from "../textFonts";
 
 export const STYLE_PRESET_FILE_EXTENSION = ".openscreenpreset";
 export const STYLE_PRESET_FORMAT = "openscreen-style-preset";
@@ -48,6 +50,42 @@ export const FACTORY_STYLE_PRESET_ID = "openscreen-factory";
 export const STYLE_PRESET_DATA_URL_MAX_LENGTH = 15 * 1024 * 1024;
 /** Colours and gradients are CSS text; anything this long is not one a user typed. */
 const CSS_WALLPAPER_MAX_LENGTH = 10_000;
+
+/** The caption look a preset carries. Placement, language and on/off are project content. */
+export interface StylePresetCaptionLook {
+	fontFamily: TextFontFamily;
+	fontWeight: "normal" | "bold";
+	fontSize: number;
+	color: string;
+	backgroundEnabled: boolean;
+	backgroundColor: string;
+	backgroundOpacity: number;
+}
+
+/** The default look, kept in step with `DEFAULT_CAPTION_SETTINGS` by a test. */
+export const DEFAULT_CAPTION_LOOK: StylePresetCaptionLook = {
+	fontFamily: "Inter",
+	fontWeight: "bold",
+	fontSize: 48,
+	color: "#ffffff",
+	backgroundEnabled: true,
+	backgroundColor: "#000000",
+	backgroundOpacity: 0.55,
+};
+
+/** The shipped caption faces. A family that does not ship reads as the default. */
+const CAPTION_FONT_FAMILIES = [
+	"Inter",
+	"Lora",
+	"Oswald",
+	"Caveat",
+	"IBM Plex Mono",
+] as const satisfies readonly TextFontFamily[];
+
+const CAPTION_FONT_SIZE_MIN = 12;
+const CAPTION_FONT_SIZE_MAX = 200;
+const CAPTION_PLATE_OPACITY_MIN = 0.4;
+const CAPTION_PLATE_OPACITY_MAX = 0.9;
 
 /** The appearance fields of `EditorSettingsSnapshot`, in the snapshot's own shape. */
 export interface StylePresetAppearance {
@@ -87,6 +125,8 @@ export interface StylePresetAppearance {
 	};
 	/** Vignette strength 0..1. Absent in old files, which read as 0 (off). */
 	vignetteAmount: number;
+	/** A caption look only: font, size, colour and plate. Never captions' text or placement. */
+	captionLook: StylePresetCaptionLook;
 }
 
 export interface StylePreset {
@@ -181,6 +221,31 @@ function readOptionalNumber(
 	at = "",
 ): number {
 	return source[key] === undefined ? fallback : readNumber(source, key, bound, at);
+}
+
+/** A number clamped into a range that is not one of the editor's `SETTING_BOUNDS`. */
+function readRange(
+	source: Fields,
+	key: string,
+	min: number,
+	max: number,
+	fallback: number,
+): number {
+	const value = source[key];
+	if (value === undefined) return fallback;
+	if (typeof value !== "number" || !Number.isFinite(value)) {
+		throw new TypeError(`Style preset ${key} must be a number.`);
+	}
+	return Math.min(max, Math.max(min, value));
+}
+
+function readOptionalString(source: Fields, key: string, fallback: string): string {
+	const value = source[key];
+	if (value === undefined) return fallback;
+	if (typeof value !== "string" || value.length === 0) {
+		throw new TypeError(`Style preset ${key} must be a non-empty string.`);
+	}
+	return value;
 }
 
 function readEnum<T extends string>(source: Fields, key: string, allowed: readonly T[]): T {
@@ -326,6 +391,10 @@ export function parseStylePresetAppearance(value: unknown): StylePresetAppearanc
 		throw new TypeError("Style preset cursorTheme must be a string.");
 	}
 	const grade = isRecord(value.colourGrade) ? value.colourGrade : {};
+	if (value.captionLook !== undefined && !isRecord(value.captionLook)) {
+		throw new TypeError("Style preset captionLook must be an object.");
+	}
+	const look = isRecord(value.captionLook) ? value.captionLook : {};
 	return {
 		wallpaper: parseStylePresetWallpaper(value.wallpaper),
 		wallpaperMotion:
@@ -387,6 +456,39 @@ export function parseStylePresetAppearance(value: unknown): StylePresetAppearanc
 			tint: readOptionalNumber(grade, "tint", "colourTint", 0),
 		},
 		vignetteAmount: readOptionalNumber(value, "vignetteAmount", "vignetteAmount", 0),
+		captionLook: {
+			fontFamily: (CAPTION_FONT_FAMILIES as readonly unknown[]).includes(look.fontFamily)
+				? (look.fontFamily as TextFontFamily)
+				: DEFAULT_CAPTION_LOOK.fontFamily,
+			fontWeight:
+				look.fontWeight === undefined
+					? DEFAULT_CAPTION_LOOK.fontWeight
+					: readEnum(look, "fontWeight", ["normal", "bold"] as const),
+			fontSize: readRange(
+				look,
+				"fontSize",
+				CAPTION_FONT_SIZE_MIN,
+				CAPTION_FONT_SIZE_MAX,
+				DEFAULT_CAPTION_LOOK.fontSize,
+			),
+			color: readOptionalString(look, "color", DEFAULT_CAPTION_LOOK.color),
+			backgroundEnabled:
+				look.backgroundEnabled === undefined
+					? DEFAULT_CAPTION_LOOK.backgroundEnabled
+					: readBoolean(look, "backgroundEnabled"),
+			backgroundColor: readOptionalString(
+				look,
+				"backgroundColor",
+				DEFAULT_CAPTION_LOOK.backgroundColor,
+			),
+			backgroundOpacity: readRange(
+				look,
+				"backgroundOpacity",
+				CAPTION_PLATE_OPACITY_MIN,
+				CAPTION_PLATE_OPACITY_MAX,
+				DEFAULT_CAPTION_LOOK.backgroundOpacity,
+			),
+		},
 	};
 }
 
@@ -491,7 +593,14 @@ export const LOOK_LEGACY_EDITOR_KEYS = [
 
 /** A preset's appearance as `legacyEditor` fields, format left out. */
 export function stylePresetLegacyEditor(appearance: StylePresetAppearance): Fields {
-	const { aspectRatio: _format, cursor, colourGrade, vignetteAmount, ...rest } = appearance;
+	const {
+		aspectRatio: _format,
+		cursor,
+		colourGrade,
+		vignetteAmount,
+		captionLook,
+		...rest
+	} = appearance;
 	return {
 		...rest,
 		colourExposure: colourGrade.exposure,
@@ -500,6 +609,7 @@ export function stylePresetLegacyEditor(appearance: StylePresetAppearance): Fiel
 		colourTemperature: colourGrade.temperature,
 		colourTint: colourGrade.tint,
 		vignetteAmount,
+		captions: captionLook,
 		cursorSize: cursor.size,
 		cursorSmoothing: cursor.smoothing,
 		cursorMotionBlur: cursor.motionBlur,

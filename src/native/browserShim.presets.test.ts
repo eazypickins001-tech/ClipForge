@@ -2,6 +2,7 @@
 // The shim keeps presets in localStorage, so this needs a DOM.
 import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import type { StylePresetAppearance } from "@/lib/ai-edition/stylePresets";
+import { DEFAULT_CAPTION_LOOK } from "@/lib/ai-edition/stylePresets";
 import { installBrowserShims } from "./browserShim";
 import {
 	isStylePresetNameTakenError,
@@ -46,6 +47,7 @@ const APPEARANCE: StylePresetAppearance = {
 	cursorTheme: "default",
 	colourGrade: { exposure: 0, contrast: 1, saturation: 1, temperature: 0, tint: 0 },
 	vignetteAmount: 0,
+	captionLook: { ...DEFAULT_CAPTION_LOOK },
 };
 
 const presets = nativeBridgeClient.presets;

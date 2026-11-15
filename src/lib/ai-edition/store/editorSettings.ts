@@ -36,6 +36,7 @@ import {
 	type WebcamMask,
 } from "@/lib/projectDefaults";
 import type { AspectRatio } from "@/utils/aspectRatioUtils";
+import type { CaptionSettings } from "../captions/settings";
 import { type ColourGrade, DEFAULT_COLOUR_GRADE } from "../colourGrade";
 import type { AxcutDocument } from "../schema";
 
@@ -194,6 +195,8 @@ interface LegacyShape {
 	webcamWallpaper?: string;
 	webcamBlurIntensity?: number;
 	vignetteAmount?: number;
+	/** The caption look blob, shared with `captions/settings.ts`. */
+	captions?: Record<string, unknown>;
 	cursorSize?: number;
 	cursorSmoothing?: number;
 	cursorMotionBlur?: number;
@@ -413,6 +416,20 @@ export interface EditorSettingsPatch {
 	cursor?: Partial<CursorVisualSettings> & { theme?: string; show?: boolean; autoHide?: boolean };
 	cursorAutoHide?: boolean;
 	autoFocusAll?: boolean;
+	/** The caption LOOK, merged into `legacyEditor.captions` in the same write. Never the
+	 *  captions' text, language, placement or on/off — those belong to the project. */
+	captions?: Partial<
+		Pick<
+			CaptionSettings,
+			| "fontFamily"
+			| "fontWeight"
+			| "fontSize"
+			| "color"
+			| "backgroundEnabled"
+			| "backgroundColor"
+			| "backgroundOpacity"
+		>
+	>;
 }
 
 function nextLegacy(current: LegacyShape | null, patch: EditorSettingsPatch): LegacyShape {
@@ -424,11 +441,19 @@ function nextLegacy(current: LegacyShape | null, patch: EditorSettingsPatch): Le
 	// The Pick keeps what the 16 `if`s used to check: a patch key with no
 	// LegacyShape counterpart fails to compile instead of leaking into the
 	// persisted blob.
-	const { cursor: _cursor, colourGrade, ...rest } = patch;
+	const { cursor: _cursor, colourGrade, captions, ...rest } = patch;
 	const defined = Object.fromEntries(
 		Object.entries(rest).filter(([, v]) => v !== undefined),
-	) as Partial<Pick<LegacyShape, keyof Omit<EditorSettingsPatch, "cursor" | "colourGrade">>>;
+	) as Partial<
+		Pick<LegacyShape, keyof Omit<EditorSettingsPatch, "cursor" | "colourGrade" | "captions">>
+	>;
 	const next: LegacyShape = { ...base, ...defined };
+	if (captions) {
+		// Captions live as one blob under `legacyEditor.captions`; a preset patches only its look
+		// fields, so everything else (enabled, language, placement, line length) is preserved.
+		const currentCaptions = isShape(base.captions) ? base.captions : {};
+		next.captions = { ...currentCaptions, ...captions };
+	}
 	if (colourGrade) {
 		// `colourGrade` is a nested object in the patch and five flat keys on disk, like `cursor`.
 		if (colourGrade.exposure !== undefined) next.colourExposure = colourGrade.exposure;

@@ -13,6 +13,7 @@ import { type KeyboardEvent, useCallback, useRef, useState } from "react";
 import { toast } from "sonner";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useScopedT } from "@/contexts/I18nContext";
+import { getCaptionSettings } from "@/lib/ai-edition/captions/settings";
 import { getEditorSettings, patchEditorSettings } from "@/lib/ai-edition/store/editorSettings";
 import { useProjectStore } from "@/lib/ai-edition/store/projectStore";
 import { useEditorSettings } from "@/lib/ai-edition/store/useEditorSettings";
@@ -174,7 +175,10 @@ export function StylePresetsMenu() {
 		}
 	};
 
-	const current = stylePresetAppearanceFromSettings(settings);
+	const current = stylePresetAppearanceFromSettings(
+		settings,
+		getCaptionSettings(useProjectStore.getState().document),
+	);
 	const factory = factoryStylePresetAppearance();
 	// At most ONE row reads as active. Several entries can carry the same look — the same
 	// look saved twice under two names — and a radio group lighting two of them reads as

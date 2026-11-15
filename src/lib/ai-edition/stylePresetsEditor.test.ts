@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { CURSOR_KIND_IDS } from "../cursor/cursorThemes";
+import {
+	DEFAULT_CAPTION_SETTINGS,
+	getCaptionSettings,
+	patchCaptionSettings,
+} from "./captions/settings";
 import { createEmptyDocument } from "./schema";
 import {
 	DEFAULT_EDITOR_SETTINGS,
@@ -168,7 +173,7 @@ describe("new-project look (main-process side)", () => {
 		// Every look key but the old always-arrow switch: only a project saved before the cursor
 		// kinds holds that one.
 		expect(Object.keys(legacy).sort()).toEqual(
-			LOOK_LEGACY_EDITOR_KEYS.filter((key) => key !== "cursorAlwaysArrow").sort(),
+			[...LOOK_LEGACY_EDITOR_KEYS.filter((key) => key !== "cursorAlwaysArrow"), "captions"].sort(),
 		);
 		const read = getEditorSettings(docWith(legacy));
 		expect(stylePresetAppearanceFromSettings(read)).toEqual({
@@ -196,6 +201,49 @@ describe("new-project look (main-process side)", () => {
 			expect(read[key]).toEqual(DEFAULT_EDITOR_SETTINGS[key]);
 		}
 		expect(lookFromLegacyEditor(null)).toEqual({});
+	});
+
+	it("carries the caption look, and applying it keeps the project's caption content", () => {
+		const captions = {
+			...DEFAULT_CAPTION_SETTINGS,
+			enabled: true,
+			language: "fr",
+			anchorV: "top" as const,
+			insetY: 20,
+			fontFamily: "Lora",
+			fontWeight: "normal" as const,
+			fontSize: 64,
+			color: "#111111",
+			backgroundEnabled: false,
+			backgroundColor: "#ffffff",
+			backgroundOpacity: 0.9,
+		};
+		const appearance = stylePresetAppearanceFromSettings(styledSettings(), captions);
+		expect(appearance.captionLook).toEqual({
+			fontFamily: "Lora",
+			fontWeight: "normal",
+			fontSize: 64,
+			color: "#111111",
+			backgroundEnabled: false,
+			backgroundColor: "#ffffff",
+			backgroundOpacity: 0.9,
+		});
+		const legacy = stylePresetLegacyEditor(appearance);
+		expect(legacy.captions).toEqual(appearance.captionLook);
+
+		const base = patchCaptionSettings(createEmptyDocument({ projectId: "p", title: "C" }), {
+			enabled: true,
+			language: "fr",
+			anchorV: "top",
+		});
+		const after = getCaptionSettings(patchEditorSettings(base, stylePresetPatch(appearance)));
+		expect(after).toMatchObject({
+			fontFamily: "Lora",
+			fontSize: 64,
+			enabled: true,
+			language: "fr",
+			anchorV: "top",
+		});
 	});
 
 	it("carries the old background blur switch as the amount it drew", () => {

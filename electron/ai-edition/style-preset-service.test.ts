@@ -3,6 +3,7 @@ import os from "node:os";
 import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { StylePresetAppearance } from "../../src/lib/ai-edition/stylePresets";
+import { DEFAULT_CAPTION_LOOK } from "../../src/lib/ai-edition/stylePresets";
 import { StylePresetError, StylePresetService } from "./style-preset-service";
 
 const APPEARANCE: StylePresetAppearance = {
@@ -42,6 +43,7 @@ const APPEARANCE: StylePresetAppearance = {
 	cursorTheme: "default",
 	colourGrade: { exposure: 0, contrast: 1, saturation: 1, temperature: 0, tint: 0 },
 	vignetteAmount: 0,
+	captionLook: { ...DEFAULT_CAPTION_LOOK },
 };
 
 let root: string;

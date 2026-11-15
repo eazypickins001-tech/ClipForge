@@ -2,16 +2,36 @@
 // appearance. The file format and its validation live in stylePresets.ts, which the main
 // process shares.
 
+import type { CaptionSettings } from "@/lib/ai-edition/captions/settings";
 import {
 	DEFAULT_EDITOR_SETTINGS,
 	type EditorSettingsPatch,
 	type EditorSettingsSnapshot,
 } from "@/lib/ai-edition/store/editorSettings";
-import type { StylePresetAppearance } from "@/lib/ai-edition/stylePresets";
+import {
+	DEFAULT_CAPTION_LOOK,
+	type StylePresetAppearance,
+	type StylePresetCaptionLook,
+} from "@/lib/ai-edition/stylePresets";
+import { resolveTextFontFamily } from "@/lib/textFonts";
+
+/** The caption LOOK out of the project's caption settings. Placement/on-off/language stay. */
+export function captionLookFromSettings(captions: CaptionSettings): StylePresetCaptionLook {
+	return {
+		fontFamily: resolveTextFontFamily(captions.fontFamily),
+		fontWeight: captions.fontWeight,
+		fontSize: captions.fontSize,
+		color: captions.color,
+		backgroundEnabled: captions.backgroundEnabled,
+		backgroundColor: captions.backgroundColor,
+		backgroundOpacity: captions.backgroundOpacity,
+	};
+}
 
 /** Copies the appearance fields out of a settings snapshot — nothing footage-dependent. */
 export function stylePresetAppearanceFromSettings(
 	settings: EditorSettingsSnapshot,
+	captions?: CaptionSettings,
 ): StylePresetAppearance {
 	return {
 		wallpaper: settings.wallpaper,
@@ -50,6 +70,7 @@ export function stylePresetAppearanceFromSettings(
 		cursorTheme: settings.cursorTheme,
 		colourGrade: { ...settings.colourGrade },
 		vignetteAmount: settings.vignetteAmount,
+		captionLook: captions ? captionLookFromSettings(captions) : { ...DEFAULT_CAPTION_LOOK },
 	};
 }
 
@@ -120,5 +141,6 @@ export function stylePresetPatch(appearance: StylePresetAppearance): EditorSetti
 		cursorAutoHide: appearance.cursorAutoHide,
 		colourGrade: { ...appearance.colourGrade },
 		vignetteAmount: appearance.vignetteAmount,
+		captions: { ...appearance.captionLook },
 	};
 }

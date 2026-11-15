@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
 import { CURSOR_KIND_IDS } from "../cursor/cursorThemes";
 import { DEFAULT_PROJECT_APPEARANCE } from "../projectDefaults";
+import { DEFAULT_CAPTION_SETTINGS } from "./captions/settings";
 import {
+	DEFAULT_CAPTION_LOOK,
 	parseStylePresetAppearance,
 	parseStylePresetFile,
 	parseStylePresetWallpaper,
@@ -52,6 +54,7 @@ function appearance(overrides: Partial<StylePresetAppearance> = {}): StylePreset
 		cursorTheme: "default",
 		colourGrade: { exposure: 0, contrast: 1, saturation: 1, temperature: 0, tint: 0 },
 		vignetteAmount: 0,
+		captionLook: { ...DEFAULT_CAPTION_LOOK },
 		...overrides,
 	};
 }
@@ -147,6 +150,44 @@ describe("parseStylePresetAppearance", () => {
 			tint: 100,
 		});
 		expect(parsed.vignetteAmount).toBe(1);
+	});
+
+	it("keeps the default caption look in step with the caption settings", () => {
+		const d = DEFAULT_CAPTION_SETTINGS;
+		expect(DEFAULT_CAPTION_LOOK).toEqual({
+			fontFamily: "Inter",
+			fontWeight: d.fontWeight,
+			fontSize: d.fontSize,
+			color: d.color,
+			backgroundEnabled: d.backgroundEnabled,
+			backgroundColor: d.backgroundColor,
+			backgroundOpacity: d.backgroundOpacity,
+		});
+	});
+
+	it("reads an old preset's missing caption look as the default, and clamps a stored one", () => {
+		const { captionLook: _look, ...older } = appearance();
+		expect(parseStylePresetAppearance(older).captionLook).toEqual(DEFAULT_CAPTION_LOOK);
+		const parsed = parseStylePresetAppearance({
+			...appearance(),
+			captionLook: {
+				fontFamily: "Nope",
+				fontSize: 999,
+				backgroundOpacity: 0,
+			},
+		});
+		expect(parsed.captionLook.fontFamily).toBe("Inter");
+		expect(parsed.captionLook.fontSize).toBe(200);
+		expect(parsed.captionLook.backgroundOpacity).toBe(0.4);
+		expect(() => parseStylePresetAppearance({ ...appearance(), captionLook: "x" })).toThrow(
+			/captionLook/,
+		);
+		expect(() =>
+			parseStylePresetAppearance({ ...appearance(), captionLook: { backgroundColor: "" } }),
+		).toThrow(/backgroundColor/);
+		expect(() =>
+			parseStylePresetAppearance({ ...appearance(), captionLook: { fontWeight: "heavy" } }),
+		).toThrow(/fontWeight/);
 	});
 
 	it("rejects non-numbers, wrong types and unknown enum values", () => {
