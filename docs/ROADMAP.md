@@ -307,6 +307,11 @@ hidden editing algorithms.
   frame, layout, webcam, cursor, **colour grade, vignette and caption style** — as one undo step. A
   caption's text, language, placement and on/off stay with the project; only its font, size, colour
   and plate travel. A preset file saved before a field existed reads it as its default.
+- **Transform keys:** the rail's **Move** button opens a Transform panel with independent
+  **Scale**, **Position X** and **Position Y** tracks, keyed like opacity (capture at the playhead,
+  easing per key, move/remove/clear). `plan_frame` scales the screen box about its centre and moves
+  it, so the frame/shadow/mask/cursor follow; split/trim retime the tracks. Rotation is a later
+  slice.
 - **Differences worth protecting:** fully local core, no watermark, no subscription/paywall, AI
   optional and BYOK, an agent/MCP surface that edits the real document, and screen-recording craft
   (cursor themes, click effects, auto-zoom, screen+webcam) that CapCut treats as secondary.
@@ -317,7 +322,7 @@ hidden editing algorithms.
 |---|---|---|
 | 4K/60fps + HDR export tier | 720p/1080p/1440p/2160p/Source and 24/30/60fps; no HDR | HDR is future craft |
 | Premium assets: templates, effects, transitions, fonts, music/SFX, stickers, graphic suite | None | Business decision (non-goal) |
-| General keyframes and graphs across properties | Zoom focus/scale only | Craft (F8) |
+| General keyframes and graphs across properties | Zoom focus/scale + clip **scale/position**; rotation and a multi-property graph editor open | Craft (F8) |
 | Hue wheel, LUTs, filters, presets | Sliders + hue wheel + twelve presets + `.cube` LUT import (9³, strength); no imported filters or preset-carried LUTs | Craft |
 | Browsable effects library/picker | One curated effect (vignette); the rest of the shader lane is agent-authored | Craft |
 | Body/beauty effects; background removal on primary video | Camera on Windows/Linux; the primary video on the flat path there (macOS out of scope; tilted/trail not yet) | Craft (F4), large |

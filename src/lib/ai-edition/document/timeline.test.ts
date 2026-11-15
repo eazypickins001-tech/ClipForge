@@ -2476,6 +2476,39 @@ describe("splitClip keyframes", () => {
 		expect(right.volumeKeys).toEqual(right.opacityKeys);
 	});
 
+	it("subdivides the transform tracks at the cut, with their own bounds", () => {
+		const [left, right] = splitClip(
+			docWith({
+				scaleKeys: [
+					{ at: 0, value: 1 },
+					{ at: 1, value: 2 },
+				],
+				positionXKeys: [
+					{ at: 0, value: 0 },
+					{ at: 1, value: 0.5 },
+				],
+			}),
+			"c1",
+			5,
+		).timeline.clips;
+		expect(left.scaleKeys).toEqual([
+			{ at: 0, value: 1 },
+			{ at: 1, value: 1.5 },
+		]);
+		expect(right.scaleKeys).toEqual([
+			{ at: 0, value: 1.5 },
+			{ at: 1, value: 2 },
+		]);
+		expect(left.positionXKeys).toEqual([
+			{ at: 0, value: 0 },
+			{ at: 1, value: 0.25 },
+		]);
+		expect(right.positionXKeys).toEqual([
+			{ at: 0, value: 0.25 },
+			{ at: 1, value: 0.5 },
+		]);
+	});
+
 	it("leaves the halves without a track when the clip had none", () => {
 		const [left, right] = splitClip(docWith({}), "c1", 5).timeline.clips;
 		expect(left.opacityKeys).toBeUndefined();

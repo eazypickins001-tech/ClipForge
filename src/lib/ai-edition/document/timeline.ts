@@ -16,6 +16,13 @@ import type {
 } from "../schema";
 import { createAudioTrack } from "../schema";
 import { sampleOpacity } from "../timeline/opacityKeyframes";
+import {
+	sampleTransformValue,
+	TRANSFORM_POSITION_MAX,
+	TRANSFORM_POSITION_MIN,
+	TRANSFORM_SCALE_MAX,
+	TRANSFORM_SCALE_MIN,
+} from "../timeline/transformKeyframes";
 
 /**
  * What `resolvePlaybackSegments` returns: a clip-shaped slice of playable film.
@@ -1286,12 +1293,28 @@ export function splitClip(
 	const cutAt = (atSec - sourceStart) / (sourceEnd - sourceStart);
 	const opacitySplit = splitPropertyKeys(clip.opacityKeys, cutAt);
 	const volumeSplit = splitPropertyKeys(clip.volumeKeys, cutAt);
+	const scaleSplit = splitPropertyKeys(clip.scaleKeys, cutAt, scaleKeysInRange, sampleScale);
+	const positionXSplit = splitPropertyKeys(
+		clip.positionXKeys,
+		cutAt,
+		positionKeysInRange,
+		samplePosition,
+	);
+	const positionYSplit = splitPropertyKeys(
+		clip.positionYKeys,
+		cutAt,
+		positionKeysInRange,
+		samplePosition,
+	);
 	const left: AxcutClip = {
 		...clip,
 		sourceEndSec: atSec,
 		timelineEndSec: clip.timelineStartSec + (atSec - sourceStart),
 		opacityKeys: opacitySplit.left,
 		volumeKeys: volumeSplit.left,
+		scaleKeys: scaleSplit.left,
+		positionXKeys: positionXSplit.left,
+		positionYKeys: positionYSplit.left,
 		origin,
 		reason: reason || clip.reason,
 	};
@@ -1302,6 +1325,9 @@ export function splitClip(
 		timelineStartSec: left.timelineEndSec,
 		opacityKeys: opacitySplit.right,
 		volumeKeys: volumeSplit.right,
+		scaleKeys: scaleSplit.right,
+		positionXKeys: positionXSplit.right,
+		positionYKeys: positionYSplit.right,
 		wordRefs: [],
 		detached: true,
 		origin,
@@ -1534,6 +1560,33 @@ export function setClipSourceRange(
 			// `at` is anchored to the window this trim is changing: move the keys with it.
 			opacityKeys: retimePropertyKeys(c.opacityKeys, c.sourceStartSec, oldEnd, lo, hi),
 			volumeKeys: retimePropertyKeys(c.volumeKeys, c.sourceStartSec, oldEnd, lo, hi),
+			scaleKeys: retimePropertyKeys(
+				c.scaleKeys,
+				c.sourceStartSec,
+				oldEnd,
+				lo,
+				hi,
+				scaleKeysInRange,
+				sampleScale,
+			),
+			positionXKeys: retimePropertyKeys(
+				c.positionXKeys,
+				c.sourceStartSec,
+				oldEnd,
+				lo,
+				hi,
+				positionKeysInRange,
+				samplePosition,
+			),
+			positionYKeys: retimePropertyKeys(
+				c.positionYKeys,
+				c.sourceStartSec,
+				oldEnd,
+				lo,
+				hi,
+				positionKeysInRange,
+				samplePosition,
+			),
 			...(cropRegion === undefined ? {} : { cropRegion: cropRegion ?? undefined }),
 		};
 	});
@@ -1565,15 +1618,34 @@ export function setClipAudio(
 
 /** Sorted, clamped, one key per instant. Shared by every property list a panel can write. */
 function normaliseClipKeys(keys: readonly AxcutClipPropertyKey[]): AxcutClipPropertyKey[] {
+	return normaliseKeysInRange(keys, 0, 1);
+}
+
+/** The same sanitising for a track whose values are not 0..1 (scale, position). */
+function normaliseKeysInRange(
+	keys: readonly AxcutClipPropertyKey[],
+	min: number,
+	max: number,
+): AxcutClipPropertyKey[] {
 	return keys
 		.map((key) => ({
 			at: Math.min(1, Math.max(0, key.at)),
-			value: Math.min(1, Math.max(0, key.value)),
+			value: Math.min(max, Math.max(min, key.value)),
 			...(key.easing ? { easing: key.easing } : {}),
 		}))
 		.sort((a, b) => a.at - b.at)
 		.filter((key, index, all) => index === 0 || key.at - all[index - 1].at > 1e-6);
 }
+
+/** The transform tracks' own bounds: their values are not 0..1 like opacity's. */
+const scaleKeysInRange = (keys: readonly AxcutClipPropertyKey[]) =>
+	normaliseKeysInRange(keys, TRANSFORM_SCALE_MIN, TRANSFORM_SCALE_MAX);
+const sampleScale = (keys: readonly AxcutClipPropertyKey[], at: number) =>
+	sampleTransformValue(keys, at, 1, TRANSFORM_SCALE_MIN, TRANSFORM_SCALE_MAX);
+const positionKeysInRange = (keys: readonly AxcutClipPropertyKey[]) =>
+	normaliseKeysInRange(keys, TRANSFORM_POSITION_MIN, TRANSFORM_POSITION_MAX);
+const samplePosition = (keys: readonly AxcutClipPropertyKey[], at: number) =>
+	sampleTransformValue(keys, at, 0, TRANSFORM_POSITION_MIN, TRANSFORM_POSITION_MAX);
 
 /** Two keys this close are the same instant when a track is cut. */
 const KEY_SPLIT_EPSILON = 1e-6;
@@ -1590,17 +1662,19 @@ const KEY_SPLIT_EPSILON = 1e-6;
 function splitPropertyKeys(
 	keys: readonly AxcutClipPropertyKey[] | undefined,
 	cut: number,
+	normalise: (keys: readonly AxcutClipPropertyKey[]) => AxcutClipPropertyKey[] = normaliseClipKeys,
+	sample: (keys: readonly AxcutClipPropertyKey[], at: number) => number = sampleOpacity,
 ): { left: AxcutClipPropertyKey[] | undefined; right: AxcutClipPropertyKey[] | undefined } {
 	if (!keys?.length) return { left: undefined, right: undefined };
-	if (!(cut > 0 && cut < 1)) return { left: normaliseClipKeys(keys), right: undefined };
+	if (!(cut > 0 && cut < 1)) return { left: normalise(keys), right: undefined };
 	const sorted = [...keys].sort((a, b) => a.at - b.at);
-	const valueAtCut = sampleOpacity(sorted, cut);
+	const valueAtCut = sample(sorted, cut);
 	let segmentEasing: AxcutClipPropertyKey["easing"];
 	for (const key of sorted) {
 		if (key.at > cut) break;
 		segmentEasing = key.easing;
 	}
-	const left = normaliseClipKeys([
+	const left = normalise([
 		...sorted
 			.filter((key) => key.at < cut - KEY_SPLIT_EPSILON)
 			.map((key) => ({
@@ -1609,7 +1683,7 @@ function splitPropertyKeys(
 			})),
 		{ at: 1, value: valueAtCut },
 	]);
-	const right = normaliseClipKeys([
+	const right = normalise([
 		{ at: 0, value: valueAtCut, ...(segmentEasing ? { easing: segmentEasing } : {}) },
 		...sorted
 			.filter((key) => key.at > cut + KEY_SPLIT_EPSILON)
@@ -1632,6 +1706,8 @@ function retimePropertyKeys(
 	oldEnd: number,
 	newStart: number,
 	newEnd: number,
+	normalise: (keys: readonly AxcutClipPropertyKey[]) => AxcutClipPropertyKey[] = normaliseClipKeys,
+	sample: (keys: readonly AxcutClipPropertyKey[], at: number) => number = sampleOpacity,
 ): AxcutClipPropertyKey[] | undefined {
 	if (!keys?.length) return undefined;
 	const oldSpan = oldEnd - oldStart;
@@ -1643,14 +1719,14 @@ function retimePropertyKeys(
 	if (newEnd <= oldStart || newStart >= oldEnd) return undefined;
 	const sorted = [...keys].sort((a, b) => a.at - b.at);
 	const valueAtNew = (newAt: number) =>
-		sampleOpacity(sorted, (newStart + newAt * newSpan - oldStart) / oldSpan);
+		sample(sorted, (newStart + newAt * newSpan - oldStart) / oldSpan);
 	const retimed = sorted
 		.map((key) => ({
 			...key,
 			at: (oldStart + key.at * oldSpan - newStart) / newSpan,
 		}))
 		.filter((key) => key.at > KEY_SPLIT_EPSILON && key.at < 1 - KEY_SPLIT_EPSILON);
-	const next = normaliseClipKeys([
+	const next = normalise([
 		{ at: 0, value: valueAtNew(0) },
 		...retimed,
 		{ at: 1, value: valueAtNew(1) },
@@ -1679,6 +1755,34 @@ export function setClipOpacityKeys(
 				? { ...clip, opacityKeys: normalised.length ? normalised : undefined }
 				: clip,
 		),
+	);
+}
+
+/**
+ * The transform panel's mutator: one track's whole key list (scale, position X or Y), sanitised
+ * to its own range. `undefined` when the list becomes empty, like the opacity track.
+ */
+export type ClipTransformTrack = "scale" | "x" | "y";
+
+export function setClipTransformKeys(
+	document: AxcutDocument,
+	clipId: string,
+	track: ClipTransformTrack,
+	keys: readonly AxcutClipPropertyKey[],
+): AxcutDocument {
+	const normalised =
+		track === "scale"
+			? normaliseKeysInRange(keys, TRANSFORM_SCALE_MIN, TRANSFORM_SCALE_MAX)
+			: normaliseKeysInRange(keys, TRANSFORM_POSITION_MIN, TRANSFORM_POSITION_MAX);
+	const value = normalised.length ? normalised : undefined;
+	return withClipsChanged(
+		document,
+		document.timeline.clips.map((clip) => {
+			if (clip.id !== clipId) return clip;
+			if (track === "scale") return { ...clip, scaleKeys: value };
+			if (track === "x") return { ...clip, positionXKeys: value };
+			return { ...clip, positionYKeys: value };
+		}),
 	);
 }
 

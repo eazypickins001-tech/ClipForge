@@ -77,6 +77,15 @@ pub struct SceneClip {
     /// pour la même raison que `opacity_keys` ; le mixeur la lit, le dessin l'ignore.
     #[serde(default)]
     pub volume_keys: Vec<ScenePropertyKey>,
+    /// F8 transform: the screen's scale (0.1..2) and position (-0.5..0.5 of the output), keyed like
+    /// opacity over the clip's SOURCE window. Empty means the layout's own box, unmoved, which is
+    /// every scene written before the fields existed.
+    #[serde(default)]
+    pub scale_keys: Vec<ScenePropertyKey>,
+    #[serde(default)]
+    pub position_x_keys: Vec<ScenePropertyKey>,
+    #[serde(default)]
+    pub position_y_keys: Vec<ScenePropertyKey>,
     /// Le fondu de frontière du clip. `#[serde(default)]` comme `has_audio` : une charge utile
     /// d'une build antérieure se lit « pas de fondu », elle ne fait pas échouer la scène.
     #[serde(default)]
@@ -114,6 +123,67 @@ impl SceneClip {
         };
         sample_property(&self.opacity_keys, at.clamp(0.0, 1.0))
     }
+
+    /// The screen's transform at `source_t`: `[scale, x, y]`. No keys → the layout's box.
+    pub fn transform_at(&self, source_t: f64) -> [f32; 3] {
+        let span = self.source_end_sec - self.source_start_sec;
+        let at = if span <= 1e-9 {
+            0.0
+        } else {
+            ((source_t - self.source_start_sec) / span) as f32
+        };
+        let at = at.clamp(0.0, 1.0);
+        [
+            sample_property_in(&self.scale_keys, at, 0.1, 2.0, 1.0),
+            sample_property_in(&self.position_x_keys, at, -0.5, 0.5, 0.0),
+            sample_property_in(&self.position_y_keys, at, -0.5, 0.5, 0.0),
+        ]
+    }
+}
+
+/// `[scale, x, y]` of the clip that covers `source_t`; the layout's box when none does.
+pub fn clip_transform_at(scene: &Scene, source_t: f64) -> [f32; 3] {
+    scene
+        .clips
+        .iter()
+        .find(|clip| source_t >= clip.source_start_sec && source_t < clip.source_end_sec)
+        .map(|clip| clip.transform_at(source_t))
+        .unwrap_or([1.0, 0.0, 0.0])
+}
+
+/// Like `sample_property`, but the property does not live in 0..1: values are clamped to the
+/// caller's range and `fallback` answers an empty track.
+pub(crate) fn sample_property_in(
+    keys: &[ScenePropertyKey],
+    at: f32,
+    min: f32,
+    max: f32,
+    fallback: f32,
+) -> f32 {
+    if keys.is_empty() {
+        return fallback;
+    }
+    let mut left: Option<&ScenePropertyKey> = None;
+    let mut right: Option<&ScenePropertyKey> = None;
+    for key in keys {
+        if key.at <= at && left.is_none_or(|l| key.at >= l.at) {
+            left = Some(key);
+        }
+        if key.at >= at && right.is_none_or(|r| key.at <= r.at) {
+            right = Some(key);
+        }
+    }
+    let value = match (left, right) {
+        (None, Some(r)) => r.value,
+        (Some(l), None) => l.value,
+        (Some(l), Some(r)) if (r.at - l.at).abs() <= 1e-9 => r.value,
+        (Some(l), Some(r)) => {
+            let t = ((at - l.at) / (r.at - l.at)).clamp(0.0, 1.0);
+            l.value + (r.value - l.value) * ease_property(&l.easing, t)
+        }
+        (None, None) => fallback,
+    };
+    value.clamp(min, max)
 }
 
 /// Même règle que `sampleOpacity` (TS) : avant la première clé, sa valeur tient ; après la
@@ -197,6 +267,9 @@ mod opacity_tests {
             has_audio: false,
             opacity_keys: keys,
             volume_keys: Vec::new(),
+            scale_keys: Vec::new(),
+            position_x_keys: Vec::new(),
+            position_y_keys: Vec::new(),
             video_dip: None,
             incoming_blend: None,
             programme_start_sec: None,
@@ -210,6 +283,18 @@ mod opacity_tests {
     #[test]
     fn no_keys_is_opaque() {
         assert_eq!(clip(Vec::new()).opacity_at(15.0), 1.0);
+    }
+
+    #[test]
+    fn transform_samples_its_own_range() {
+        let mut c = clip(Vec::new());
+        c.scale_keys = vec![key(0.0, 1.0), key(1.0, 2.0)];
+        c.position_x_keys = vec![key(0.0, -2.0)]; // clamped to -0.5
+        c.position_y_keys = vec![key(0.0, 0.25)];
+        assert_eq!(c.transform_at(10.0), [1.0, -0.5, 0.25]);
+        assert_eq!(c.transform_at(15.0), [1.5, -0.5, 0.25]);
+        assert_eq!(c.transform_at(20.0), [2.0, -0.5, 0.25]);
+        assert_eq!(clip(Vec::new()).transform_at(15.0), [1.0, 0.0, 0.0]);
     }
 
     #[test]

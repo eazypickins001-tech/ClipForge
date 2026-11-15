@@ -787,6 +787,9 @@ export function buildNativeClipList(document: AxcutDocument): CompositorClipInpu
 				// F8's first property: opacity keys, normalised inside this clip's source window.
 				// Absent means fully opaque, which is every document written before it.
 				...(clip.opacityKeys?.length ? { opacityKeys: clip.opacityKeys } : {}),
+				...(clip.scaleKeys?.length ? { scaleKeys: clip.scaleKeys } : {}),
+				...(clip.positionXKeys?.length ? { positionXKeys: clip.positionXKeys } : {}),
+				...(clip.positionYKeys?.length ? { positionYKeys: clip.positionYKeys } : {}),
 				// F8's volume envelope. Only the export ARGUMENT consumer (the mixer) reads it;
 				// the scene's clip list ignores the field, and an absent list is unity.
 				...(clip.volumeKeys?.length ? { volumeKeys: clip.volumeKeys } : {}),
@@ -1259,6 +1262,9 @@ export function buildSceneDescription(
 				// F8's first property: opacity keys, normalised inside this clip's source window.
 				// Absent means fully opaque, which is every document written before it.
 				...(clip.opacityKeys?.length ? { opacityKeys: clip.opacityKeys } : {}),
+				...(clip.scaleKeys?.length ? { scaleKeys: clip.scaleKeys } : {}),
+				...(clip.positionXKeys?.length ? { positionXKeys: clip.positionXKeys } : {}),
+				...(clip.positionYKeys?.length ? { positionYKeys: clip.positionYKeys } : {}),
 				// F8's volume envelope. Only the export ARGUMENT consumer (the mixer) reads it;
 				// the scene's clip list ignores the field, and an absent list is unity.
 				...(clip.volumeKeys?.length ? { volumeKeys: clip.volumeKeys } : {}),

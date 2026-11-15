@@ -282,6 +282,13 @@ export const clipSchema = z
 		// `gainDb`. `at` is normalized over the clip's OUTPUT span (timeline), because that is the
 		// span the audio mixer stretches to — unlike opacity, whose reader is handed source time.
 		volumeKeys: z.array(clipPropertyKeySchema).max(MAX_CLIP_PROPERTY_KEYS).optional(),
+		// F8's first TRANSFORM property: the screen's scale, 0.1..2 (1 = layout size). Same
+		// source-normalised keys as opacity, so a split/trim moves the animation with the clip.
+		scaleKeys: z.array(clipPropertyKeySchema).max(MAX_CLIP_PROPERTY_KEYS).optional(),
+		// Position as a fraction of the output, -0.5..0.5 on each axis (0 = layout centre).
+		// The screen's frame, shadow and mask follow it; annotations do not.
+		positionXKeys: z.array(clipPropertyKeySchema).max(MAX_CLIP_PROPERTY_KEYS).optional(),
+		positionYKeys: z.array(clipPropertyKeySchema).max(MAX_CLIP_PROPERTY_KEYS).optional(),
 	})
 	.refine((data) => data.timelineEndSec >= data.timelineStartSec, {
 		message: "timelineEndSec must be greater than or equal to timelineStartSec",

@@ -71,6 +71,7 @@ import { resolveVisibleClips } from "@/native/sceneDescription";
 import { useNativePlaybackSync } from "@/native/useNativePlaybackSync";
 import { ClipAudioModal } from "./ClipAudioModal";
 import { ClipOpacityModal } from "./ClipOpacityModal";
+import { ClipTransformModal } from "./ClipTransformModal";
 import { ExportDialog } from "./ExportDialog";
 import { importProjectFile } from "./importProjectFile";
 import { insertionsEnabled } from "./insertionsEnabled";
@@ -306,6 +307,7 @@ export function NewEditorShell() {
 	const [clipAudioTarget, setClipAudioTarget] = useState<AxcutClip | null>(null);
 	// F8's opacity panel. One shell-level instance, like the audio sheet above.
 	const [clipOpacityTarget, setClipOpacityTarget] = useState<AxcutClip | null>(null);
+	const [clipTransformTarget, setClipTransformTarget] = useState<AxcutClip | null>(null);
 	// The boundary dip sheet — CapCut's transition panel. It names the clip whose LEFT edge the dip
 	// sits on (a boundary belongs to the clip that follows it), so the state is an id rather than a
 	// clip object: the row itself lives in the document and arrives back through the store.
@@ -2091,6 +2093,7 @@ export function NewEditorShell() {
 								onEditClip={setEditClipTarget}
 								onEditClipAudio={setClipAudioTarget}
 								onEditClipOpacity={setClipOpacityTarget}
+								onEditClipTransform={setClipTransformTarget}
 								onSplit={splitAtPlayhead}
 								transcriptProps={transcriptProps}
 							/>
@@ -2169,6 +2172,19 @@ export function NewEditorShell() {
 					if (!clipAudioTarget) return;
 					const clipId = clipAudioTarget.id;
 					void enqueueTimelineWrite(() => tl.updateClipAudio(clipId, patch));
+				}}
+			/>
+			<ClipTransformModal
+				open={clipTransformTarget !== null}
+				onClose={() => setClipTransformTarget(null)}
+				clip={clipTransformTarget}
+				playheadSec={useProjectStore.getState().currentTimeSec}
+				onSeek={(sec) => useProjectStore.getState().setCurrentTime(sec)}
+				speedRegions={tl.speedRegions}
+				onChange={(track, keys) => {
+					if (!clipTransformTarget) return;
+					const clipId = clipTransformTarget.id;
+					void enqueueTimelineWrite(() => tl.updateClipTransform(clipId, track, keys));
 				}}
 			/>
 			<ClipOpacityModal

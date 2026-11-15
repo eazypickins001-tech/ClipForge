@@ -1,3 +1,4 @@
+import type { AxcutClipPropertyKey } from "../lib/ai-edition/schema";
 import type { StylePreset, StylePresetAppearance } from "../lib/ai-edition/stylePresets";
 
 export const NATIVE_BRIDGE_CHANNEL = "native-bridge:invoke";
@@ -216,6 +217,11 @@ export interface CompositorClipInput {
 	gainDb?: number;
 	fadeInSec?: number;
 	fadeOutSec?: number;
+	/** F8 transform keys, source-normalised like opacity: the screen's scale (0.1..2) and its
+	 *  position (-0.5..0.5 of the output). Absent means the layout's own box, unmoved. */
+	scaleKeys?: AxcutClipPropertyKey[];
+	positionXKeys?: AxcutClipPropertyKey[];
+	positionYKeys?: AxcutClipPropertyKey[];
 	/** The VIDEO dip between this clip and its neighbour, from a boundary transition. Distinct
 	 *  from `fadeInSec`/`fadeOutSec` above, which are the clip's own AUDIO fades. Absent means a
 	 *  hard cut. `fadeInSec` ramps this clip up from `color`; `fadeOutSec` ramps it down into it

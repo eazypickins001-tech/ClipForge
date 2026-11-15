@@ -18,6 +18,7 @@ import {
 	Layout as LayoutIcon,
 	type LucideIcon,
 	MousePointer2,
+	Move,
 	Pencil,
 	Scissors,
 	Slice,
@@ -144,6 +145,8 @@ interface FloatingInspectorProps {
 	onEditClipAudio: (clip: AxcutClip) => void;
 	/** Opens the clip's opacity panel — F8's first keyframed property. */
 	onEditClipOpacity: (clip: AxcutClip) => void;
+	/** Opens the clip's transform panel — F8 scale and position keys. */
+	onEditClipTransform: (clip: AxcutClip) => void;
 	/** The razor. Lane-aware — an audio take selected means the take is cut, otherwise the picture
 	 *  — so it lives with the shell that knows both, rather than being re-derived here. */
 	onSplit: () => void;
@@ -164,6 +167,7 @@ export function FloatingInspector({
 	onEditClip,
 	onEditClipAudio,
 	onEditClipOpacity,
+	onEditClipTransform,
 	onSplit,
 	transcriptProps,
 	tl,
@@ -315,6 +319,25 @@ export function FloatingInspector({
 						}}
 					>
 						<Blend size={17} />
+					</button>
+				</Tooltip>
+				<Tooltip content={ts("transform.title")} {...RAIL_TOOLTIP}>
+					<button
+						type="button"
+						aria-label={ts("transform.title")}
+						disabled={clips.length === 0}
+						onClick={() => {
+							if (selection) tl.clearSelection();
+							const playhead = useProjectStore.getState().currentTimeSec;
+							const target = clipAtPlayhead(clips, playhead);
+							if (!target) {
+								toast.info(te("inspector.splitClipHint"));
+								return;
+							}
+							onEditClipTransform(target);
+						}}
+					>
+						<Move size={17} />
 					</button>
 				</Tooltip>
 				<Popover open={clipPickerOpen && clips.length > 1} onOpenChange={setClipPickerOpen}>

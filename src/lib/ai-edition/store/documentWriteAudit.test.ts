@@ -317,6 +317,9 @@ const DECLARED: WritePath[] = [
 	// The clip opacity panel (F8): a key capture or a slider release is the user's own edit and one
 	// write, so one undo step. Clearing the track is the same list write.
 	w("src/lib/ai-edition/store/useTimeline.ts", "updateClipOpacity", "save", "gesture"),
+	// The transform panel (F8 scale/position): a key capture, a move, a clear or a slider release
+	// is one list write, so one undo step — the same rule as opacity above.
+	w("src/lib/ai-edition/store/useTimeline.ts", "updateClipTransform", "save", "gesture"),
 	// Boundary dips: setting one on a clip's edge (kind, duration, colour — the same write whether
 	// it is the first or a change) and taking it off. Both are the user's own edit from the
 	// junction button or its panel, one write each, so one undo step each.

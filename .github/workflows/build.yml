@@ -100,6 +100,7 @@ jobs:
           cargo test -p openscreen-compositor --lib audio::hold_tests
           cargo test -p openscreen-compositor --lib scene::opacity_tests
           cargo test -p openscreen-compositor --lib audio_jobs::volume_envelope_tests
+          cargo test -p openscreen-compositor --lib frame_geometry::tests::a_transform_scales_about_the_centre_and_moves_the_box
           cargo test -p openscreen-compositor --lib shader_fx::tests::a_constant_array_may_be_indexed_at_runtime
           cargo test -p openscreen-compositor --lib shader_fx::tests::a_nine_cubed_lut_table_compiles_at_its_real_size
 

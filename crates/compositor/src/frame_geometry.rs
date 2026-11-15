@@ -3056,6 +3056,17 @@ fn pad_rect(r: [f32; 4], render_px: [f32; 2], pad_px: f32) -> [f32; 4] {
 /// contenaient pas un seul appel D3D11. Les deux backends doivent produire ces
 /// placements au pixel près (la propriété « iso-render » que le projet mesure), et la
 /// seule façon fiable d'y arriver est qu'ils appellent la même fonction.
+/// The layout's screen box, scaled about its centre and moved by `[x, y]` in output fractions.
+/// Identity returns the box untouched (an untouched project must stay bit-for-bit identical).
+fn place_screen_box(b: [f32; 4], [scale, x, y]: [f32; 3]) -> [f32; 4] {
+    if (scale - 1.0).abs() < 1e-6 && x.abs() < 1e-6 && y.abs() < 1e-6 {
+        return b;
+    }
+    let w = b[2] * scale;
+    let h = b[3] * scale;
+    [b[0] + (b[2] - w) * 0.5 + x, b[1] + (b[3] - h) * 0.5 + y, w, h]
+}
+
 pub fn plan_frame(input: &FrameGeometryInput) -> FrameGeometry {
     let (rw, rh) = (input.render_px[0], input.render_px[1]);
     let (stw, sth) = (input.screen_tex_px[0], input.screen_tex_px[1]);
@@ -3355,8 +3366,15 @@ pub fn plan_frame(input: &FrameGeometryInput) -> FrameGeometry {
         // d'atteindre les bords du cadre. On rend le zoom à la BOÎTE (cf. `remap_box`) :
         // la coupe dessinée redevient le crop nu, la boîte porte le grossissement et
         // déborde le padding — c'est la géométrie de `applyZoomTransform` (TS).
-        let s_box = fit_screen(p.screen.dst);
-        let s_box_prev = fit_screen(pp.screen.dst);
+        // F8 transform: the active clip's scale/position at this source instant. It moves the
+        // layout's screen BOX, so the window frame, shadow, mask and cursor measured from that
+        // box follow it; annotations are anchored to the unzoomed box, as before. Identity
+        // returns the box untouched, so a scene without transform keys is bit-for-bit unchanged.
+        let screen_transform = scene
+            .map(|s| crate::scene::clip_transform_at(s, source_t as f64))
+            .unwrap_or([1.0, 0.0, 0.0]);
+        let s_box = place_screen_box(fit_screen(p.screen.dst), screen_transform);
+        let s_box_prev = place_screen_box(fit_screen(pp.screen.dst), screen_transform);
         // Le cadre ne touche PAS à la boîte écran : il pousse vers l'extérieur, dans la place que
         // le layout de l'app lui a faite (le padding se mesure depuis son bord extérieur,
         // `computeCompositeLayout`). Ombre, masques, annotations et curseurs, ancrés sur `s_dst`,
@@ -4783,6 +4801,15 @@ pub fn lru_evictions(entries: &[(String, u64, u64)], budget: u64, protect_from: 
 #[cfg(test)]
 mod tests {
     use super::lru_evictions;
+
+    /// F8 transform: scale about the centre, then move by output fractions. Identity is the exact
+    /// same box (an untouched project must not move by an ulp).
+    #[test]
+    fn a_transform_scales_about_the_centre_and_moves_the_box() {
+        let b = [0.1, 0.2, 0.4, 0.2];
+        assert_eq!(place_screen_box(b, [1.0, 0.0, 0.0]), b);
+        assert_eq!(place_screen_box(b, [0.5, 0.1, -0.05]), [0.3, 0.2, 0.2, 0.1]);
+    }
 
     /// Un fond fixe a une clé qui ne reconnaît que lui, chacune de ses entrées comptant ; un fond
     /// animé n'en a pas.

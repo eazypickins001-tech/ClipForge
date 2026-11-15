@@ -412,6 +412,19 @@
 		"easeOut": "Ease out",
 		"easeInOut": "Ease in-out"
 	},
+	"transform": {
+		"title": "Transform",
+		"scale": "Scale",
+		"positionX": "Position X",
+		"positionY": "Position Y",
+		"add": "Add keyframe",
+		"clear": "Clear animation",
+		"hint": "Set the playhead where you want it, then add a key at the current value.",
+		"outside": "The playhead is outside this clip.",
+		"keyPosition": "Key position (%)",
+		"goToKey": "Go to key",
+		"remove": "Remove key"
+	},
 	"opacity": {
 		"keyPosition": "Key position (%)",
 		"goToKey": "Go to key",

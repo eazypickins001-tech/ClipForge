@@ -3548,6 +3548,35 @@ describe("buildSceneDescription.colourGrade", () => {
 	});
 });
 
+describe("buildSceneDescription.transform", () => {
+	it("passes the clip's scale and position keys to the scene", () => {
+		const asset = makeAsset({ id: "a", originalPath: "/a.mp4" });
+		const clip = makeClip({
+			id: "c1",
+			assetId: "a",
+			sourceStartSec: 0,
+			sourceEndSec: 4,
+			timelineStartSec: 0,
+			timelineEndSec: 4,
+			scaleKeys: [
+				{ at: 0, value: 1 },
+				{ at: 1, value: 1.5 },
+			],
+			positionXKeys: [{ at: 0, value: 0.2 }],
+			positionYKeys: [{ at: 0, value: -0.1 }],
+		});
+		const scene = buildSceneDescription(makeDoc({ assets: [asset], clips: [clip] }));
+		expect(scene.clips?.[0]).toMatchObject({
+			scaleKeys: [
+				{ at: 0, value: 1 },
+				{ at: 1, value: 1.5 },
+			],
+			positionXKeys: [{ at: 0, value: 0.2 }],
+			positionYKeys: [{ at: 0, value: -0.1 }],
+		});
+	});
+});
+
 describe("buildSceneDescription.vignette", () => {
 	it("emits nothing when the vignette is off", () => {
 		const doc = makeDoc({ legacyEditor: { vignetteAmount: 0 } });

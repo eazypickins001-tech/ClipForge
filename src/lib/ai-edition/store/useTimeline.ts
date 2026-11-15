@@ -35,6 +35,7 @@ import {
 } from "../document/layout";
 import { resolveAspectRatioValue } from "../document/outputFormat";
 import {
+	type ClipTransformTrack,
 	clearEditRegions,
 	countEditRegions,
 	detachAudio as detachAudioInDocument,
@@ -50,6 +51,7 @@ import {
 	setClipAudio,
 	setClipOpacityKeys,
 	setClipSourceRange,
+	setClipTransformKeys,
 	splitClipAtTimes as splitClipAtTimesInDocument,
 	splitClip as splitClipInDocument,
 } from "../document/timeline";
@@ -1965,6 +1967,16 @@ export function useTimeline() {
 		[saveDocument],
 	);
 
+	/** The transform panel's write: one track's whole key list. One gesture, one save. */
+	const updateClipTransform = useCallback(
+		async (clipId: string, track: ClipTransformTrack, keys: readonly AxcutClipPropertyKey[]) => {
+			const doc = useProjectStore.getState().document;
+			if (!doc) return;
+			await saveDocument(setClipTransformKeys(doc, clipId, track, keys), { history: true });
+		},
+		[saveDocument],
+	);
+
 	// Turning loop ON fills the rest of the programme with the track.
 	//
 	// Looping only means anything when the span EXCEEDS the source, so a toggle
@@ -2060,6 +2072,7 @@ export function useTimeline() {
 		updateAudioTrack,
 		updateClipAudio,
 		updateClipOpacity,
+		updateClipTransform,
 		setAudioTrackLoop,
 		placeAudioTrack,
 		setAudioTrackGain,
