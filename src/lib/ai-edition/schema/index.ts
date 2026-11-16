@@ -289,6 +289,9 @@ export const clipSchema = z
 		// The screen's frame, shadow and mask follow it; annotations do not.
 		positionXKeys: z.array(clipPropertyKeySchema).max(MAX_CLIP_PROPERTY_KEYS).optional(),
 		positionYKeys: z.array(clipPropertyKeySchema).max(MAX_CLIP_PROPERTY_KEYS).optional(),
+		// Rotation in degrees, -180..180. Applied by the native quad path (mode 8), so the window
+		// frame and shadow turn with the screen.
+		rotationKeys: z.array(clipPropertyKeySchema).max(MAX_CLIP_PROPERTY_KEYS).optional(),
 	})
 	.refine((data) => data.timelineEndSec >= data.timelineStartSec, {
 		message: "timelineEndSec must be greater than or equal to timelineStartSec",

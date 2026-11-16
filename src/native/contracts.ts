@@ -222,6 +222,8 @@ export interface CompositorClipInput {
 	scaleKeys?: AxcutClipPropertyKey[];
 	positionXKeys?: AxcutClipPropertyKey[];
 	positionYKeys?: AxcutClipPropertyKey[];
+	/** Rotation keys in degrees, -180..180; the native quad path turns the screen and its frame. */
+	rotationKeys?: AxcutClipPropertyKey[];
 	/** The VIDEO dip between this clip and its neighbour, from a boundary transition. Distinct
 	 *  from `fadeInSec`/`fadeOutSec` above, which are the clip's own AUDIO fades. Absent means a
 	 *  hard cut. `fadeInSec` ramps this clip up from `color`; `fadeOutSec` ramps it down into it

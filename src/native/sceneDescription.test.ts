@@ -3564,6 +3564,7 @@ describe("buildSceneDescription.transform", () => {
 			],
 			positionXKeys: [{ at: 0, value: 0.2 }],
 			positionYKeys: [{ at: 0, value: -0.1 }],
+			rotationKeys: [{ at: 0, value: -30 }],
 		});
 		const scene = buildSceneDescription(makeDoc({ assets: [asset], clips: [clip] }));
 		expect(scene.clips?.[0]).toMatchObject({
@@ -3573,6 +3574,7 @@ describe("buildSceneDescription.transform", () => {
 			],
 			positionXKeys: [{ at: 0, value: 0.2 }],
 			positionYKeys: [{ at: 0, value: -0.1 }],
+			rotationKeys: [{ at: 0, value: -30 }],
 		});
 	});
 });

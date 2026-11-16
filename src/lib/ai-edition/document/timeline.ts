@@ -20,6 +20,8 @@ import {
 	sampleTransformValue,
 	TRANSFORM_POSITION_MAX,
 	TRANSFORM_POSITION_MIN,
+	TRANSFORM_ROTATION_MAX,
+	TRANSFORM_ROTATION_MIN,
 	TRANSFORM_SCALE_MAX,
 	TRANSFORM_SCALE_MIN,
 } from "../timeline/transformKeyframes";
@@ -1306,6 +1308,12 @@ export function splitClip(
 		positionKeysInRange,
 		samplePosition,
 	);
+	const rotationSplit = splitPropertyKeys(
+		clip.rotationKeys,
+		cutAt,
+		rotationKeysInRange,
+		sampleRotation,
+	);
 	const left: AxcutClip = {
 		...clip,
 		sourceEndSec: atSec,
@@ -1315,6 +1323,7 @@ export function splitClip(
 		scaleKeys: scaleSplit.left,
 		positionXKeys: positionXSplit.left,
 		positionYKeys: positionYSplit.left,
+		rotationKeys: rotationSplit.left,
 		origin,
 		reason: reason || clip.reason,
 	};
@@ -1328,6 +1337,7 @@ export function splitClip(
 		scaleKeys: scaleSplit.right,
 		positionXKeys: positionXSplit.right,
 		positionYKeys: positionYSplit.right,
+		rotationKeys: rotationSplit.right,
 		wordRefs: [],
 		detached: true,
 		origin,
@@ -1587,6 +1597,15 @@ export function setClipSourceRange(
 				positionKeysInRange,
 				samplePosition,
 			),
+			rotationKeys: retimePropertyKeys(
+				c.rotationKeys,
+				c.sourceStartSec,
+				oldEnd,
+				lo,
+				hi,
+				rotationKeysInRange,
+				sampleRotation,
+			),
 			...(cropRegion === undefined ? {} : { cropRegion: cropRegion ?? undefined }),
 		};
 	});
@@ -1646,6 +1665,10 @@ const positionKeysInRange = (keys: readonly AxcutClipPropertyKey[]) =>
 	normaliseKeysInRange(keys, TRANSFORM_POSITION_MIN, TRANSFORM_POSITION_MAX);
 const samplePosition = (keys: readonly AxcutClipPropertyKey[], at: number) =>
 	sampleTransformValue(keys, at, 0, TRANSFORM_POSITION_MIN, TRANSFORM_POSITION_MAX);
+const rotationKeysInRange = (keys: readonly AxcutClipPropertyKey[]) =>
+	normaliseKeysInRange(keys, TRANSFORM_ROTATION_MIN, TRANSFORM_ROTATION_MAX);
+const sampleRotation = (keys: readonly AxcutClipPropertyKey[], at: number) =>
+	sampleTransformValue(keys, at, 0, TRANSFORM_ROTATION_MIN, TRANSFORM_ROTATION_MAX);
 
 /** Two keys this close are the same instant when a track is cut. */
 const KEY_SPLIT_EPSILON = 1e-6;
@@ -1762,7 +1785,7 @@ export function setClipOpacityKeys(
  * The transform panel's mutator: one track's whole key list (scale, position X or Y), sanitised
  * to its own range. `undefined` when the list becomes empty, like the opacity track.
  */
-export type ClipTransformTrack = "scale" | "x" | "y";
+export type ClipTransformTrack = "scale" | "x" | "y" | "rotation";
 
 export function setClipTransformKeys(
 	document: AxcutDocument,
@@ -1773,7 +1796,9 @@ export function setClipTransformKeys(
 	const normalised =
 		track === "scale"
 			? normaliseKeysInRange(keys, TRANSFORM_SCALE_MIN, TRANSFORM_SCALE_MAX)
-			: normaliseKeysInRange(keys, TRANSFORM_POSITION_MIN, TRANSFORM_POSITION_MAX);
+			: track === "rotation"
+				? normaliseKeysInRange(keys, TRANSFORM_ROTATION_MIN, TRANSFORM_ROTATION_MAX)
+				: normaliseKeysInRange(keys, TRANSFORM_POSITION_MIN, TRANSFORM_POSITION_MAX);
 	const value = normalised.length ? normalised : undefined;
 	return withClipsChanged(
 		document,
@@ -1781,7 +1806,8 @@ export function setClipTransformKeys(
 			if (clip.id !== clipId) return clip;
 			if (track === "scale") return { ...clip, scaleKeys: value };
 			if (track === "x") return { ...clip, positionXKeys: value };
-			return { ...clip, positionYKeys: value };
+			if (track === "y") return { ...clip, positionYKeys: value };
+			return { ...clip, rotationKeys: value };
 		}),
 	);
 }

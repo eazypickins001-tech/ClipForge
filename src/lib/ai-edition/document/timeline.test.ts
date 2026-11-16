@@ -2487,6 +2487,10 @@ describe("splitClip keyframes", () => {
 					{ at: 0, value: 0 },
 					{ at: 1, value: 0.5 },
 				],
+				rotationKeys: [
+					{ at: 0, value: 0 },
+					{ at: 1, value: 90 },
+				],
 			}),
 			"c1",
 			5,
@@ -2506,6 +2510,14 @@ describe("splitClip keyframes", () => {
 		expect(right.positionXKeys).toEqual([
 			{ at: 0, value: 0.25 },
 			{ at: 1, value: 0.5 },
+		]);
+		expect(left.rotationKeys).toEqual([
+			{ at: 0, value: 0 },
+			{ at: 1, value: 45 },
+		]);
+		expect(right.rotationKeys).toEqual([
+			{ at: 0, value: 45 },
+			{ at: 1, value: 90 },
 		]);
 	});
 

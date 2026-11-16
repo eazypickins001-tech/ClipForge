@@ -1,6 +1,6 @@
-// F8's transform panel: the clip screen's scale and position over time.
+// F8's transform panel: the clip screen's scale, position and rotation over time.
 //
-// Three independent key tracks, each edited like opacity's: the slider commits on release (one
+// Four independent key tracks, each edited like opacity's: the slider commits on release (one
 // write), and the key button CAPTURES the value at the playhead. `at` is source-normalised, so
 // splitting/trimming retimes the tracks through the same helpers opacity uses.
 import { useEffect, useState } from "react";
@@ -15,6 +15,8 @@ import {
 	setTransformKey,
 	TRANSFORM_POSITION_MAX,
 	TRANSFORM_POSITION_MIN,
+	TRANSFORM_ROTATION_MAX,
+	TRANSFORM_ROTATION_MIN,
 	TRANSFORM_SCALE_MAX,
 	TRANSFORM_SCALE_MIN,
 } from "@/lib/ai-edition/timeline/transformKeyframes";
@@ -32,6 +34,8 @@ function TransformTrack({
 	min,
 	max,
 	fallback,
+	uiScale = PERCENT,
+	suffix = "%",
 	onWrite,
 	onSeekToKey,
 }: {
@@ -42,6 +46,9 @@ function TransformTrack({
 	min: number;
 	max: number;
 	fallback: number;
+	/** Degrees for rotation, percent for scale and position. */
+	uiScale?: number;
+	suffix?: string;
 	onWrite: (track: ClipTransformTrack, keys: AxcutClipPropertyKey[]) => void;
 	onSeekToKey: (keyAt: number) => void;
 }) {
@@ -58,14 +65,14 @@ function TransformTrack({
 				<div style={{ flex: 1 }}>
 					<SliderCell
 						label={label}
-						value={Math.round(value * PERCENT)}
-						min={Math.round(min * PERCENT)}
-						max={Math.round(max * PERCENT)}
+						value={Math.round(value * uiScale)}
+						min={Math.round(min * uiScale)}
+						max={Math.round(max * uiScale)}
 						step={1}
 						decimals={0}
-						suffix="%"
+						suffix={suffix}
 						showValue
-						onChange={(next) => setLive(next / PERCENT)}
+						onChange={(next) => setLive(next / uiScale)}
 						onCommit={() => {
 							if (at !== null && live !== null) {
 								onWrite(track, setTransformKey(keys, at, live, min, max));
@@ -125,7 +132,8 @@ function TransformTrack({
 								/>
 								<span style={{ marginLeft: 4 }}>%</span>
 								<span style={{ marginLeft: 8, opacity: 0.75 }}>
-									{Math.round(key.value * PERCENT)}%
+									{Math.round(key.value * uiScale)}
+									{suffix}
 								</span>
 								<button
 									type="button"
@@ -188,6 +196,7 @@ export function ClipTransformModal({
 		scale: clip?.scaleKeys ?? [],
 		x: clip?.positionXKeys ?? [],
 		y: clip?.positionYKeys ?? [],
+		rotation: clip?.rotationKeys ?? [],
 	});
 	const clipId = clip?.id ?? null;
 	// The panel writes WHOLE lists, so it owns them while open: a second capture must not read
@@ -198,6 +207,7 @@ export function ClipTransformModal({
 			scale: clip?.scaleKeys ?? [],
 			x: clip?.positionXKeys ?? [],
 			y: clip?.positionYKeys ?? [],
+			rotation: clip?.rotationKeys ?? [],
 		});
 	}, [clipId]);
 
@@ -261,6 +271,19 @@ export function ClipTransformModal({
 				min={TRANSFORM_POSITION_MIN}
 				max={TRANSFORM_POSITION_MAX}
 				fallback={0}
+				onWrite={write}
+				onSeekToKey={seekToKey}
+			/>
+			<TransformTrack
+				track="rotation"
+				label={t("transform.rotation")}
+				keys={keys.rotation}
+				at={at}
+				min={TRANSFORM_ROTATION_MIN}
+				max={TRANSFORM_ROTATION_MAX}
+				fallback={0}
+				uiScale={1}
+				suffix="°"
 				onWrite={write}
 				onSeekToKey={seekToKey}
 			/>

@@ -2008,6 +2008,12 @@ pub struct FrameGeometry {
     /// Layouts en bloc : le slot de l'écran, un conteneur qui le MASQUE (cf. `ScreenMask`).
     /// `None` ailleurs, et le rendu est celui d'avant, à l'octet.
     pub screen_mask: Option<ScreenMask>,
+    /// F8 clip rotation, in degrees. 0 is the identity, and the whole quad path is skipped then —
+    /// a project with no rotation keys renders exactly as before. A roll reuses the tilted-screen
+    /// draw (mode 8), so the window frame, shadow, mask and cursor follow it for free; it does
+    /// NOT go through the tilt's containment scale (`regions::rolled_quad_px`), because shrinking
+    /// a screen the user merely turned is not what a rotation means.
+    pub clip_roll: f32,
 }
 
 /// Le conteneur d'un layout en bloc (côte à côte, haut/bas) : un masque fixe, overflow hidden.
@@ -2088,6 +2094,10 @@ pub fn annotation_dst_in(anchor: [f32; 4], x: f32, y: f32, w: f32, h: f32) -> [f
     [anchor[0] + x * anchor[2], anchor[1] + y * anchor[3], w * anchor[2], h * anchor[3]]
 }
 
+/// Below this a rotation is not a rotation; keeps a key at 0 from switching to the quad path and
+/// changing the render by a rounding error.
+const CLIP_ROLL_EPSILON: f32 = 1e-3;
+
 impl FrameGeometry {
     /// Le quad de l'écran incliné pour une boîte de `s_px` px, `None` quand l'écran est droit.
     /// LE point de passage de l'écran, de son ombre, du curseur et du masque de flou : tous
@@ -2097,6 +2107,19 @@ impl FrameGeometry {
     pub fn screen_tilt(&self, s_px: [f32; 2]) -> Option<crate::regions::TiltedQuad> {
         if let Some(pose) = self.camera {
             return Some(crate::camera::View::new(s_px, pose).quad(s_px));
+        }
+        // A roll is its own quad: exact corners, no containment, no perspective. Checked before
+        // the 3D tilt so a clip rotated on a zoomed screen keeps the zoom's quad ordering out of
+        // it — a roll is a 2D spin of the picture plane, and mixing the two would have the roll
+        // fight the tilt's scale.
+        if self.clip_roll.abs() > CLIP_ROLL_EPSILON {
+            let mut quad = crate::regions::rolled_quad_px(s_px[0], s_px[1], self.clip_roll);
+            if self.window_frame.as_ref().is_some_and(|f| f.kind.is_device())
+                && self.screen_mask.is_none()
+            {
+                quad.projective = true;
+            }
+            return Some(quad);
         }
         self.tilted().then(|| {
             let mut quad = crate::regions::rotated_quad_corners_px(
@@ -2160,7 +2183,9 @@ impl FrameGeometry {
 
     /// L'écran passe-t-il par le plan projeté (modes 8, 12, 13, 14) plutôt que par le rect droit ?
     pub fn tilted(&self) -> bool {
-        self.camera.is_some() || !crate::regions::is_identity_rotation(self.zoom_rotation)
+        self.clip_roll.abs() > CLIP_ROLL_EPSILON
+            || self.camera.is_some()
+            || !crate::regions::is_identity_rotation(self.zoom_rotation)
     }
 
     /// La profondeur de champ tourne-t-elle sur CETTE frame ? Réglage allumé, écran réellement
@@ -3058,7 +3083,7 @@ fn pad_rect(r: [f32; 4], render_px: [f32; 2], pad_px: f32) -> [f32; 4] {
 /// seule façon fiable d'y arriver est qu'ils appellent la même fonction.
 /// The layout's screen box, scaled about its centre and moved by `[x, y]` in output fractions.
 /// Identity returns the box untouched (an untouched project must stay bit-for-bit identical).
-fn place_screen_box(b: [f32; 4], [scale, x, y]: [f32; 3]) -> [f32; 4] {
+fn place_screen_box(b: [f32; 4], [scale, x, y, _roll]: [f32; 4]) -> [f32; 4] {
     if (scale - 1.0).abs() < 1e-6 && x.abs() < 1e-6 && y.abs() < 1e-6 {
         return b;
     }
@@ -3372,7 +3397,8 @@ pub fn plan_frame(input: &FrameGeometryInput) -> FrameGeometry {
         // returns the box untouched, so a scene without transform keys is bit-for-bit unchanged.
         let screen_transform = scene
             .map(|s| crate::scene::clip_transform_at(s, source_t as f64))
-            .unwrap_or([1.0, 0.0, 0.0]);
+            .unwrap_or([1.0, 0.0, 0.0, 0.0]);
+        let clip_roll = screen_transform[3];
         let s_ann_box = fit_screen(p.screen.dst);
         let s_box = place_screen_box(s_ann_box, screen_transform);
         let s_box_prev = place_screen_box(fit_screen(pp.screen.dst), screen_transform);
@@ -3757,6 +3783,7 @@ pub fn plan_frame(input: &FrameGeometryInput) -> FrameGeometry {
         shape_fade,
         window_frame,
         screen_mask,
+        clip_roll,
     }
 }
 
@@ -4808,8 +4835,21 @@ mod tests {
     #[test]
     fn a_transform_scales_about_the_centre_and_moves_the_box() {
         let b = [0.1, 0.2, 0.4, 0.2];
-        assert_eq!(place_screen_box(b, [1.0, 0.0, 0.0]), b);
-        assert_eq!(place_screen_box(b, [0.5, 0.1, -0.05]), [0.3, 0.2, 0.2, 0.1]);
+        assert_eq!(place_screen_box(b, [1.0, 0.0, 0.0, 0.0]), b);
+        assert_eq!(place_screen_box(b, [0.5, 0.1, -0.05, 30.0]), [0.3, 0.2, 0.2, 0.1]);
+    }
+
+    /// A roll turns the four corners about the centre and never rescales them (the tilted path's
+    /// containment would shrink a screen the user only turned).
+    #[test]
+    fn a_roll_turns_the_corners_without_rescaling() {
+        let quad = crate::regions::rolled_quad_px(200.0, 100.0, 90.0);
+        assert_eq!(quad.scale, 1.0);
+        let near = |a: (f32, f32), b: (f32, f32)| (a.0 - b.0).abs() < 1e-4 && (a.1 - b.1).abs() < 1e-4;
+        assert!(near(quad.corners[0], (50.0, -100.0)), "{:?}", quad.corners);
+        assert!(near(quad.corners[1], (50.0, 100.0)), "{:?}", quad.corners);
+        assert!(near(quad.corners[2], (-50.0, 100.0)), "{:?}", quad.corners);
+        assert!(near(quad.corners[3], (-50.0, -100.0)), "{:?}", quad.corners);
     }
 
     /// Un fond fixe a une clé qui ne reconnaît que lui, chacune de ses entrées comptant ; un fond
@@ -8592,6 +8632,7 @@ mod tests {
             shape_fade: 0.0,
             window_frame: None,
             screen_mask: None,
+            clip_roll: 0.0,
         }
     }
 

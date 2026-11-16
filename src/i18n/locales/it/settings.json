@@ -417,6 +417,7 @@
 		"scale": "Scale",
 		"positionX": "Position X",
 		"positionY": "Position Y",
+		"rotation": "Rotation",
 		"add": "Add keyframe",
 		"clear": "Clear animation",
 		"hint": "Set the playhead where you want it, then add a key at the current value.",

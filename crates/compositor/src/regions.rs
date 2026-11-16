@@ -1460,6 +1460,33 @@ pub fn rotated_quad_corners_px(
     }
 }
 
+/// A 2D ROLL of the screen, for F8's clip rotation. Unlike `rotated_quad_corners_px` this never
+/// rescales the plane: a roll is a spin in the picture plane, so "containment" would shrink a
+/// screen the user only turned, and a 45° roll would halve it. No depth (a roll is flat), no
+/// lamp, no projective warp — the four corners are exact and the shader's bilinear inverse is
+/// exact for a parallelogram.
+pub fn rolled_quad_px(width: f32, height: f32, degrees: f32) -> TiltedQuad {
+    let (half_w, half_h) = (width * 0.5, height * 0.5);
+    let rad = degrees.to_radians();
+    let (s, c) = (rad.sin(), rad.cos());
+    let corner = |x: f32, y: f32| (x * c - y * s, x * s + y * c);
+    TiltedQuad {
+        corners: [
+            corner(-half_w, -half_h),
+            corner(half_w, -half_h),
+            corner(half_w, half_h),
+            corner(-half_w, half_h),
+        ],
+        scale: 1.0,
+        depth_k: (0.0, 0.0),
+        rot: [0.0, 0.0, degrees],
+        perspective: width.min(height) * PERSPECTIVE_FACTOR,
+        offset: [0.0; 2],
+        projective: false,
+        lamp: false,
+    }
+}
+
 /// L'échelle de containment de la pose `rot` et ses coins à cette échelle ; `None` si un coin
 /// part derrière le plan de fuite dès l'échelle 1.
 fn contain_scale(

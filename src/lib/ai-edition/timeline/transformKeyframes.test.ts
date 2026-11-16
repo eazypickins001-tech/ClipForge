@@ -69,11 +69,23 @@ describe("sampleClipTransform", () => {
 			positionXKeys: [{ at: 0, value: 0 }],
 			positionYKeys: [{ at: 0, value: -0.25 }],
 		});
-		expect(sampleClipTransform(c, 10)).toEqual({ scale: 1, x: 0, y: -0.25 });
+		expect(sampleClipTransform(c, 10)).toEqual({ scale: 1, x: 0, y: -0.25, rotation: 0 });
 		expect(sampleClipTransform(c, 15).scale).toBeCloseTo(1.5);
 		expect(sampleClipTransform(c, 20).scale).toBe(2);
-		expect(sampleClipTransform(c, 5)).toEqual({ scale: 1, x: 0, y: -0.25 });
+		expect(sampleClipTransform(c, 5)).toEqual({ scale: 1, x: 0, y: -0.25, rotation: 0 });
 		expect(sampleClipTransform(clip(), 15)).toEqual(DEFAULT_CLIP_TRANSFORM);
+	});
+
+	it("passes rotation through in degrees", () => {
+		const c = clip({
+			rotationKeys: [
+				{ at: 0, value: -45 },
+				{ at: 1, value: 45 },
+			],
+		});
+		expect(sampleClipTransform(c, 10).rotation).toBe(-45);
+		expect(sampleClipTransform(c, 15).rotation).toBeCloseTo(0);
+		expect(sampleClipTransform(c, 20).rotation).toBe(45);
 	});
 });
 

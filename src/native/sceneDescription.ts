@@ -790,6 +790,7 @@ export function buildNativeClipList(document: AxcutDocument): CompositorClipInpu
 				...(clip.scaleKeys?.length ? { scaleKeys: clip.scaleKeys } : {}),
 				...(clip.positionXKeys?.length ? { positionXKeys: clip.positionXKeys } : {}),
 				...(clip.positionYKeys?.length ? { positionYKeys: clip.positionYKeys } : {}),
+				...(clip.rotationKeys?.length ? { rotationKeys: clip.rotationKeys } : {}),
 				// F8's volume envelope. Only the export ARGUMENT consumer (the mixer) reads it;
 				// the scene's clip list ignores the field, and an absent list is unity.
 				...(clip.volumeKeys?.length ? { volumeKeys: clip.volumeKeys } : {}),
@@ -1265,6 +1266,7 @@ export function buildSceneDescription(
 				...(clip.scaleKeys?.length ? { scaleKeys: clip.scaleKeys } : {}),
 				...(clip.positionXKeys?.length ? { positionXKeys: clip.positionXKeys } : {}),
 				...(clip.positionYKeys?.length ? { positionYKeys: clip.positionYKeys } : {}),
+				...(clip.rotationKeys?.length ? { rotationKeys: clip.rotationKeys } : {}),
 				// F8's volume envelope. Only the export ARGUMENT consumer (the mixer) reads it;
 				// the scene's clip list ignores the field, and an absent list is unity.
 				...(clip.volumeKeys?.length ? { volumeKeys: clip.volumeKeys } : {}),

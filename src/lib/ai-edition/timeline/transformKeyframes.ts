@@ -18,6 +18,8 @@ export const TRANSFORM_SCALE_MIN = 0.1;
 export const TRANSFORM_SCALE_MAX = 2;
 export const TRANSFORM_POSITION_MIN = -0.5;
 export const TRANSFORM_POSITION_MAX = 0.5;
+export const TRANSFORM_ROTATION_MIN = -180;
+export const TRANSFORM_ROTATION_MAX = 180;
 
 const clamp = (value: number, min: number, max: number) =>
 	Math.min(max, Math.max(min, Number.isFinite(value) ? value : min));
@@ -53,15 +55,21 @@ export interface ClipTransform {
 	scale: number;
 	x: number;
 	y: number;
+	rotation: number;
 }
 
-export const DEFAULT_CLIP_TRANSFORM: ClipTransform = { scale: 1, x: 0, y: 0 };
+export const DEFAULT_CLIP_TRANSFORM: ClipTransform = { scale: 1, x: 0, y: 0, rotation: 0 };
 
 /** The screen's transform at a SOURCE second. Outside the clip's window, the edge key holds. */
 export function sampleClipTransform(
 	clip: Pick<
 		AxcutClip,
-		"sourceStartSec" | "sourceEndSec" | "scaleKeys" | "positionXKeys" | "positionYKeys"
+		| "sourceStartSec"
+		| "sourceEndSec"
+		| "scaleKeys"
+		| "positionXKeys"
+		| "positionYKeys"
+		| "rotationKeys"
 	>,
 	sourceSec: number,
 ): ClipTransform {
@@ -87,6 +95,13 @@ export function sampleClipTransform(
 			DEFAULT_CLIP_TRANSFORM.y,
 			TRANSFORM_POSITION_MIN,
 			TRANSFORM_POSITION_MAX,
+		),
+		rotation: sampleTransformValue(
+			clip.rotationKeys,
+			at,
+			DEFAULT_CLIP_TRANSFORM.rotation,
+			TRANSFORM_ROTATION_MIN,
+			TRANSFORM_ROTATION_MAX,
 		),
 	};
 }

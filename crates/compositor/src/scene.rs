@@ -86,6 +86,10 @@ pub struct SceneClip {
     pub position_x_keys: Vec<ScenePropertyKey>,
     #[serde(default)]
     pub position_y_keys: Vec<ScenePropertyKey>,
+    /// F8 rotation in degrees, -180..180. Drawn by the quad path (mode 8), so the frame and shadow
+    /// turn with the screen. Empty is the identity.
+    #[serde(default)]
+    pub rotation_keys: Vec<ScenePropertyKey>,
     /// Le fondu de frontière du clip. `#[serde(default)]` comme `has_audio` : une charge utile
     /// d'une build antérieure se lit « pas de fondu », elle ne fait pas échouer la scène.
     #[serde(default)]
@@ -124,8 +128,8 @@ impl SceneClip {
         sample_property(&self.opacity_keys, at.clamp(0.0, 1.0))
     }
 
-    /// The screen's transform at `source_t`: `[scale, x, y]`. No keys → the layout's box.
-    pub fn transform_at(&self, source_t: f64) -> [f32; 3] {
+    /// The screen's transform at `source_t`: `[scale, x, y, rotation]`. No keys → the layout's box.
+    pub fn transform_at(&self, source_t: f64) -> [f32; 4] {
         let span = self.source_end_sec - self.source_start_sec;
         let at = if span <= 1e-9 {
             0.0
@@ -137,18 +141,19 @@ impl SceneClip {
             sample_property_in(&self.scale_keys, at, 0.1, 2.0, 1.0),
             sample_property_in(&self.position_x_keys, at, -0.5, 0.5, 0.0),
             sample_property_in(&self.position_y_keys, at, -0.5, 0.5, 0.0),
+            sample_property_in(&self.rotation_keys, at, -180.0, 180.0, 0.0),
         ]
     }
 }
 
-/// `[scale, x, y]` of the clip that covers `source_t`; the layout's box when none does.
-pub fn clip_transform_at(scene: &Scene, source_t: f64) -> [f32; 3] {
+/// `[scale, x, y, rotation]` of the clip that covers `source_t`; the layout's box when none does.
+pub fn clip_transform_at(scene: &Scene, source_t: f64) -> [f32; 4] {
     scene
         .clips
         .iter()
         .find(|clip| source_t >= clip.source_start_sec && source_t < clip.source_end_sec)
         .map(|clip| clip.transform_at(source_t))
-        .unwrap_or([1.0, 0.0, 0.0])
+        .unwrap_or([1.0, 0.0, 0.0, 0.0])
 }
 
 /// Like `sample_property`, but the property does not live in 0..1: values are clamped to the
@@ -270,6 +275,7 @@ mod opacity_tests {
             scale_keys: Vec::new(),
             position_x_keys: Vec::new(),
             position_y_keys: Vec::new(),
+            rotation_keys: Vec::new(),
             video_dip: None,
             incoming_blend: None,
             programme_start_sec: None,
@@ -291,10 +297,11 @@ mod opacity_tests {
         c.scale_keys = vec![key(0.0, 1.0), key(1.0, 2.0)];
         c.position_x_keys = vec![key(0.0, -2.0)]; // clamped to -0.5
         c.position_y_keys = vec![key(0.0, 0.25)];
-        assert_eq!(c.transform_at(10.0), [1.0, -0.5, 0.25]);
-        assert_eq!(c.transform_at(15.0), [1.5, -0.5, 0.25]);
-        assert_eq!(c.transform_at(20.0), [2.0, -0.5, 0.25]);
-        assert_eq!(clip(Vec::new()).transform_at(15.0), [1.0, 0.0, 0.0]);
+        c.rotation_keys = vec![key(0.0, 0.0), key(1.0, 90.0)];
+        assert_eq!(c.transform_at(10.0), [1.0, -0.5, 0.25, 0.0]);
+        assert_eq!(c.transform_at(15.0), [1.5, -0.5, 0.25, 45.0]);
+        assert_eq!(c.transform_at(20.0), [2.0, -0.5, 0.25, 90.0]);
+        assert_eq!(clip(Vec::new()).transform_at(15.0), [1.0, 0.0, 0.0, 0.0]);
     }
 
     #[test]

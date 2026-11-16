@@ -46,6 +46,8 @@ describe("ClipTransformModal", () => {
 		expect(onChange).toHaveBeenLastCalledWith("scale", [{ at: 0.1, value: 1 }]);
 		fireEvent.click(screen.getByTestId("transform-add-x"));
 		expect(onChange).toHaveBeenLastCalledWith("x", [{ at: 0.1, value: 0 }]);
+		fireEvent.click(screen.getByTestId("transform-add-rotation"));
+		expect(onChange).toHaveBeenLastCalledWith("rotation", [{ at: 0.1, value: 0 }]);
 	});
 
 	it("keeps earlier captures while the panel stays open", () => {
