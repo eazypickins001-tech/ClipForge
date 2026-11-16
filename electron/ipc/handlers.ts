@@ -100,6 +100,7 @@ import {
 	readCursorSidecar,
 	readCursorTelemetryFile as readCursorTelemetryFileFrom,
 } from "../media/cursorSidecar";
+import { ensureImageVideo, isImagePath } from "../media/imageClip";
 import { findMediaLinksByFingerprint, registerMediaLinks } from "../media/mediaLinksRegistry";
 import { relinkProjectMedia } from "../media/projectMediaRelinker";
 import {
@@ -4343,9 +4344,13 @@ export function registerIpcHandlers(
 						name: mainT("dialogs", "fileDialogs.videoFiles"),
 						extensions: ["webm", "mp4", "mov", "avi", "mkv", "m4v", "wmv", "flv", "ts"],
 					},
+					{
+						name: mainT("dialogs", "fileDialogs.imageFiles"),
+						extensions: ["png", "jpg", "jpeg", "webp", "bmp", "gif", "tif", "tiff"],
+					},
 					{ name: mainT("dialogs", "fileDialogs.allFiles"), extensions: ["*"] },
 				],
-				properties: ["openFile"],
+				properties: ["openFile", "multiSelections"],
 			};
 			const result = await showOpenDialogOver(
 				BrowserWindow.fromWebContents(event.sender),
@@ -4356,8 +4361,27 @@ export function registerIpcHandlers(
 				return { success: false, canceled: true };
 			}
 
-			const normalizedPath = await approveReadableVideoPath(result.filePaths[0]);
-			if (!normalizedPath) {
+			// Import every readable pick. One bad file in a multi-selection must not throw away
+			// the good ones; the renderer gets the readable list and a count of the rest.
+			const paths: string[] = [];
+			const names: string[] = [];
+			const stillsDir = path.join(app.getPath("userData"), "stills");
+			for (const candidate of result.filePaths) {
+				if (isImagePath(candidate)) {
+					// A still becomes a short H.264 proxy, so the timeline, preview and export
+					// read it through the same video pipeline as a recording.
+					const still = await ensureImageVideo(candidate, stillsDir);
+					if (!still) continue;
+					paths.push(still.path);
+					names.push(still.name);
+					continue;
+				}
+				const normalizedPath = await approveReadableVideoPath(candidate);
+				if (!normalizedPath) continue;
+				paths.push(normalizedPath);
+				names.push(path.basename(normalizedPath));
+			}
+			if (paths.length === 0) {
 				return {
 					success: false,
 					message: "Selected file is not a supported readable video file",
@@ -4367,7 +4391,11 @@ export function registerIpcHandlers(
 			currentProjectPath = null;
 			return {
 				success: true,
-				path: normalizedPath,
+				// `path` stays for every single-file consumer (relink, empty state, browser shim).
+				path: paths[0],
+				paths,
+				names,
+				rejected: result.filePaths.length - paths.length,
 			};
 		} catch (error) {
 			console.error("Failed to open file picker:", error);

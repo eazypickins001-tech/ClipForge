@@ -119,16 +119,34 @@ export function MediaStage({
 			return;
 		}
 		const picker = await window.electronAPI?.openVideoFilePicker();
-		if (!picker?.success || !picker.path) return;
+		if (!picker?.success) return;
+		const paths = picker.paths?.length ? picker.paths : picker.path ? [picker.path] : [];
+		if (paths.length === 0) return;
 		setBusy(true);
 		try {
-			const label = picker.name || basename(picker.path);
-			await addAsset(picker.path, label);
-			toast.success(t("mediaStage.added", { label }));
-		} catch (err) {
-			toast.error(t("mediaStage.couldNotAddAsset"), {
-				description: err instanceof Error ? err.message : String(err),
-			});
+			const names = picker.names ?? paths.map((p) => basename(p));
+			let added = 0;
+			let failed = 0;
+			for (const [index, assetPath] of paths.entries()) {
+				try {
+					await addAsset(assetPath, names[index] || basename(assetPath));
+					added++;
+				} catch (err) {
+					failed++;
+					console.error("Failed to import media", assetPath, err);
+				}
+			}
+			if (added === 1) {
+				toast.success(t("mediaStage.added", { label: names[0] || basename(paths[0]) }));
+			} else if (added > 1) {
+				toast.success(t("mediaStage.addedMany", { count: added }));
+			}
+			const skipped = (picker.rejected ?? 0) + failed;
+			if (skipped > 0) {
+				toast.error(t("mediaStage.couldNotAddAsset"), {
+					description: t("mediaStage.someSkipped", { count: skipped }),
+				});
+			}
 		} finally {
 			setBusy(false);
 		}

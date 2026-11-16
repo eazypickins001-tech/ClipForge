@@ -161,6 +161,8 @@
 		"emptyHint": "Chưa có media nào — nhập một bản ghi để bắt đầu.",
 		"importMedia": "Nhập media",
 		"added": "Đã thêm {{label}}",
+		"addedMany": "Added {{count}} files",
+		"someSkipped": "{{count}} file(s) could not be imported",
 		"addToTimeline": "Thêm vào dòng thời gian",
 		"deleteMediaConfirm": "Remove this media from the project? Any clip using it will be removed too.",
 		"deleteMedia": "Delete media",

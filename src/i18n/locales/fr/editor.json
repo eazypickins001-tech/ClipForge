@@ -161,6 +161,8 @@
 		"emptyHint": "Aucun média pour l'instant — importez un enregistrement pour commencer.",
 		"importMedia": "Importer un média",
 		"added": "{{label}} ajouté",
+		"addedMany": "Added {{count}} files",
+		"someSkipped": "{{count}} file(s) could not be imported",
 		"addToTimeline": "Ajouter à la timeline",
 		"deleteMediaConfirm": "Remove this media from the project? Any clip using it will be removed too.",
 		"deleteMedia": "Delete media",

@@ -161,6 +161,8 @@
 		"emptyHint": "아직 미디어가 없습니다 — 녹화 파일을 가져와서 시작하세요.",
 		"importMedia": "미디어 가져오기",
 		"added": "{{label}} 추가됨",
+		"addedMany": "Added {{count}} files",
+		"someSkipped": "{{count}} file(s) could not be imported",
 		"addToTimeline": "타임라인에 추가",
 		"deleteMediaConfirm": "Remove this media from the project? Any clip using it will be removed too.",
 		"deleteMedia": "Delete media",

@@ -161,6 +161,8 @@
 		"emptyHint": "Пока нет медиафайлов — импортируйте запись, чтобы начать.",
 		"importMedia": "Импортировать медиа",
 		"added": "Добавлено: {{label}}",
+		"addedMany": "Added {{count}} files",
+		"someSkipped": "{{count}} file(s) could not be imported",
 		"addToTimeline": "Добавить на таймлайн",
 		"deleteMediaConfirm": "Remove this media from the project? Any clip using it will be removed too.",
 		"deleteMedia": "Delete media",

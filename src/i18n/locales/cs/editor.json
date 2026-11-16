@@ -161,6 +161,8 @@
 		"emptyHint": "Zatím žádná média. Importujte nahrávku pro začátek.",
 		"importMedia": "Importovat média",
 		"added": "Přidáno {{label}}",
+		"addedMany": "Added {{count}} files",
+		"someSkipped": "{{count}} file(s) could not be imported",
 		"addToTimeline": "Přidat na časovou osu",
 		"deleteMediaConfirm": "Remove this media from the project? Any clip using it will be removed too.",
 		"deleteMedia": "Delete media",

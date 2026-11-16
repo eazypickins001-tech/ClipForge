@@ -161,6 +161,8 @@
 		"emptyHint": "Noch keine Medien — importiere eine Aufnahme, um loszulegen.",
 		"importMedia": "Medien importieren",
 		"added": "{{label}} hinzugefügt",
+		"addedMany": "Added {{count}} files",
+		"someSkipped": "{{count}} file(s) could not be imported",
 		"addToTimeline": "Zur Timeline hinzufügen",
 		"deleteMediaConfirm": "Remove this media from the project? Any clip using it will be removed too.",
 		"deleteMedia": "Delete media",

@@ -111,13 +111,21 @@ function persistShimSelectedSource(source: ShimDesktopSource | null) {
 // already special-case blob:/http(s):/data: asset paths and pass them
 // through untouched, so this just has to produce one.
 type PickVideoResult =
-	| { success: true; canceled: false; path: string; name: string }
+	| {
+			success: true;
+			canceled: false;
+			path: string;
+			name: string;
+			paths: string[];
+			names: string[];
+	  }
 	| { success: false; canceled: true };
 
 function pickVideoFileViaInput(): Promise<PickVideoResult> {
 	return new Promise((resolve) => {
 		const input = document.createElement("input");
 		input.type = "file";
+		input.multiple = true;
 		input.accept =
 			"video/mp4,video/quicktime,video/webm,video/x-matroska,video/x-msvideo,video/x-ms-wmv,video/*";
 		input.style.position = "fixed";
@@ -130,12 +138,19 @@ function pickVideoFileViaInput(): Promise<PickVideoResult> {
 			resolve(result);
 		};
 		input.addEventListener("change", () => {
-			const file = input.files?.[0];
-			if (!file) {
+			const files = Array.from(input.files ?? []);
+			if (files.length === 0) {
 				finish({ success: false, canceled: true });
 				return;
 			}
-			finish({ success: true, canceled: false, path: URL.createObjectURL(file), name: file.name });
+			finish({
+				success: true,
+				canceled: false,
+				path: URL.createObjectURL(files[0]),
+				name: files[0].name,
+				paths: files.map((file) => URL.createObjectURL(file)),
+				names: files.map((file) => file.name),
+			});
 		});
 		// Chrome fires this when the picker is dismissed without a selection.
 		input.addEventListener("cancel", () => finish({ success: false, canceled: true }));

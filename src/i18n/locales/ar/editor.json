@@ -161,6 +161,8 @@
 		"emptyHint": "لا توجد وسائط بعد — استورد تسجيلاً للبدء.",
 		"importMedia": "استيراد وسائط",
 		"added": "تمت إضافة {{label}}",
+		"addedMany": "Added {{count}} files",
+		"someSkipped": "{{count}} file(s) could not be imported",
 		"addToTimeline": "إضافة إلى الخط الزمني",
 		"deleteMediaConfirm": "Remove this media from the project? Any clip using it will be removed too.",
 		"deleteMedia": "Delete media",

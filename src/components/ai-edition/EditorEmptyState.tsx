@@ -58,16 +58,22 @@ export function EditorEmptyState({
 
 	const handleImportVideo = useCallback(async () => {
 		const result = await window.electronAPI?.openVideoFilePicker?.();
-		if (!result || result.canceled || !result.success || !result.path) return;
+		if (!result || result.canceled || !result.success) return;
+		const paths = result.paths?.length ? result.paths : result.path ? [result.path] : [];
+		if (paths.length === 0) return;
 		try {
 			const projectId = await ensureProject();
 			if (!projectId) return;
-			const label = result.name || result.path.split(/[\\/]/).pop() || "Recording";
-			await addAsset(result.path, label);
+			for (const [index, assetPath] of paths.entries()) {
+				const label = result.names?.[index] || assetPath.split(/[\\/]/).pop() || "Recording";
+				try {
+					await addAsset(assetPath, label);
+				} catch (err) {
+					console.error("Failed to import video", assetPath, err);
+				}
+			}
 		} catch (err) {
 			setDropError("load-failed");
-			// ponytail: surface as a console message only — the dialog above
-			// already tells the user something went wrong.
 			console.error("Failed to import video", err);
 		}
 	}, [addAsset, ensureProject]);

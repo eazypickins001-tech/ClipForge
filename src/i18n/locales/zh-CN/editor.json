@@ -161,6 +161,8 @@
 		"emptyHint": "暂无媒体 — 导入录制内容以开始。",
 		"importMedia": "导入媒体",
 		"added": "已添加 {{label}}",
+		"addedMany": "Added {{count}} files",
+		"someSkipped": "{{count}} file(s) could not be imported",
 		"addToTimeline": "添加到时间线",
 		"deleteMediaConfirm": "Remove this media from the project? Any clip using it will be removed too.",
 		"deleteMedia": "Delete media",

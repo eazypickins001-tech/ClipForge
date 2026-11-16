@@ -312,6 +312,9 @@ hidden editing algorithms.
   the playhead, easing per key, move/remove/clear). `plan_frame` scales the screen box about its
   centre and moves it; the roll draws through a dedicated quad so the frame and shadow turn without
   the tilt's containment shrink. Split/trim retime the tracks.
+- **Media import:** the Media tab imports **several files at once**. Videos import unchanged;
+  still images are looped by the bundled ffmpeg into a 5 s silent H.264 proxy and then behave like
+  any clip (trim, transform, export). Alpha is flattened; the still default is 5 s.
 - **Differences worth protecting:** fully local core, no watermark, no subscription/paywall, AI
   optional and BYOK, an agent/MCP surface that edits the real document, and screen-recording craft
   (cursor themes, click effects, auto-zoom, screen+webcam) that CapCut treats as secondary.

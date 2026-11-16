@@ -161,6 +161,8 @@
 		"emptyHint": "Henüz medya yok — başlamak için bir kayıt içe aktarın.",
 		"importMedia": "Medya içe aktar",
 		"added": "{{label}} eklendi",
+		"addedMany": "Added {{count}} files",
+		"someSkipped": "{{count}} file(s) could not be imported",
 		"addToTimeline": "Zaman çizelgesine ekle",
 		"deleteMediaConfirm": "Remove this media from the project? Any clip using it will be removed too.",
 		"deleteMedia": "Delete media",
