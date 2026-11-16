@@ -4346,7 +4346,7 @@ export function registerIpcHandlers(
 					},
 					{
 						name: mainT("dialogs", "fileDialogs.imageFiles"),
-						extensions: ["png", "jpg", "jpeg", "webp", "bmp", "gif", "tif", "tiff"],
+						extensions: ["png", "jpg", "jpeg", "webp", "bmp", "tif", "tiff"],
 					},
 					{ name: mainT("dialogs", "fileDialogs.allFiles"), extensions: ["*"] },
 				],
