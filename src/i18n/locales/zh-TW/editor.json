@@ -469,6 +469,8 @@
 		"resizeTimeline": "調整時間軸大小"
 	},
 	"preview": {
+		"expand": "Expand preview",
+		"collapse": "Exit full preview",
 		"videoPreview": "影片預覽",
 		"webcamPreview": "攝影機預覽",
 		"mediaError": {

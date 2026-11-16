@@ -334,6 +334,51 @@
 	min-width: 0;
 	min-height: 0;
 }
+/* Sits over the preview's own top-right corner, clear of the timecode/badge row: it is the
+   one control that is about the PICTURE, so it belongs on it rather than in a menu. */
+.previewExpandBtn {
+	position: absolute;
+	top: 8px;
+	right: 8px;
+	z-index: 3;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 30px;
+	height: 30px;
+	border-radius: 8px;
+	border: 1px solid var(--border);
+	background: color-mix(in oklab, var(--surface-1) 82%, transparent);
+	color: var(--fg);
+	cursor: pointer;
+	opacity: 0.75;
+	transition:
+		opacity 120ms ease,
+		background 120ms ease;
+}
+.previewExpandBtn:hover {
+	opacity: 1;
+	background: var(--surface-1);
+}
+/* Expanded mode has no timeline, so no transport: the preview carries one, centred near the
+   bottom edge where a player's controls belong. */
+.previewExpandPlay {
+	position: absolute;
+	bottom: 14px;
+	left: 50%;
+	transform: translateX(-50%);
+	z-index: 3;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 44px;
+	height: 44px;
+	border-radius: 50%;
+	border: 1px solid var(--border);
+	background: color-mix(in oklab, var(--surface-1) 88%, transparent);
+	color: var(--fg);
+	cursor: pointer;
+}
 .previewFrame {
 	position: relative;
 	aspect-ratio: 16 / 9;

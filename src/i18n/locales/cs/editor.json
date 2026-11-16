@@ -469,6 +469,8 @@
 		"resizeTimeline": "Změnit velikost časové osy"
 	},
 	"preview": {
+		"expand": "Expand preview",
+		"collapse": "Exit full preview",
 		"videoPreview": "Náhled videa",
 		"webcamPreview": "Náhled kamery",
 		"mediaError": {

@@ -469,6 +469,8 @@
 		"resizeTimeline": "تغيير حجم المخطط الزمني"
 	},
 	"preview": {
+		"expand": "Expand preview",
+		"collapse": "Exit full preview",
 		"videoPreview": "معاينة الفيديو",
 		"webcamPreview": "معاينة الكاميرا",
 		"mediaError": {

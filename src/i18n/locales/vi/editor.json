@@ -469,6 +469,8 @@
 		"resizeTimeline": "Đổi kích thước dòng thời gian"
 	},
 	"preview": {
+		"expand": "Expand preview",
+		"collapse": "Exit full preview",
 		"videoPreview": "Xem trước video",
 		"webcamPreview": "Xem trước máy ảnh",
 		"mediaError": {

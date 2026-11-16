@@ -469,6 +469,8 @@
 		"resizeTimeline": "タイムラインのサイズを変更"
 	},
 	"preview": {
+		"expand": "Expand preview",
+		"collapse": "Exit full preview",
 		"videoPreview": "動画プレビュー",
 		"webcamPreview": "カメラのプレビュー",
 		"mediaError": {

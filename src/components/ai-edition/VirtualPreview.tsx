@@ -440,6 +440,13 @@ export function applyPreviewAudioSettings(
 	graph.voice.gain.value = voiceGain;
 }
 
+/**
+ * How far past a clip's own end the SAME asset may already be when the next clip begins:
+ * the split halves are contiguous in the file, so the decoder is already sitting on the next
+ * half's first frame and must not be rewound to it.
+ */
+const CLIP_JOIN_TOLERANCE_SEC = 0.25;
+
 /** First clip (by timeline order) starting strictly after `afterTimelineStartSec` —
  *  independent of the `clips` array's own order, which is never guaranteed to match
  *  timeline order (a clip can be inserted/reordered at any array index; only
@@ -1412,6 +1419,23 @@ export function VirtualPreview({
 					if (activeClipIdRef.current === endPos?.clip.id) {
 						updateVirtualTime(virtualDurationSecRef.current);
 					}
+					return;
+				}
+				// CONTIGUOUS HALVES OF ONE FILE (a split) need no seek at all. Both clips read the
+				// same decoder, and the next one opens exactly where this one ends, so the media is
+				// already at that in-point. Seeking back to it re-lands on the cut, and while that
+				// seek is in flight this tick returns early on `v.seeking` — so the playhead never
+				// advances and Play looks dead after a split. Hand the playhead over and leave the
+				// decoder alone. `sourceStartSec === sourceEndSec` is what makes it a SPLIT: two
+				// clips over the same stretch (a duplicate) are contiguous in the timeline but not
+				// in the file, and those must still seek.
+				const nextSourceStart = nextClip.sourceStartSec;
+				const sourceEnd = position.clip.sourceEndSec ?? position.clip.sourceStartSec;
+				const sameAsset = nextClip.assetId === position.clip.assetId;
+				const contiguousInFile = Math.abs(nextSourceStart - sourceEnd) <= CLIP_JOIN_TOLERANCE_SEC;
+				if (sameAsset && contiguousInFile) {
+					activeClipIdRef.current = nextClip.id;
+					updateVirtualTime(clampVirtualTime(clipsRef.current, nextClip.timelineStartSec));
 					return;
 				}
 				seekToVirtualTimeRef.current?.(nextClip.timelineStartSec, true);

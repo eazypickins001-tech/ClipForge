@@ -469,6 +469,8 @@
 		"resizeTimeline": "타임라인 크기 조절"
 	},
 	"preview": {
+		"expand": "Expand preview",
+		"collapse": "Exit full preview",
 		"videoPreview": "영상 미리보기",
 		"webcamPreview": "카메라 미리보기",
 		"mediaError": {

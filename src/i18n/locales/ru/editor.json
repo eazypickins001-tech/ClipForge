@@ -469,6 +469,8 @@
 		"resizeTimeline": "Изменить размер таймлайна"
 	},
 	"preview": {
+		"expand": "Expand preview",
+		"collapse": "Exit full preview",
 		"videoPreview": "Предпросмотр видео",
 		"webcamPreview": "Предпросмотр камеры",
 		"mediaError": {

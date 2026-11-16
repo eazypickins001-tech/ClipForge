@@ -1,3 +1,4 @@
+import { Maximize2, Minimize2, Pause, Play } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { CameraFullscreenRegion, ZoomFocus } from "@/components/video-editor/types";
 import { useScopedT } from "@/contexts/I18nContext";
@@ -60,12 +61,21 @@ interface PreviewProps {
 	// the parent shell — Preview only needs `playing` to report it on the
 	// data-is-playing test attribute.
 	playing: boolean;
+	/** The preview is filling the stage (the timeline is folded away). Omitted where there is
+	 *  no shell to expand into, e.g. tests. */
+	expanded?: boolean;
+	onToggleExpanded?: () => void;
+	/** Expanded mode hides the timeline, and the transport with it, so the overlay carries its own. */
+	onTogglePlay?: () => void;
 }
 
 export function Preview({
 	hasProject,
 	onRecord,
 	hasAsset,
+	expanded = false,
+	onToggleExpanded,
+	onTogglePlay,
 	videoSources,
 	primaryAssetId,
 	audioTracks = [],
@@ -224,6 +234,37 @@ export function Preview({
 		>
 			{hasProject && hasAsset && previewSources.length > 0 ? (
 				<>
+					{onToggleExpanded ? (
+						<>
+							{expanded && onTogglePlay ? (
+								<button
+									type="button"
+									onClick={onTogglePlay}
+									className={styles.previewExpandPlay}
+									data-testid="preview-expand-play"
+									aria-label={playing ? te("transport.pause") : te("transport.play")}
+									title={playing ? te("transport.pause") : te("transport.play")}
+								>
+									{playing ? (
+										<Pause size={18} fill="currentColor" />
+									) : (
+										<Play size={18} fill="currentColor" />
+									)}
+								</button>
+							) : null}
+							<button
+								type="button"
+								onClick={onToggleExpanded}
+								className={styles.previewExpandBtn}
+								data-testid="preview-expand"
+								aria-pressed={expanded}
+								title={expanded ? te("preview.collapse") : te("preview.expand")}
+								aria-label={expanded ? te("preview.collapse") : te("preview.expand")}
+							>
+								{expanded ? <Minimize2 size={16} /> : <Maximize2 size={16} />}
+							</button>
+						</>
+					) : null}
 					<PreviewCanvas
 						videoSources={previewSources}
 						audioTracks={audioTracks}

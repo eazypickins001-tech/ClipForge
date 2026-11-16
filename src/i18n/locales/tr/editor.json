@@ -469,6 +469,8 @@
 		"resizeTimeline": "Zaman çizelgesini yeniden boyutlandır"
 	},
 	"preview": {
+		"expand": "Expand preview",
+		"collapse": "Exit full preview",
 		"videoPreview": "Video önizlemesi",
 		"webcamPreview": "Kamera önizlemesi",
 		"mediaError": {

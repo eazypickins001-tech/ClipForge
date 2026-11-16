@@ -469,6 +469,8 @@
 		"resizeTimeline": "调整时间轴大小"
 	},
 	"preview": {
+		"expand": "Expand preview",
+		"collapse": "Exit full preview",
 		"videoPreview": "视频预览",
 		"webcamPreview": "摄像头预览",
 		"mediaError": {

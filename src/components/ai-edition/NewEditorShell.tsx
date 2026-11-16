@@ -308,6 +308,19 @@ export function NewEditorShell() {
 	// F8's opacity panel. One shell-level instance, like the audio sheet above.
 	const [clipOpacityTarget, setClipOpacityTarget] = useState<AxcutClip | null>(null);
 	const [clipTransformTarget, setClipTransformTarget] = useState<AxcutClip | null>(null);
+	// "Watch it as it will play": the preview takes the stage and the timeline folds away, so
+	// the picture is as large as the window allows. One click (or Escape) puts it back.
+	const [previewExpanded, setPreviewExpanded] = useState(false);
+	// Escape leaves the expanded preview, the way it leaves any full-bleed view. Bound only while
+	// expanded, so it never competes with the editor's other Escape meanings.
+	useEffect(() => {
+		if (!previewExpanded) return;
+		const onKeyDown = (event: KeyboardEvent) => {
+			if (event.key === "Escape") setPreviewExpanded(false);
+		};
+		window.addEventListener("keydown", onKeyDown);
+		return () => window.removeEventListener("keydown", onKeyDown);
+	}, [previewExpanded]);
 	// The boundary dip sheet — CapCut's transition panel. It names the clip whose LEFT edge the dip
 	// sits on (a boundary belongs to the clip that follows it), so the state is an id rather than a
 	// clip object: the row itself lives in the document and arrives back through the store.
@@ -1777,7 +1790,7 @@ export function NewEditorShell() {
 		openVoiceoverFlow,
 	]);
 
-	const showTimeline = mode !== "rec";
+	const showTimeline = mode !== "rec" && !previewExpanded;
 	const timelineRow = mode === "media" ? "188px" : `${timelineHeightPx}px`;
 	const bodyColumns = mode === "edit" && chatOpen ? `${chatWidthPx}px 1fr` : "1fr";
 
@@ -2035,6 +2048,9 @@ export function NewEditorShell() {
 									hasProject={hasProject}
 									onRecord={() => setMode("rec")}
 									hasAsset={hasAsset}
+									expanded={previewExpanded}
+									onToggleExpanded={() => setPreviewExpanded((open) => !open)}
+									onTogglePlay={togglePlay}
 									videoSources={videoSources}
 									// While the timeline is empty the preview mounts this asset rather
 									// than whichever one sorts first, so the clip `handleLoadedMetadata`

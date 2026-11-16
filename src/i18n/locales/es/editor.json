@@ -469,6 +469,8 @@
 		"resizeTimeline": "Redimensionar la línea de tiempo"
 	},
 	"preview": {
+		"expand": "Expand preview",
+		"collapse": "Exit full preview",
 		"videoPreview": "Vista previa del vídeo",
 		"webcamPreview": "Vista previa de la cámara",
 		"mediaError": {
