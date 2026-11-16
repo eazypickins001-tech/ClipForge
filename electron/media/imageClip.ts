@@ -18,7 +18,6 @@ export const IMAGE_EXTENSIONS = new Set([
 	".jpeg",
 	".webp",
 	".bmp",
-	".gif",
 	".tif",
 	".tiff",
 ]);
