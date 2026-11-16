@@ -10,7 +10,7 @@
 // without a filesystem round trip, and guessing wrong is how an error message
 // sends someone re-importing media that was never gone.
 
-import { AlertCircle, RotateCcw } from "lucide-react";
+import { AlertCircle, FolderOpen, RotateCcw } from "lucide-react";
 import { useScopedT } from "@/contexts/I18nContext";
 import styles from "./NewEditorShell.module.css";
 
@@ -19,9 +19,11 @@ interface PreviewErrorCardProps {
 	 *  that makes a user's bug report actionable (see mediaError.ts). */
 	detail: string;
 	onRetry: () => void;
+	/** Pick the file again and relink the asset that failed, without re-importing it. */
+	onLocate?: () => void;
 }
 
-export function PreviewErrorCard({ detail, onRetry }: PreviewErrorCardProps) {
+export function PreviewErrorCard({ detail, onRetry, onLocate }: PreviewErrorCardProps) {
 	const t = useScopedT("editor");
 
 	return (
@@ -36,6 +38,17 @@ export function PreviewErrorCard({ detail, onRetry }: PreviewErrorCardProps) {
 					<RotateCcw className={styles.previewEmptyButtonIcon} />
 					{t("preview.mediaError.retry")}
 				</button>
+				{onLocate ? (
+					<button
+						type="button"
+						onClick={onLocate}
+						className={styles.previewEmptySecondaryButton}
+						data-testid="preview-error-locate"
+					>
+						<FolderOpen className={styles.previewEmptyButtonIcon} />
+						{t("preview.mediaError.locate")}
+					</button>
+				) : null}
 				{detail ? (
 					<p className={styles.previewFailureDetail}>
 						{t("preview.mediaError.detail", { detail })}

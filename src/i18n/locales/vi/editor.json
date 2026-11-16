@@ -475,6 +475,7 @@
 			"title": "Xem trước đã dừng",
 			"description": "Không thể giải mã video. Tệp có thể đã hỏng, vẫn đang được ghi, hoặc không còn ở nơi dự án mong đợi — dự án của bạn vẫn nguyên vẹn.",
 			"retry": "Thử lại",
+			"locate": "Locate media…",
 			"detail": "Chi tiết: {{detail}}"
 		}
 	},

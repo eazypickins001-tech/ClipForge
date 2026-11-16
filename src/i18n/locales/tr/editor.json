@@ -475,6 +475,7 @@
 			"title": "Önizleme durdu",
 			"description": "Video çözümlenemedi. Dosya bozulmuş, hâlâ yazılıyor ya da projenin beklediği yerde olmayabilir — projeniz olduğu gibi duruyor.",
 			"retry": "Yeniden dene",
+			"locate": "Locate media…",
 			"detail": "Ayrıntılar: {{detail}}"
 		}
 	},

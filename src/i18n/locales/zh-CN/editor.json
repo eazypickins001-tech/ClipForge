@@ -475,6 +475,7 @@
 			"title": "预览已停止",
 			"description": "无法解码该视频。文件可能已损坏、仍在写入中，或已不在项目预期的位置——你的项目本身完好无损。",
 			"retry": "重试",
+			"locate": "Locate media…",
 			"detail": "详细信息：{{detail}}"
 		}
 	},

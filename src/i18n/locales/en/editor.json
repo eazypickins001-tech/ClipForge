@@ -475,6 +475,7 @@
 			"title": "Preview stopped",
 			"description": "The video couldn't be decoded. The file may be damaged, still being written, or no longer where the project expects it — your project itself is intact.",
 			"retry": "Try again",
+			"locate": "Locate media…",
 			"detail": "Details: {{detail}}"
 		}
 	},

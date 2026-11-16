@@ -199,6 +199,20 @@ export function Preview({
 		setFailure(null);
 		setRetryToken((token) => token + 1);
 	}, []);
+	/** Pick the source again and relink the asset that failed. The cut, trims and regions stay —
+	 *  only the asset's path moves. */
+	const handleLocate = useCallback(async () => {
+		if (!failure) return;
+		const picked = await window.electronAPI?.openVideoFilePicker();
+		if (!picked?.success || !picked.path) return;
+		try {
+			await useProjectStore.getState().relinkAsset(failure.assetId, picked.path);
+			setFailure(null);
+			setRetryToken((token) => token + 1);
+		} catch (error) {
+			console.error("Failed to relink media", error);
+		}
+	}, [failure]);
 
 	return (
 		<section
@@ -244,7 +258,13 @@ export function Preview({
 					    position: relative) — NOT inside VirtualPreview's `.videoFrame`,
 					    which carries the live zoom transform and would translate the
 					    Retry button off the stage at high zoom. */}
-					{failure ? <PreviewErrorCard detail={failure.detail} onRetry={handleRetry} /> : null}
+					{failure ? (
+						<PreviewErrorCard
+							detail={failure.detail}
+							onRetry={handleRetry}
+							onLocate={handleLocate}
+						/>
+					) : null}
 				</>
 			) : (
 				<EditorEmptyState hasProject={hasProject} onRecord={onRecord} />
