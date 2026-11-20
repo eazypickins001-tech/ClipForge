@@ -315,6 +315,10 @@ hidden editing algorithms.
 - **Media import:** the Media tab imports **several files at once**. Videos import unchanged;
   still images are looped by the bundled ffmpeg into a 5 s silent H.264 proxy and then behave like
   any clip (trim, transform, export). Alpha is flattened; the still default is 5 s.
+- **Expanded preview:** the ⤢ button on the preview folds the timeline away and gives the picture
+  the whole stage, with play/pause over it; Escape restores the editor.
+- **Split playback:** contiguous halves of one file are joined without a seek, so Play keeps
+  running through a cut instead of being pinned to it.
 - **Differences worth protecting:** fully local core, no watermark, no subscription/paywall, AI
   optional and BYOK, an agent/MCP surface that edits the real document, and screen-recording craft
   (cursor themes, click effects, auto-zoom, screen+webcam) that CapCut treats as secondary.

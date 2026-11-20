@@ -53,6 +53,7 @@ export const HELP_TOPICS: readonly HelpTopic[] = [
 			"The clip rail's Opacity button fades a clip over time: set the slider, then Add keyframe at the playhead. Each key has an easing menu (four presets or a custom curve) and a position you can edit; → jumps the playhead to it; Clear removes the animation.",
 			"The rail's Move button keyframes a clip's Scale, Position X, Position Y and Rotation independently. The screen's frame and shadow follow.",
 			"Audio's Volume panel has the clip level, mute and fades, plus Volume over time — a keyframed envelope on top of the level.",
+			"The preview's ⤢ button expands it over the stage and folds the timeline away, for watching the cut as it will play; Escape or the same button puts it back.",
 			"Media → Import media accepts several files at once. Images become 5-second still clips through the bundled encoder, and can then be trimmed, transformed and exported like video.",
 			"Remove filler words and silences from the Transcript menu.",
 		],
